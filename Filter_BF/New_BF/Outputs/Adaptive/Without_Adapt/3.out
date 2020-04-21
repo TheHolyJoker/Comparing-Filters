@@ -1,0 +1,27 @@
+[ true_negative, false_positive, true_positive]	[70, 8122 ,0]
+member_set_init_time: 0.025254
+nom_set_init_time: 0.004911
+nom_set to lookups_num ratio : 1
+
+false positive rate:0.991455	Expected: 0.01	error deviation: 9814.55%
+adaptive init_time: 0.000118
+adaptive insertion_time: 0.023666	1.3846e+06 el/sec
+adaptive lookup_time: 0.002855	2.86935e+06 el/sec
+
+total_run_time: 0.056816
+
+level 0
+bit_array size is: 628166	k is: 7
+[111908, 202971, 72343, 186206, 170163, 237504, 199878]
+Number of on bits in filter: 162834	Ratio is: 0.259221
+Number of on bits in stale: 0	Ratio is: 0
+
+
+
+level 1
+bit_array size is: 6700	k is: 7
+[1296, 428, 1030, 2938, 2890, 3059, 950]
+Number of on bits in filter: 0	Ratio is: 0
+Number of on bits in stale: 0	Ratio is: 0
+
+

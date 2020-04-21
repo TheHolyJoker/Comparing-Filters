@@ -1,0 +1,3 @@
+/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/CMakeFiles/edit_cache.dir
+/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/CMakeFiles/Filter_Comparison.dir

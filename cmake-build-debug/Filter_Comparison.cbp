@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="Filter_Comparison"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="Filter_Comparison">
+				<Option output="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Filter_Comparison" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 Filter_Comparison"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="Filter_Comparison/fast">
+				<Option output="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Filter_Comparison" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/usr/include/c++/7"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
+					<Add directory="/usr/include/c++/7/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 Filter_Comparison/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Comparing/b_helpers.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Comparing/b_helpers.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Comparing/benchmarking_filters.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Comparing/benchmarking_filters.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_BF/New_BF/General_BF/GeneralBF.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_BF/New_BF/General_BF/GeneralBF.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_BF/New_BF/Grey_Box_Function_Dir/GreyBoxFunction.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_BF/New_BF/Grey_Box_Function_Dir/GreyBoxFunction.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_BF/New_BF/Hash_files/Hash.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_BF/New_BF/Hash_files/Hash.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/CPD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/CPD.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/CPD_validator.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/CPD_validator.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/Counters_Array.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/Counters_Array.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/Naive_Counter_Endec.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/CPD/Naive_Counter_Endec.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/Dict/dict.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/Dict/dict.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/Dict/multi_dict.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/Dict/multi_dict.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/const_filter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/const_filter.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/gen_2Power.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/gen_2Power.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/pow2c_filter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/pow2c_filter.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/pow2c_naive_filter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Filters/POW2C/pow2c_naive_filter.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Global_functions/basic_functions.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Global_functions/basic_functions.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Global_functions/cuckoo_and_counting_macros.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Global_functions/macros.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/Hash.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/Hash.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/Permutation.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/Permutation.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/hashutil/hashutil.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/hashutil_backup/hashutil.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/hashutil_backup/lookup3.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash/static_hashing.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash_Table/hash_table.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash_Table/hash_table.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash_Table/hash_table_var.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash_Table/hash_table_var.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash_Table/multi_hash_table.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Hash_Table/multi_hash_table.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Constant_size_PD/const_Body.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Constant_size_PD/const_Body.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Constant_size_PD/const_Header.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Constant_size_PD/const_Header.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Constant_size_PD/const_PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Constant_size_PD/const_PD.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Contiguous_PD/cg_PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Contiguous_PD/cg_PD.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Contiguous_PD/constant_contiguous_PD/cc_PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Contiguous_PD/constant_contiguous_PD/cc_PD.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/cg_naive_PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/cg_naive_PD.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/naive_Body.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/naive_Body.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/naive_Header.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/naive_Header.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/naive_PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Naive_PD/naive_PD.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Non_Contiguous_PD/Body.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Non_Contiguous_PD/Body.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Non_Contiguous_PD/Header.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Non_Contiguous_PD/Header.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Non_Contiguous_PD/PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Non_Contiguous_PD/PD.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Safe_PD/safe_PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Safe_PD/safe_PD.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Safe_PD/v_Body.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Safe_PD/v_Body.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Safe_PD/v_Header.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/PD/Safe_PD/v_Header.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Benchmarking/benchmark_counting_filter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Benchmarking/benchmark_counting_filter.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Benchmarking/benchmark_tests.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Benchmarking/benchmark_tests.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Benchmarking/old_benchmark_tests.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Benchmarking/old_benchmark_tests.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Test_output_formatting/test_printer.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Test_output_formatting/test_printer.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_bit_op.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_bit_op.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_counter_PD.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_counter_PD.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_counters.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_counters.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_counting_filter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_counting_filter.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_filter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_filter.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_hash_table.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validate_hash_table.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validation_tests.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/Tests/Validation/validation_tests.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/bit_operations/bit_op.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/bit_operations/bit_op.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/bit_operations/bit_word_converter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/bit_operations/bit_word_converter.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/bit_operations/my_bit_op.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_PD/bit_operations/my_bit_op.hpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/GlobalFunctions/globalFunction.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/GlobalFunctions/globalFunction.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/Hash/Hash.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/Hash/Hash.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/BasicFilter.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/BasicFilter.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/BitArray.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/BitArray.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/DataBase.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/DataBase.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/Filter_QF.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/QuotientFilter/Filter_QF.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/Tests/DBtests.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Filter_Quotient/Tests/DBtests.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Shared_files/MurmurHash3.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/Shared_files/MurmurHash3.h">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/main.cpp">
+			<Option target="Filter_Comparison"/>
+		</Unit>
+		<Unit filename="/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
