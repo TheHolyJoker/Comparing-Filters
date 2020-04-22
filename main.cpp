@@ -4,7 +4,8 @@
 
 #include <iostream>
 #include "Comparing/benchmarking_filters.hpp"
-#include "Filter_PD/Filters/Dict/multi_dict.hpp"
+#include "Comparing/benchmark_integer.hpp"
+//#include "Filter_PD/Filters/Dict/multi_dict.hpp"
 
 void call_all_filters();
 
@@ -16,6 +17,11 @@ auto main() -> int {
     size_t remainder_length = 13;
     size_t l1_counter_size = 3, l2_counter_size = 7;
     double l1_LF = 0.95, l2_LF = 0.65;
+
+    name_compare::b_filter_wrapper_int<Filter_QF, uint32_t>(max_distinct_capacity >> 4u, reps >> 4u, remainder_length,
+                                                            l1_counter_size,
+                                                            l2_counter_size, 0.6, l2_LF, cout);
+
 
 //    name_compare::b_filter_wrapper<Filter_QF>(max_distinct_capacity >> 4u, reps>> 4u, remainder_length, l1_counter_size,
 //                                              l2_counter_size, 0.6, l2_LF, cout);
@@ -39,13 +45,13 @@ auto main() -> int {
     return 0;
 }
 
-void call_all_filters(){
+void call_all_filters() {
     size_t reps = 1u << 21u, max_distinct_capacity = 1u << 16u;
     size_t remainder_length = 8;
     size_t l1_counter_size = 3, l2_counter_size = 7;
     double l1_LF = 0.6, l2_LF = 0.25;
 
-    string line_sep = string(32,'*') + "\n";
+    string line_sep = string(32, '*') + "\n";
     string block_sep = line_sep + line_sep;
     block_sep += block_sep;
     block_sep += block_sep;
@@ -57,12 +63,12 @@ void call_all_filters(){
     cout << block_sep;
     cout << "Filter_QF\n" << endl;
     name_compare::b_filter_wrapper<Filter_QF>(max_distinct_capacity, reps, remainder_length, l1_counter_size,
-                                                 l2_counter_size, l1_LF, l2_LF, cout);
+                                              l2_counter_size, l1_LF, l2_LF, cout);
 
     cout << block_sep;
     cout << "dict32\n" << endl;
     name_compare::b_filter_wrapper<dict32>(max_distinct_capacity, reps, remainder_length, l1_counter_size,
-                                              l2_counter_size, l1_LF, l2_LF, cout);
+                                           l2_counter_size, l1_LF, l2_LF, cout);
 
     /*cout << block_sep;
     cout << "GeneralBF\n" << endl;

@@ -22,7 +22,7 @@
 //static const uint32_t SEED_1 = random() , SEED_2 = random();
 static const uint32_t SEED_1 = 1, SEED_2 = 42;
 
-inline uint32_t my_hash(uint32_t el, uint32_t seed) {
+inline uint32_t my_hash(const uint32_t el, uint32_t seed) {
     uint32_t a = 0, b = 0;
     MurmurHash3_x86_32(&el, (int) (64), SEED_1, &a);
     MurmurHash3_x86_32(&el, (int) (64), SEED_2, &b);
@@ -86,6 +86,7 @@ inline uint32_t hashint2(uint32_t a) {
     a ^= (a >> 6);
     a += ~(a << 11);
     a ^= (a >> 16);
+    return a
 }
 /*
  * Robert Jenkins' 96 bit Mix Function

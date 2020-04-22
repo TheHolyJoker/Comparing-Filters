@@ -52,8 +52,25 @@ dict<D, S>::dict(size_t filter_max_capacity, size_t error_power_inv, double leve
 
 template<class D, class S>
 auto dict<D, S>::lookup(const string *s) -> bool {
-    auto hash_val = wrap_hash(s);
+    return lookup_helper(wrap_hash(s));
+    /*auto hash_val = wrap_hash(s);
 
+    size_t pd_index = -1;
+    uint32_t quot = -1, r = -1;
+    split(hash_val, &pd_index, &quot, &r);
+    if (pd_vec[pd_index].lookup(quot, r)) return true;
+
+    return spare->find(hash_val % SL(sparse_element_length));*/
+}
+
+template<class D, class S>
+template<typename P>
+auto dict<D, S>::lookup_int(P x) -> bool {
+    return lookup_helper(wrap_hash(x));
+}
+
+template<class D, class S>
+bool dict<D, S>::lookup_helper(uint32_t hash_val) {
     size_t pd_index = -1;
     uint32_t quot = -1, r = -1;
     split(hash_val, &pd_index, &quot, &r);
@@ -64,6 +81,9 @@ auto dict<D, S>::lookup(const string *s) -> bool {
 
 template<class D, class S>
 void dict<D, S>::insert(const string *s) {
+    return insert_helper(wrap_hash(s));
+/*
+
     auto hash_val = wrap_hash(s);
 
     size_t pd_index = -1;
@@ -75,9 +95,31 @@ void dict<D, S>::insert(const string *s) {
     }
     pd_vec[pd_index].insert(quot, r);
     ++(pd_capacity_vec[pd_index]);
+*/
 
 }
 
+
+template<class D, class S>
+template<typename P>
+void dict<D, S>::insert_int(P x) {
+    return insert_helper(wrap_hash(x));
+
+}
+
+template<class D, class S>
+void dict<D, S>::insert_helper(uint32_t hash_val) {
+    size_t pd_index = -1;
+    uint32_t quot = -1, r = -1;
+    split(hash_val, &pd_index, &quot, &r);
+    if (pd_capacity_vec[pd_index] == single_pd_capacity) {
+        insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
+        return;
+    }
+    pd_vec[pd_index].insert(quot, r);
+    ++(pd_capacity_vec[pd_index]);
+
+}
 
 template<class D, class S>
 void dict<D, S>::insert_to_spare(S_TYPE y) {
@@ -112,6 +154,7 @@ void dict<D, S>::insert_level1_inc_overflow_handler(S_TYPE hash_val) {
 
 template<class D, class S>
 auto dict<D, S>::insert_to_bucket_attempt(S_TYPE y, size_t bucket_index) -> bool {
+    assert(false);
 //    auto tp = insert_inc_to_bucket_attempt(y, bucket_index);
 //    auto op_res = std::get<0>(tp);
 //    auto empty_bucket_location_nom = std::get<1>(tp);
@@ -189,8 +232,29 @@ void dict<D, S>::insert_to_spare_with_pop(S_TYPE hash_val) {
 
 template<class D, class S>
 void dict<D, S>::remove(const string *s) {
-    auto hash_val = wrap_hash(s);
+    return remove_helper(wrap_hash(s));
 
+    /*auto hash_val = wrap_hash(s);
+
+    size_t pd_index = -1;
+    uint32_t quot = -1, r = -1;
+    split(hash_val, &pd_index, &quot, &r);
+    if (pd_vec[pd_index].conditional_remove(quot, r)) {
+        --(pd_capacity_vec[pd_index]);
+        return;
+    }
+    spare->remove(hash_val);*/
+}
+
+template<class D, class S>
+template<typename P>
+void dict<D, S>::remove_int(P x) {
+    return remove_helper(wrap_hash(x));
+
+}
+
+template<class D, class S>
+void dict<D, S>::remove_helper(uint32_t hash_val) {
     size_t pd_index = -1;
     uint32_t quot = -1, r = -1;
     split(hash_val, &pd_index, &quot, &r);
@@ -310,3 +374,9 @@ static auto get_spare_max_capacity(size_t dict_max_capacity, double level1_load_
 template
 class dict<cg_PD, hash_table<uint32_t>>;
 
+
+template void dict32::remove_int<uint32_t>(uint32_t x);
+
+template void dict32::insert_int<uint32_t>(uint32_t x);
+
+template auto dict32::lookup_int<uint32_t>(uint32_t x) -> bool;

@@ -26,6 +26,14 @@ namespace QF_Hash {
 //    return uint32_t((a % size + this->multiConst * (b % this->size)) % this->size);*/
     }
 
+    uint32_t Hash::hash(const uint32_t el) {
+        uint32_t a = 0, b = 0;
+        MurmurHash3_x86_32(&el, (int) (64), DEFAULT_SEED, &a);
+        MurmurHash3_x86_32(&el, (int) (64), SECOND_SEED, &b);
+        return a + multiConst * b;
+    }
+
+
     uint32_t Hash::hash(const string *elementP) const {
         char const *cp = elementP->c_str();
         return hash(cp);

@@ -42,10 +42,10 @@ bool GeneralBF::insert(const string *s) {
 
     bool did_not_hit_FP = true;
     for (auto h : this->hashVec) {
-        size_t temp_index = h(s) << 1;// NOLINT(hicpp-signed-bitwise)
+        size_t temp_index = h(s) << 1u;// NOLINT(hicpp-signed-bitwise)
 //        assert(temp_index + 1 < this->size);
         this->bit_array[temp_index] = true;
-        if (this->bit_array[temp_index bitor 1]) {  // NOLINT(hicpp-signed-bitwise)
+        if (this->bit_array[temp_index bitor 1u]) {  // NOLINT(hicpp-signed-bitwise)
             did_not_hit_FP = false;
             //Todo break here.
         }

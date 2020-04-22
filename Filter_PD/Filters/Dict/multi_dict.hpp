@@ -45,12 +45,23 @@ public:
 
     auto lookup(const string *s) -> bool;
 
+    template<typename P>
+    auto lookup_int(P x) -> bool;
+
     auto lookup_multi(const string *s) -> size_t;
+
+    template<typename P>
+    auto lookup_multi_int(P x) -> size_t;
 
     void insert(const string *s);
 
+    template<typename P>
+    void insert_int(P x);
 
     void remove(const string *s);
+
+    template<typename P>
+    void remove_int(P x);
 
     void get_info();
 
@@ -65,6 +76,15 @@ public:
     auto do_elements_collide(const string *s1, const string *s2) -> bool;
 
 private:
+
+    auto lookup_helper(S_T hash_val) -> bool;
+
+    auto lookup_multi_helper(S_T hash_val) -> size_t;
+
+    void insert_helper(S_T hash_val);
+
+    void remove_helper(S_T hash_val);
+
     void insert_full_PD_helper(S_T hash_val, size_t pd_index, uint32_t quot, uint32_t r);
 
     void insert_to_spare(S_T y);
@@ -108,8 +128,25 @@ private:
         return my_hash(s, HASH_SEED) & MASK(spare_element_length);
     }
 
+    template<typename P>
+    inline auto wrap_hash(const P x) -> S_T {
+        return my_hash(x, HASH_SEED) & MASK(spare_element_length);
+    }
+
     auto wrap_hash_split(const string *s) -> std::tuple<S_T, S_T, S_T> {
         S_T h = my_hash(s, HASH_SEED) & MASK(spare_element_length);
+        S_T r, q, pd_index;
+        r = h & MASK(remainder_length);
+        h >>= remainder_length;
+        q = h % (quotient_range);
+        h >>= quotient_length;
+        pd_index = h % pd_vec.size();
+        return std::make_tuple(pd_index, q, r);
+    }
+
+    template<typename P>
+    auto wrap_hash_split(const P x) -> std::tuple<S_T, S_T, S_T> {
+        S_T h = my_hash(x, HASH_SEED) & MASK(spare_element_length);
         S_T r, q, pd_index;
         r = h & MASK(remainder_length);
         h >>= remainder_length;
@@ -131,6 +168,7 @@ private:
         h >>= quotient_length;
         *pd_index = h % pd_vec.size();
     }
+
 
 };
 

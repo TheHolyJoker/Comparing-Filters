@@ -20,4 +20,16 @@ namespace name_compare {
     void set_init(size_t size, std::set<std::string> *mySet, int minLength, int charsNum) {
         for (int i = 0; i < size; ++i) mySet->insert(rand_string(minLength, charsNum));
     }
+
+    template<typename T>
+    void number_set_init(size_t size, std::set<T> *mySet) {
+        for (int i = 0; i < size; ++i) {
+            mySet->insert(random());
+        }
+    }
+
+    template void number_set_init<uint32_t>(size_t size, std::set<uint32_t> *mySet);
+
+    template void number_set_init<uint64_t>(size_t size, std::set<uint64_t> *mySet);
+
 }

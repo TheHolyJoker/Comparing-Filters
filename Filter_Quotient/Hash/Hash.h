@@ -37,6 +37,8 @@ namespace QF_Hash {
 
         uint32_t hash(const string *elementP) const;
 
+        uint32_t hash(uint32_t el);
+
         uint32_t dataHash(const string *elementP) const;
 
         /**

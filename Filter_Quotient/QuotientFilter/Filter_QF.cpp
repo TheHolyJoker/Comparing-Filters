@@ -18,6 +18,18 @@ KEY_TYPE Filter_QF::insert(const string *s) {
     return KEY_TYPE(qIndex, tempVec);
 }
 
+template<typename P>
+auto Filter_QF::insert_int(P x) -> KEY_TYPE {
+    size_t qIndex;
+    BLOCK_TYPE dataArray[bf.defaultSlotsPerElement];
+    strToData(x, &qIndex, dataArray);
+
+    if (!bf.insert(qIndex, dataArray))
+        return KEY_TYPE();
+    vector<BLOCK_TYPE> tempVec(dataArray, dataArray + bf.defaultSlotsPerElement);
+    return KEY_TYPE(qIndex, tempVec);
+}
+
 int Filter_QF::lookup(const string *s, size_t *fpIndex) {
     size_t qIndex;
     BLOCK_TYPE dataArray[bf.defaultSlotsPerElement];
@@ -30,6 +42,14 @@ auto Filter_QF::lookup(const string *s) -> int {
     return lookup(s, &fpIndex);
 }
 
+template<typename P>
+auto Filter_QF::lookup_int(P x) -> int {
+    std::size_t fpIndex = -1;
+    size_t qIndex;
+    BLOCK_TYPE dataArray[bf.defaultSlotsPerElement];
+    strToData(x, &qIndex, dataArray);
+    return bf.lookup(qIndex, dataArray, &fpIndex);
+}
 
 KEY_TYPE Filter_QF::strToKey(const string *s) {
     size_t qIndex;
@@ -41,9 +61,10 @@ KEY_TYPE Filter_QF::strToKey(const string *s) {
 
 void Filter_QF::strToData(const string *s, size_t *qIndex, BLOCK_TYPE *dataArray) {
     if (bf.defaultSlotsPerElement == 1) {
-        auto tempVal = uint32_t(indexHash.hash(s) % SL(q + r));
+        //todo validate change here.
+        auto tempVal = uint32_t(indexHash.hash(s) & MASK(q + r));
         *qIndex = tempVal >> r;
-        *dataArray = BLOCK_TYPE(tempVal % SL(r));
+        *dataArray = BLOCK_TYPE(tempVal & MASK(r));
         return;
     }
     *qIndex = indexHash.hash(s) >> (BLOCK_SIZE - q);
@@ -54,9 +75,20 @@ void Filter_QF::strToData(const string *s, size_t *qIndex, BLOCK_TYPE *dataArray
     bf.compareHelper(dataArray, bf.defaultSlotsPerElement);
 }
 
+template<typename P>
+void Filter_QF::strToData(P x, size_t *qIndex, uint32_t *dataArray) {
+    auto tempVal = uint32_t(indexHash.hash(x) & MASK(q + r));
+    *qIndex = tempVal >> r;
+    *dataArray = BLOCK_TYPE(tempVal & MASK(r));
+}
+
 void Filter_QF::setFP(size_t qIndex) {
     bf.setFP(qIndex);
 }
 
 
+template
+auto Filter_QF::insert_int<uint32_t>(uint32_t x) -> KEY_TYPE;
 
+template
+auto Filter_QF::lookup_int<uint32_t>(uint32_t x) -> int;

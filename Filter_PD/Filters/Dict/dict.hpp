@@ -32,15 +32,34 @@ public:
     auto lookup(const string *s) -> bool;
 
     void insert(const string *s);
+
     void insert_to_spare_without_pop(S_TYPE hash_val);
 
     void insert_to_spare_with_pop(S_TYPE hash_val);
 
     void remove(const string *s);
 
+    template<typename P>
+    auto lookup_int(P x) -> bool;
+
+    template<typename P>
+    void insert_int(P x);
+
+    template<typename P>
+    void remove_int(P x);
+
+
     void get_info();
 
 private:
+
+
+    bool lookup_helper(S_TYPE hash_val);
+
+    void insert_helper(S_TYPE hash_val);
+
+    void remove_helper(S_TYPE hash_val);
+
     void insert_full_PD_helper(S_TYPE hash_val, size_t pd_index, uint32_t quot, uint32_t r);
 
     void insert_to_spare(S_TYPE y);
@@ -60,11 +79,9 @@ private:
     auto single_pop_attempt(S_TYPE temp_el, S_TYPE counter) -> bool;
 
 
-
     auto pop_attempt(string *s) -> S_TYPE *;
 
     auto pop_attempt_by_bucket(size_t bucket_index) -> S_TYPE *;
-
 
 
     auto pop_attempt_with_insertion_by_bucket(S_TYPE hash_val, size_t bucket_index) -> bool;
@@ -78,6 +95,11 @@ private:
 
     inline auto wrap_hash(const string *s) -> S_TYPE {
         return my_hash(s, HASH_SEED) & MASK(sparse_element_length);
+    }
+
+    template<typename P>
+    inline auto wrap_hash(P x) -> S_TYPE {
+        return my_hash(x, HASH_SEED) & MASK(sparse_element_length);
     }
 
     inline void wrap_split(const string *s, size_t *pd_index, D_TYPE *q, D_TYPE *r) {
@@ -103,8 +125,8 @@ static auto get_max_elements_in_level2(size_t number_of_pd, size_t single_pd_cap
 
 static auto get_spare_max_capacity(size_t dict_max_capacity, double level1_load_factor) -> size_t;
 
-typedef dict<cg_PD,hash_table<uint32_t>> dict32;
-typedef dict<cg_PD,hash_table<uint32_t>> dict64;
+typedef dict<cg_PD, hash_table<uint32_t>> dict32;
+typedef dict<cg_PD, hash_table<uint32_t>> dict64;
 
 
 #endif //CLION_CODE_DICT_HPP

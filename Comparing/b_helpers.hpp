@@ -17,9 +17,13 @@
 #include <iomanip>
 #include <cassert>
 
-namespace name_compare  {
+namespace name_compare {
     auto rand_string(int minLength, int charsNum, int numOfDiffLength = 8) -> std::string;
 
     void set_init(size_t size, std::set<std::string> *mySet, int minLength = 8, int charsNum = 32);
+
+    template<typename T>
+    void number_set_init(size_t size, std::set<T> *mySet);
+
 }
 #endif //FILTER_COMPARISON_B_HELPERS_HPP

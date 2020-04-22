@@ -285,7 +285,9 @@ private:
 
     auto decrease_counter(size_t table_index) -> counter_status;
 
+    auto safe_get_distinct_capacity() -> size_t;
 
+    auto safe_get_total_capacity() -> size_t;
 };
 
 

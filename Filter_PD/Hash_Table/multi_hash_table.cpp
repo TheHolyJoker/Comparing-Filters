@@ -118,6 +118,11 @@ void multi_hash_table<T>::insert_new(const T y) {
         cuckoo_swap(&hold, &bucket_index);
     }
 
+    const size_t var_num = 3;
+    string names[var_num] = {"table_size", "distinct_capacity", "total_capacity"};
+    std::size_t values[var_num] = {table_size, safe_get_distinct_capacity(), safe_get_total_capacity()};
+    table_print(var_num, names, values);
+
     assert(false);
 }
 
@@ -264,11 +269,11 @@ multi_hash_table<T>::get_element_with_counter_by_bucket_index_and_location(size_
 
 template<typename T>
 auto multi_hash_table<T>::get_counter_by_table_index(size_t table_index) -> size_t {
-    if (MHT_DB_MODE1)
+    if (MHT_DB_MODE1) {
         assert(is_occupied(table_index));
-    auto res = table[table_index] >> element_size;
-    if (MHT_DB_MODE1)
+        auto res = table[table_index] >> element_size;
         assert (res <= MASK(counter_size));
+    }
     return table[table_index] >> element_size;
 }
 
@@ -385,8 +390,8 @@ auto multi_hash_table<T>::increase_counter(size_t table_index) -> counter_status
         // Different solution: Ignoring this insertion.
         return inc_overflow;
     }
-    auto prev_val = table[table_index];
-    auto new_val = ((counter + 1) << element_size) | (table_index & MASK(element_size));
+//    auto prev_val = table[table_index];
+//    auto new_val = ((counter + 1) << element_size) | (table_index & MASK(element_size));
     table[table_index] = ((counter + 1) << element_size) | (table_index & MASK(element_size));
     if (MHT_DB_MODE1)
         assert(is_occupied(table_index));
@@ -493,6 +498,26 @@ auto multi_hash_table<T>::get_hash_buckets(T x) -> std::tuple<size_t, size_t> {
     size_t b1 = (hashint(x)) % number_of_buckets_in_each_table;
     size_t b2 = (hashint2(x) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
     return std::make_tuple(b1, b2);
+}
+
+template<typename T>
+auto multi_hash_table<T>::safe_get_distinct_capacity() -> size_t {
+    size_t counter = 0;
+    for (int i = 0; i < table_size; ++i) {
+        if (is_occupied(table[i])) ++counter;
+    }
+    return counter;
+
+}
+
+template<typename T>
+auto multi_hash_table<T>::safe_get_total_capacity() -> size_t {
+    size_t counter = 0;
+    for (int i = 0; i < table_size; ++i) {
+        if (is_occupied(table[i]))
+            counter += get_counter_by_table_index(i);
+    }
+    return counter;
 }
 
 

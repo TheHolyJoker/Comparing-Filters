@@ -152,11 +152,11 @@ add_executable(Filter_Comparison
         Filter_Quotient/QuotientFilter/Filter_QF.h
         Filter_Quotient/Tests/DBtests.cpp
         Filter_Quotient/Tests/DBtests.h
-#        Filter_Quotient/main.cpp
+        #        Filter_Quotient/main.cpp
         main.cpp
 
         Shared_files/MurmurHash3.h Shared_files/MurmurHash3.cpp
         #        main.cpp Comparing/benchmarking_filters.cpp Comparing/benchmarking_filters.hpp Comparing/b_helpers.cpp Comparing/b_helpers.hpp)
-        )
+        Comparing/benchmark_integer.cpp Comparing/benchmark_integer.hpp)
 
 #target_link_libraries(Clion_Code cuckoofilter)

@@ -24,7 +24,14 @@ public:
 
     auto insert(const string *s) -> KEY_TYPE;
 
+
+    template<typename P>
+    auto insert_int(P x) -> KEY_TYPE;
+
     auto lookup(const string *s, size_t *fpIndex) -> int;
+
+    template<typename P>
+    auto lookup_int(P x) -> int;
 
     auto lookup(const string *s) -> int;
 
@@ -35,6 +42,8 @@ public:
 private:
     void strToData(const string *s, size_t *qIndex, BLOCK_TYPE *dataArray);
 
+    template<typename P>
+    void strToData(P x, size_t *qIndex, BLOCK_TYPE *dataArray);
 };
 
 
