@@ -86,7 +86,7 @@ inline uint32_t hashint2(uint32_t a) {
     a ^= (a >> 6);
     a += ~(a << 11);
     a ^= (a >> 16);
-    return a
+    return a;
 }
 /*
  * Robert Jenkins' 96 bit Mix Function

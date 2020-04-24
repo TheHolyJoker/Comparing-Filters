@@ -631,13 +631,13 @@ template
 class multi_dict<CPD_validator, multi_hash_table<uint64_t>, uint64_t>;
 
 
-template void multi_dict64::remove_int<uint32_t>(uint32_t x);
+template void multi_dict64::remove_int<uint64_t>(uint64_t x);
 
-template void multi_dict64::insert_int<uint32_t>(uint32_t x);
+template void multi_dict64::insert_int<uint64_t>(uint64_t x);
 
-template auto multi_dict64::lookup_int<uint32_t>(uint32_t x) -> bool;
+template auto multi_dict64::lookup_int<uint64_t>(uint64_t x) -> bool;
 
-template auto multi_dict64::lookup_multi_int<uint32_t>(uint32_t x) -> size_t;
+template auto multi_dict64::lookup_multi_int<uint64_t>(uint64_t x) -> size_t;
 
 
 //template

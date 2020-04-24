@@ -23,7 +23,11 @@ namespace name_compare {
     void set_init(size_t size, std::set<std::string> *mySet, int minLength = 8, int charsNum = 32);
 
     template<typename T>
-    void number_set_init(size_t size, std::set<T> *mySet);
+    void set_init(size_t size, std::set<T> *mySet);
+
+    template<typename T>
+    void multiset_init(size_t size, std::multiset<T> *mySet, size_t universe_size);
+
 
 }
 #endif //FILTER_COMPARISON_B_HELPERS_HPP
