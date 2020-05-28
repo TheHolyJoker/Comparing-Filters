@@ -6,7 +6,7 @@
 #include "PD.h"
 #include "hash_table.hpp"
 
-#define DICT_DB_MODE0 (true)
+#define DICT_DB_MODE0 (false)
 #define DICT_DB_MODE1 (true & DICT_DB_MODE0)
 #define DICT_DB_MODE2 (true & DICT_DB_MODE1)
 
@@ -166,7 +166,7 @@ public:
 private:
 
 
-    bool lookup_helper(S_TYPE hash_val) const {
+    inline bool lookup_helper(S_TYPE hash_val) const {
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
@@ -175,7 +175,7 @@ private:
         return spare->find(hash_val & MASK(sparse_element_length));
     }
 
-    void insert_helper(S_TYPE hash_val) {
+    inline void insert_helper(S_TYPE hash_val) {
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
@@ -188,7 +188,7 @@ private:
 
     }
 
-    void remove_helper(S_TYPE hash_val) {
+    inline void remove_helper(S_TYPE hash_val) {
         if (DICT_DB_MODE2)
             assert (lookup_helper(hash_val));
         size_t pd_index = -1;

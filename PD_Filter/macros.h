@@ -33,7 +33,7 @@
 #define HASH_SEED (127)
 
 ////Debug macros
-#define DB (1)
+#define DB (0)
 #define DB_PRINT (0)
 
 

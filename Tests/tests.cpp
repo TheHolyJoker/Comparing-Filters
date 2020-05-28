@@ -140,7 +140,7 @@ void print_round_header() {
 
 void print_single_round(size_t var_num, string *var_names, const size_t *values, const size_t *divisors) {
     bool is_last_round = values[0] == values[1];
-    bool is_round_contain_two_digits = (values[0] >9);
+    bool is_round_contain_two_digits = (values[0] > 9);
     size_t max_length = 24;
 //    for (int i = 0; i < var_num; ++i) {
 //        max_length = max(var_names[i].length(), max_length);
@@ -175,7 +175,7 @@ void print_single_round(size_t var_num, string *var_names, const size_t *values,
     std::cout << std::string(6, ' ') << sep << '\n';
 
     if (is_last_round)
-        std::cout  << line << '\n';
+        std::cout << line << '\n';
 
 //    << line << endl;
 
@@ -243,7 +243,7 @@ auto CF_rates_wrapper<s_dict32>(size_t filter_max_capacity, size_t lookup_reps,
 
 
 
-int main() {
+int main(int argc, char **argv) {
     std::cout << "Hello" << std::endl;
 /*
 
@@ -267,16 +267,52 @@ int main() {
 
 //    using Table_bloom = FilterAPI<simple_bloom>;
 */
-    ulong shift = 15u;
-    size_t reps = 1u << (shift + 3u), max_distinct_capacity = 1u << shift;
+//    ulong shift = 15u;
+//    size_t reps = 1u << (shift + 3u), max_distinct_capacity = 1u << shift;
+//    size_t remainder_length = BITS_PER_ELEMENT_MACRO;
+//    size_t l1_counter_size = 3, l2_counter_size = 7;
+//    double l1_LF = 0.95, l2_LF = 0.65;
+//    bool cond;
+
+    ulong shift = 20u;
+    size_t reps = 1u << (22u), max_distinct_capacity = 1u << shift;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
+    std::size_t bench_precision = 20;
     size_t l1_counter_size = 3, l2_counter_size = 7;
     double l1_LF = 0.95, l2_LF = 0.65;
-    bool cond;
+    cout <<" argc is :" << argc;
 
+//    benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+    int filter_indicator;
+    if (argc == 1) filter_indicator == 0;
+    else if (argc == 2){
+        char *end;
+        filter_indicator = strtol(argv[1], &end, 10);
+        cout <<" filter_indicator is:" << filter_indicator;
+    }
+
+    switch (filter_indicator) {
+        case 0:
+            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+                    max_distinct_capacity, reps, remainder_length, bench_precision);
+            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        case 1:
+            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        case 2:
+            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+                    max_distinct_capacity, reps, remainder_length, bench_precision);
+        case 3:
+            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        case 4:
+            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        default:
+            break;
+    }
     /**Validation of the filters */
-    cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
-    assert(cond);
+//    cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+//    assert(cond);
     /*cond = w_validate_filter<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
             max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
     assert(cond);
@@ -288,16 +324,16 @@ int main() {
 */
     /**Benchmarking of the filters */
 
-    shift = 20u;
-    reps = 1u << (22u), max_distinct_capacity = 1u << shift;
-    std::size_t bench_precision = 20;
-    benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+/*
 
-    benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+    benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(max_distinct_capacity,
+                                                                                              reps, remainder_length,
+                                                                                              bench_precision);
 
     benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
 
     benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+*/
 
 
     return 0;

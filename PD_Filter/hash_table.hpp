@@ -18,7 +18,7 @@
 //#define FREE_IND (0x80000000)
 //#define IS_FREE(x) ((x & MASK(31u)) == 0)
 
-#define HT_DB_MODE0 (true)
+#define HT_DB_MODE0 (false)
 #define HT_DB_MODE1 (HT_DB_MODE0 & true)
 #define HT_DB_MODE2 (HT_DB_MODE1 & true)
 
@@ -78,7 +78,7 @@ public:
 //    hash_table(size_t )
 //    hash_table(size_t number_of_pd, size_t quotient_range, size_t single_pd_capacity, size_t remainder_length);
 
-    auto find(T x) -> bool const {
+    auto find(T x) const -> bool {
         if (HT_DB_MODE1)
             assert((x & MASK(element_length)) == x);
 
@@ -420,7 +420,7 @@ public:
         return get_bucket_capacity(bucket_index) == bucket_size;
     }
 
-    inline void my_hash(T x, uint32_t *b1, uint32_t *b2) {
+    inline void my_hash(T x, uint32_t *b1, uint32_t *b2) const {
         size_t number_of_buckets_in_each_table = (table_size / bucket_size) / 2;
         *b1 = (s_pd_filter::hashint(x)) % number_of_buckets_in_each_table;
         *b2 = (s_pd_filter::hashint2(x) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
@@ -442,7 +442,7 @@ private:
         assert(false);
     }
 
-    auto find_helper(T x, size_t bucket_index) -> bool const {
+    inline auto find_helper(T x, size_t bucket_index) const -> bool {
         auto table_index = bucket_index * bucket_size;
         for (int i = 0; i < bucket_size; ++i) {
             if (is_equal(table[table_index + i], x))
@@ -485,7 +485,7 @@ private:
      * @param without_counter
      * @return compares x,y first "element length" bits.
      */
-    auto is_equal(T with_counter, T without_counter) -> bool const {
+    auto is_equal(T with_counter, T without_counter) const-> bool  {
         T after_mask = without_counter & MASK(element_length);
         assert((without_counter & MASK(element_length)) == without_counter);
         return (with_counter & MASK(element_length)) == without_counter;

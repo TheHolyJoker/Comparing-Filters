@@ -239,6 +239,43 @@ struct FilterAPI<dict<PD, TableType, itemType, uint32_t>> {
     }
 };
 
+/*
+template<typename itemType>
+struct FilterAPI<set<itemType>> {
+//    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
+//    using Table = set<itemType>;
+    static set<itemType> ConstructFromAddCount(size_t add_count) { return set<itemType>(add_count); }
+
+    static void Add(itemType key, set<itemType> *table) {
+        table->insert(key);
+    }
+
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, set<itemType> *table) {
+        table->insert(keys);
+//        for (int i = start; i < end; ++i) {
+//            table->insert(keys[i]);
+//        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        table->insert(keys);
+//        for (int i = 0; i < keys.size(); ++i) {
+//            table->insert(keys[i]);
+//        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
+        return table->lookup(key);
+    }
+    static string get_name() {
+        return "std::set";
+    }
+};*/
 
 
 
