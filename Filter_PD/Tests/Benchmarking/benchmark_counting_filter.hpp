@@ -6,7 +6,7 @@
 #define CLION_CODE_BENCHMARK_COUNTING_FILTER_HPP
 
 #include "benchmark_tests.h"
-#include "../Test_output_formatting/test_printer.hpp"
+#include "../../../Comparing/Test_output_formatting/test_printer.hpp"
 #include <tr1/type_traits> // C++03, use std::tr1
 
 

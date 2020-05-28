@@ -5,14 +5,14 @@
 #ifndef FILTER_COMPARISON_BENCHMARK_INTEGER_HPP
 #define FILTER_COMPARISON_BENCHMARK_INTEGER_HPP
 
-#include "../Filter_PD/Tests/Test_output_formatting/test_printer.hpp"
+#include "Test_output_formatting/test_printer.hpp"
 #include "b_helpers.hpp"
 #include "../Filter_BF/New_BF/General_BF/GeneralBF.h"
 #include "../Filter_Quotient/QuotientFilter/Filter_QF.h"
 #include "../Filter_PD/Filters/Dict/multi_dict.hpp"
 #include "../Filter_PD/Filters/Dict/dict.hpp"
-#include "benchmark_integer.hpp"
-#include <cuckoofilter/cuckoofilter.h>
+#include "/usr/local/include/cuckoofilter/cuckoofilter.h"
+
 
 #define CUCKOO_BITS_PER_ELEMENTS 4
 
@@ -22,8 +22,10 @@
 
 //typdef <cuckoofilter::CuckooFilter,uint32_t> basic_cf<uinuint32_t ,CUCKOO_BITS_PER_ELEMENTS>;
 //typdef <cuckoofilter::CuckooFilter,uint32_t> <uint32_t, CUCKOO_BITS_PER_ELEMENTS> basic_cf;
-typedef cuckoofilter::CuckooFilter<uint32_t, CUCKOO_BITS_PER_ELEMENTS> basic_cf;
+//typedef cuckoofilter::CuckooFilter<uint32_t, CUCKOO_BITS_PER_ELEMENTS> basic_cf;
 //typdef
+
+typedef cuckoofilter::CuckooFilter<uint32_t, 8> basic_cf;
 
 namespace name_compare {
     template<class D, typename T>

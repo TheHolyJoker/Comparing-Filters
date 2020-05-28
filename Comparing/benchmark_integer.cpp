@@ -4,10 +4,6 @@
 
 #include "benchmark_integer.hpp"
 
-//
-// Created by tomer on 4/18/20.
-//
-
 
 namespace name_compare {
     template<class D, typename T>
@@ -94,7 +90,7 @@ namespace name_compare {
         table_print_rates(var_num, names, values, divisors);
 
         return os;
-    }
+     }
 
 
     template<class D, typename T>
@@ -257,7 +253,7 @@ auto b_filter_wrapper<multi_dict64>(size_t filter_max_capacity, size_t lookup_re
 
     template<>
     auto
-    b_filter_wrapper_int<basic_cf, uint32_t>(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
+    b_filter_wrapper_int <basic_cf,uint32_t>(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
                                              size_t l1_counter_size,
                                              size_t l2_counter_size, double level1_load_factor,
                                              double level2_load_factor,

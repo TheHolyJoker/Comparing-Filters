@@ -1,3 +1,6 @@
+//#include "test_printer.hpp"
+
+/*
 //
 // Created by tomer on 4/12/20.
 //
@@ -5,7 +8,7 @@
 
 namespace name_compare {
 
-    void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t *divisors) {
+    void table_print_rates(size_t var_num, std::string *var_names, size_t *values, size_t *divisors) {
         size_t max_length = 0;
         for (int i = 0; i < var_num; ++i) {
             max_length = max(var_names[i].length(), max_length);
@@ -26,10 +29,12 @@ namespace name_compare {
 
         const size_t column_num = 4;
         string columns[column_num] = {"var_name", "ratio", "actual value", "divider"};
-        /*cout << std::setw(name_width) << "var_name" << sep;
+        */
+/*cout << std::setw(name_width) << "var_name" << sep;
         cout << std::setw(name_width) << "ratio " << sep;
         cout << std::setw(name_width) << "actual value" << sep;
-        cout << std::setw(name_width) << "divider" << sep;*/
+        cout << std::setw(name_width) << "divider" << sep;*//*
+
         for (const auto &column : columns) {
             cout << std::setw(name_width) << column << sep;
         }
@@ -50,7 +55,8 @@ namespace name_compare {
 
     void
     table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_count, size_t mid_load_FP_count) {
-        /*const auto var_num = 9;
+        */
+/*const auto var_num = 9;
             string var_names[var_num] = {"start", "start_array_index", "start_bit_pos",
                                          "end", "end_array_index", "end_bit_pos",
                                          "new_end", "new_end_array_index", "new_end_bit_pos"};
@@ -61,7 +67,8 @@ namespace name_compare {
             size_t max_length = 0;
             for (auto & var_name : var_names) {
                 max_length = max(var_name.length(), max_length);
-            }*/
+            }*//*
+
         size_t var_num = 3;
         string names[3] = {"expected_FP_count", "high_load_FP_count", "mid_load_FP_count"};
         size_t values[3] = {expected_FP_count, high_load_FP_count, mid_load_FP_count};
@@ -95,3 +102,4 @@ namespace name_compare {
 }
 
 
+*/

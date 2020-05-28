@@ -1,3 +1,4 @@
+/*
 //
 // Created by tomer on 4/12/20.
 //
@@ -17,3 +18,4 @@ namespace name_compare {
 
 }
 #endif //CLION_CODE_TEST_PRINTER_HPP
+*/

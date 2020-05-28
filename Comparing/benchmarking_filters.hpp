@@ -9,7 +9,7 @@
 
 //#include "../Filter_PD/Tests/Benchmarking/benchmark_tests.h"
 //#include "../Filter_PD/Tests/Benchmarking/benchmark_counting_filter.hpp"
-#include "../Filter_PD/Tests/Test_output_formatting/test_printer.hpp"
+#include "Test_output_formatting/test_printer.hpp"
 #include "b_helpers.hpp"
 #include "../Filter_BF/New_BF/General_BF/GeneralBF.h"
 #include "../Filter_Quotient/QuotientFilter/Filter_QF.h"

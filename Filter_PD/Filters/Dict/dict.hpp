@@ -126,7 +126,7 @@ static auto get_max_elements_in_level2(size_t number_of_pd, size_t single_pd_cap
 static auto get_spare_max_capacity(size_t dict_max_capacity, double level1_load_factor) -> size_t;
 
 typedef dict<cg_PD, hash_table<uint32_t>> dict32;
-typedef dict<cg_PD, hash_table<uint32_t>> dict64;
+typedef dict<cg_PD, hash_table<uint64_t>> dict64;
 
 
 #endif //CLION_CODE_DICT_HPP

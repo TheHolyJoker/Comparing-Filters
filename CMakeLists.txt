@@ -20,6 +20,9 @@ add_executable(Filter_Comparison
         Comparing/benchmarking_filters.cpp
         Comparing/benchmarking_filters.hpp
 
+        Comparing/Test_output_formatting/test_printer.hpp
+        Comparing/Test_output_formatting/test_printer.cpp
+
         Filter_BF/New_BF/General_BF/GeneralBF.cpp
         Filter_BF/New_BF/General_BF/GeneralBF.h
         Filter_BF/New_BF/Grey_Box_Function_Dir/GreyBoxFunction.cpp
@@ -153,10 +156,22 @@ add_executable(Filter_Comparison
         Filter_Quotient/Tests/DBtests.cpp
         Filter_Quotient/Tests/DBtests.h
         #        Filter_Quotient/main.cpp
+
+#        Filter_Cuckoo/bitsutil.h
+#        Filter_Cuckoo/cuckoofilter.h
+#        Filter_Cuckoo/debug.h
+#        Filter_Cuckoo/hashutil.cc
+#        Filter_Cuckoo/printutil.cc
+#        Filter_Cuckoo/printutil.h
+#        Filter_Cuckoo/simd-block.h
+#        Filter_Cuckoo/singletable.h
+#        Filter_Cuckoo/packedtable.h
+#        Filter_Cuckoo/permencoding.h
+
         main.cpp
 
         Shared_files/MurmurHash3.h Shared_files/MurmurHash3.cpp
         #        main.cpp Comparing/benchmarking_filters.cpp Comparing/benchmarking_filters.hpp Comparing/b_helpers.cpp Comparing/b_helpers.hpp)
         Comparing/benchmark_integer.cpp Comparing/benchmark_integer.hpp Comparing/benchmarking_cuckoo_filter.cpp Comparing/benchmarking_cuckoo_filter.hpp Comparing/benchmark_using_multisets.cpp Comparing/benchmark_using_multisets.hpp)
 
-#target_link_libraries(Clion_Code cuckoofilter)
+target_link_libraries(Filter_Comparison cuckoofilter)
