@@ -1,3 +1,0 @@
-/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Pocket_Dictionary/PD_Code/Clion_Code/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Pocket_Dictionary/PD_Code/Clion_Code/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Pocket_Dictionary/PD_Code/Clion_Code/cmake-build-debug/CMakeFiles/Clion_Code.dir

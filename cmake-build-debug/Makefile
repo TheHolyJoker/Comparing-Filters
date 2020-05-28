@@ -39,19 +39,19 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /snap/clion/111/bin/cmake/linux/bin/cmake
+CMAKE_COMMAND = /snap/clion/112/bin/cmake/linux/bin/cmake
 
 # The command to remove a file.
-RM = /snap/clion/111/bin/cmake/linux/bin/cmake -E remove -f
+RM = /snap/clion/112/bin/cmake/linux/bin/cmake -E remove -f
 
 # Escaping for special characters.
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison
+CMAKE_SOURCE_DIR = /home/tomer/Desktop/Edu/4th/Sem1/Workshop/Comparing_Filters
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug
+CMAKE_BINARY_DIR = /home/tomer/Desktop/Edu/4th/Sem1/Workshop/Comparing_Filters/cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -59,7 +59,7 @@ CMAKE_BINARY_DIR = /home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Fi
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	/snap/clion/111/bin/cmake/linux/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	/snap/clion/112/bin/cmake/linux/bin/cmake -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : rebuild_cache
 
 # Special rule for the target rebuild_cache
@@ -70,7 +70,7 @@ rebuild_cache/fast: rebuild_cache
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/snap/clion/111/bin/cmake/linux/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+	/snap/clion/112/bin/cmake/linux/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/CMakeFiles /home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tomer/Desktop/Edu/4th/Sem1/Workshop/Comparing_Filters/cmake-build-debug/CMakeFiles /home/tomer/Desktop/Edu/4th/Sem1/Workshop/Comparing_Filters/cmake-build-debug/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/tomer/Desktop/Edu/4th/Sem1/Workshop/Comparing_Filters/cmake-build-debug/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -123,6 +123,33 @@ Filter_Comparison/fast:
 	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/build
 .PHONY : Filter_Comparison/fast
 
+Comparing/Test_output_formatting/test_printer.o: Comparing/Test_output_formatting/test_printer.cpp.o
+
+.PHONY : Comparing/Test_output_formatting/test_printer.o
+
+# target to build an object file
+Comparing/Test_output_formatting/test_printer.cpp.o:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/Test_output_formatting/test_printer.cpp.o
+.PHONY : Comparing/Test_output_formatting/test_printer.cpp.o
+
+Comparing/Test_output_formatting/test_printer.i: Comparing/Test_output_formatting/test_printer.cpp.i
+
+.PHONY : Comparing/Test_output_formatting/test_printer.i
+
+# target to preprocess a source file
+Comparing/Test_output_formatting/test_printer.cpp.i:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/Test_output_formatting/test_printer.cpp.i
+.PHONY : Comparing/Test_output_formatting/test_printer.cpp.i
+
+Comparing/Test_output_formatting/test_printer.s: Comparing/Test_output_formatting/test_printer.cpp.s
+
+.PHONY : Comparing/Test_output_formatting/test_printer.s
+
+# target to generate assembly for a file
+Comparing/Test_output_formatting/test_printer.cpp.s:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/Test_output_formatting/test_printer.cpp.s
+.PHONY : Comparing/Test_output_formatting/test_printer.cpp.s
+
 Comparing/b_helpers.o: Comparing/b_helpers.cpp.o
 
 .PHONY : Comparing/b_helpers.o
@@ -149,6 +176,87 @@ Comparing/b_helpers.s: Comparing/b_helpers.cpp.s
 Comparing/b_helpers.cpp.s:
 	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/b_helpers.cpp.s
 .PHONY : Comparing/b_helpers.cpp.s
+
+Comparing/benchmark_integer.o: Comparing/benchmark_integer.cpp.o
+
+.PHONY : Comparing/benchmark_integer.o
+
+# target to build an object file
+Comparing/benchmark_integer.cpp.o:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmark_integer.cpp.o
+.PHONY : Comparing/benchmark_integer.cpp.o
+
+Comparing/benchmark_integer.i: Comparing/benchmark_integer.cpp.i
+
+.PHONY : Comparing/benchmark_integer.i
+
+# target to preprocess a source file
+Comparing/benchmark_integer.cpp.i:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmark_integer.cpp.i
+.PHONY : Comparing/benchmark_integer.cpp.i
+
+Comparing/benchmark_integer.s: Comparing/benchmark_integer.cpp.s
+
+.PHONY : Comparing/benchmark_integer.s
+
+# target to generate assembly for a file
+Comparing/benchmark_integer.cpp.s:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmark_integer.cpp.s
+.PHONY : Comparing/benchmark_integer.cpp.s
+
+Comparing/benchmark_using_multisets.o: Comparing/benchmark_using_multisets.cpp.o
+
+.PHONY : Comparing/benchmark_using_multisets.o
+
+# target to build an object file
+Comparing/benchmark_using_multisets.cpp.o:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmark_using_multisets.cpp.o
+.PHONY : Comparing/benchmark_using_multisets.cpp.o
+
+Comparing/benchmark_using_multisets.i: Comparing/benchmark_using_multisets.cpp.i
+
+.PHONY : Comparing/benchmark_using_multisets.i
+
+# target to preprocess a source file
+Comparing/benchmark_using_multisets.cpp.i:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmark_using_multisets.cpp.i
+.PHONY : Comparing/benchmark_using_multisets.cpp.i
+
+Comparing/benchmark_using_multisets.s: Comparing/benchmark_using_multisets.cpp.s
+
+.PHONY : Comparing/benchmark_using_multisets.s
+
+# target to generate assembly for a file
+Comparing/benchmark_using_multisets.cpp.s:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmark_using_multisets.cpp.s
+.PHONY : Comparing/benchmark_using_multisets.cpp.s
+
+Comparing/benchmarking_cuckoo_filter.o: Comparing/benchmarking_cuckoo_filter.cpp.o
+
+.PHONY : Comparing/benchmarking_cuckoo_filter.o
+
+# target to build an object file
+Comparing/benchmarking_cuckoo_filter.cpp.o:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmarking_cuckoo_filter.cpp.o
+.PHONY : Comparing/benchmarking_cuckoo_filter.cpp.o
+
+Comparing/benchmarking_cuckoo_filter.i: Comparing/benchmarking_cuckoo_filter.cpp.i
+
+.PHONY : Comparing/benchmarking_cuckoo_filter.i
+
+# target to preprocess a source file
+Comparing/benchmarking_cuckoo_filter.cpp.i:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmarking_cuckoo_filter.cpp.i
+.PHONY : Comparing/benchmarking_cuckoo_filter.cpp.i
+
+Comparing/benchmarking_cuckoo_filter.s: Comparing/benchmarking_cuckoo_filter.cpp.s
+
+.PHONY : Comparing/benchmarking_cuckoo_filter.s
+
+# target to generate assembly for a file
+Comparing/benchmarking_cuckoo_filter.cpp.s:
+	$(MAKE) -f CMakeFiles/Filter_Comparison.dir/build.make CMakeFiles/Filter_Comparison.dir/Comparing/benchmarking_cuckoo_filter.cpp.s
+.PHONY : Comparing/benchmarking_cuckoo_filter.cpp.s
 
 Comparing/benchmarking_filters.o: Comparing/benchmarking_filters.cpp.o
 
@@ -1725,9 +1833,21 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... Filter_Comparison"
+	@echo "... Comparing/Test_output_formatting/test_printer.o"
+	@echo "... Comparing/Test_output_formatting/test_printer.i"
+	@echo "... Comparing/Test_output_formatting/test_printer.s"
 	@echo "... Comparing/b_helpers.o"
 	@echo "... Comparing/b_helpers.i"
 	@echo "... Comparing/b_helpers.s"
+	@echo "... Comparing/benchmark_integer.o"
+	@echo "... Comparing/benchmark_integer.i"
+	@echo "... Comparing/benchmark_integer.s"
+	@echo "... Comparing/benchmark_using_multisets.o"
+	@echo "... Comparing/benchmark_using_multisets.i"
+	@echo "... Comparing/benchmark_using_multisets.s"
+	@echo "... Comparing/benchmarking_cuckoo_filter.o"
+	@echo "... Comparing/benchmarking_cuckoo_filter.i"
+	@echo "... Comparing/benchmarking_cuckoo_filter.s"
 	@echo "... Comparing/benchmarking_filters.o"
 	@echo "... Comparing/benchmarking_filters.i"
 	@echo "... Comparing/benchmarking_filters.s"

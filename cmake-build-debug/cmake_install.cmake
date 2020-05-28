@@ -1,4 +1,4 @@
-# Install script for directory: /home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison
+# Install script for directory: /home/tomer/Desktop/Edu/4th/Sem1/Workshop/Comparing_Filters
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Filters_Comparison/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/tomer/Desktop/Edu/4th/Sem1/Workshop/Comparing_Filters/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

@@ -1,3 +1,0 @@
-/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Old_Code/Adaptive-Bloom-filter/git_clean_code/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Old_Code/Adaptive-Bloom-filter/git_clean_code/cmake-build-debug/CMakeFiles/newQF.dir
-/home/tomer/Desktop/Fourth_Year/Second_Semester/NewProject/Old_Code/Adaptive-Bloom-filter/git_clean_code/cmake-build-debug/CMakeFiles/edit_cache.dir
