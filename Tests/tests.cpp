@@ -274,13 +274,13 @@ int main(int argc, char **argv) {
 //    double l1_LF = 0.95, l2_LF = 0.65;
 //    bool cond;
 
-    ulong shift = 20u;
+    ulong shift = 16u;
     size_t reps = 1u << (22u), max_distinct_capacity = 1u << shift;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
     std::size_t bench_precision = 20;
     size_t l1_counter_size = 3, l2_counter_size = 7;
     double l1_LF = 0.95, l2_LF = 0.65;
-    cout <<" argc is :" << argc;
+//    cout <<" argc is :" << argc;
 
 //    benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
     int filter_indicator;
@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
     else if (argc == 2){
         char *end;
         filter_indicator = strtol(argv[1], &end, 10);
-        cout <<" filter_indicator is:" << filter_indicator;
+//        cout <<" filter_indicator is:" << filter_indicator;
     }
 
     switch (filter_indicator) {
@@ -298,6 +298,7 @@ int main(int argc, char **argv) {
                     max_distinct_capacity, reps, remainder_length, bench_precision);
             benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
             benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+            break;
         case 1:
             benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
         case 2:

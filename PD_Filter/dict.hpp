@@ -293,8 +293,9 @@ private:
         return s_pd_filter::hashint(x) & MASK(sparse_element_length);
     }
 
+//    auto wrap_hash(uint64_t x) const -> S_TYPE; {
 //    inline auto wrap_hash(uint64_t x) const -> S_TYPE {
-//        return s_pd_filter::my_hash(x, HASH_SEED) & MASK(sparse_element_length);
+//        return s_pd_filter::hashint3(x) & MASK(sparse_element_length);
 //    }
 
     inline auto wrap_hash(const string *s) const -> S_TYPE {

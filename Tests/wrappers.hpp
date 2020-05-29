@@ -244,7 +244,7 @@ template<typename itemType>
 struct FilterAPI<set<itemType>> {
 //    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
 //    using Table = set<itemType>;
-    static set<itemType> ConstructFromAddCount(size_t add_count) { return set<itemType>(add_count); }
+    static set<itemType> ConstructFromAddCount(size_t add_count) { return set<itemType>(); }
 
     static void Add(itemType key, set<itemType> *table) {
         table->insert(key);
@@ -275,8 +275,9 @@ struct FilterAPI<set<itemType>> {
     static string get_name() {
         return "std::set";
     }
-};*/
+};
 
+*/
 
 
 //typedef struct FilterAPI<bloomfilter::bloom<uint64_t, 8, false, HashUtil>> filter_api_bloom;

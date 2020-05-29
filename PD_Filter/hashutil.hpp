@@ -59,6 +59,24 @@ namespace s_pd_filter {
         return a;
     }
 
+    inline uint32_t hashint3( uint32_t a)
+    {
+        a = (a^0xdeadbeef) + (a<<4);
+        a = a ^ (a>>10);
+        a = a + (a<<7);
+        a = a ^ (a>>13);
+        return a;
+    }
+
+    inline uint32_t hashint3( uint64_t a)
+    {
+        a = (a^0xdeadbeef) + (a<<4);
+        a = a ^ (a>>10);
+        a = a + (a<<7);
+        a = a ^ (a>>13);
+        return a;
+    }
+
 
     inline uint32_t my_hash(const uint32_t el, uint32_t seed) {
         uint32_t a = 0, b = 0;
