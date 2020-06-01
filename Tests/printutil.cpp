@@ -109,7 +109,7 @@ void print_single_round(size_t var_num, const size_t *values, const size_t *divi
 // values for controlling format
     const uint32_t name_width = width;
     const std::string sep = " |";
-    const uint32_t total_width = (name_width + sep.size()) * var_num;
+    const uint32_t total_width = (name_width + sep.size()) * (var_num - 1);
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
 //    std::cout << line << '\n' << sep << left;
     std::cout << sep << left;

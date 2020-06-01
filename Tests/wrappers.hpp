@@ -148,7 +148,7 @@ struct FilterAPI<SimdBlockFilter<>> {
         throw std::runtime_error("Unsupported");
     }
     static string get_name() {
-        return "SimdBlockFIlter";
+        return "SimdBlockFilter";
     }
 };
 
