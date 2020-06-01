@@ -15,7 +15,7 @@ Currently benchmarking:
  Currently checking only insertions and lookups, in different loads.
  
  
- ##Usage
+ ## Usage
  '''
  git clone -b Simpler https://github.com/TheHolyJoker/Comparing_Filters.git
  cd Comparing_Filters
