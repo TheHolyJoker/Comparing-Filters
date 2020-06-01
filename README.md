@@ -16,7 +16,7 @@ Currently benchmarking:
  
  
  ## Usage
- '''
+ ```
  git clone -b Simpler https://github.com/TheHolyJoker/Comparing_Filters.git
  cd Comparing_Filters
  mkdir build
@@ -24,5 +24,5 @@ Currently benchmarking:
  cmake ..
  make
  ./Filters
- '''
+ ```
  
