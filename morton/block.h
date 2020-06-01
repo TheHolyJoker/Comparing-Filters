@@ -105,7 +105,7 @@ struct Block{ // Assuming block size is a multiple of atom_t's size in bytes
 
     // Templated version of the function below it
     // Note that like the version below it, it assumes that you only need to 
-    // read a single word of type T from _block_storage.
+    // read a single word of type slot_type from _block_storage.
     template<class T> // Set to type of desired read size
     inline void add_t(uint64_t raw_offset_bits, uint64_t field_width_bits, 
       uint64_t index, T item){

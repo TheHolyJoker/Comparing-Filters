@@ -25,9 +25,10 @@
 using namespace std;
 
 
-template<typename T>
+//template<typename slot_type, size_t bucket_size>
+template<typename slot_type>
 class hash_table {
-    T *table;
+    slot_type *table;
     const size_t table_size, max_capacity, element_length, bucket_size;
     size_t capacity;
     const double max_load_factor;
@@ -53,9 +54,9 @@ public:
             max_load_factor(max_load_factor), capacity(0),
             table_size(std::ceil(((double) max_capacity) / max_load_factor)), seed1(42), seed2(43),
             max_cuckoo_insert(0), cuckoo_insert_counter(0), max_capacity_reached(0) {
-        table = new T[table_size];
+        table = new slot_type[table_size];
         // The msb is indicator to whether the cell is free or not. (0 might be valid fingerprint)
-        assert(element_length < sizeof(T) * CHAR_BIT);
+        assert(element_length <= sizeof(slot_type) * CHAR_BIT);
 //    cout << "table_size is: " << table_size << endl;
         for (int i = 0; i < table_size; ++i) {
             table[i] = EMPTY;
@@ -78,7 +79,7 @@ public:
 //    hash_table(size_t )
 //    hash_table(size_t number_of_pd, size_t quotient_range, size_t single_pd_capacity, size_t remainder_length);
 
-    auto find(T x) const -> bool {
+    auto find(slot_type x) const -> bool {
         if (HT_DB_MODE1)
             assert((x & MASK(element_length)) == x);
 
@@ -89,7 +90,7 @@ public:
 
     }
 
-    void insert(T x) {
+    void insert(slot_type x) {
         if (HT_DB_MODE1)
             assert((x & MASK(element_length)) == x);
 //    assert(!find(x));
@@ -109,7 +110,7 @@ public:
         my_hash(x, &b1, &b2);
 
         if (insert_if_bucket_not_full(x, b2)) return;
-        T hold = x;
+        slot_type hold = x;
         size_t bucket_index = b1;
         cuckoo_insert_counter -= bucket_size;
         for (int i = 0; i < MAX_CUCKOO_LOOP; ++i) {
@@ -151,7 +152,7 @@ public:
  * @param bucket_index
  * @return
  */
-    auto insert_if_bucket_not_full(T x, size_t bucket_index) -> bool {
+    auto insert_if_bucket_not_full(slot_type x, size_t bucket_index) -> bool {
         if (HT_DB_MODE1)
             assert((x & MASK(element_length)) == x);
         auto table_index = bucket_index * bucket_size;
@@ -165,7 +166,7 @@ public:
         return false;
     }
 
-    void insert_by_table_index(T x, T table_index) {
+    void insert_by_table_index(slot_type x, slot_type table_index) {
         table[table_index] = x;
         capacity++;
     }
@@ -177,18 +178,18 @@ public:
  * @param location
  * table[bucket_index*bucket_size + location] = x;
  */
-    void insert_by_bucket_index_and_location(T x, size_t bucket_index, size_t location) {
+    void insert_by_bucket_index_and_location(slot_type x, size_t bucket_index, size_t location) {
         insert_by_table_index(x, bucket_index * bucket_size + location);
     }
 
-    void insert_by_slot_pointer(T x, T *p_slot) {
+    void insert_by_slot_pointer(slot_type x, slot_type *p_slot) {
         assert(false);
         *p_slot = x;
     }
 
-    void insert_without_counter(T x);
+    void insert_without_counter(slot_type x);
 
-    void remove(T x) {
+    void remove(slot_type x) {
 //    if (HT_DB_MODE2)
 //        assert(find(x));
         if (HT_DB_MODE0) {
@@ -208,16 +209,16 @@ public:
 
     }
 
-    void full_buckets_handler(T x, size_t b1, size_t b2) {
+    void full_buckets_handler(slot_type x, size_t b1, size_t b2) {
         assert(false);
 
-//    T *possible_free_slot = move_el_from_bucket_to_other(b1);
+//    slot_type *possible_free_slot = move_el_from_bucket_to_other(b1);
 
     }
 
-    void pop_attempt(T x);
+    void pop_attempt(slot_type x);
 
-    auto insert_single_cuckoo(T *hold, size_t *bucket_index, size_t cuckoo_counter) -> bool {
+    auto insert_single_cuckoo(slot_type *hold, size_t *bucket_index, size_t cuckoo_counter) -> bool {
         cuckoo_insert_counter += bucket_size;
         if (insert_if_bucket_not_full(*hold, *bucket_index)) {
             update_max_cuckoo_insert(cuckoo_counter);
@@ -255,7 +256,7 @@ public:
      * @param hold
      * @param bucket_index
      */
-    void cuckoo_swap(T *hold, size_t *bucket_index) {
+    void cuckoo_swap(slot_type *hold, size_t *bucket_index) {
         auto rand_table_index = (*bucket_index * bucket_size) + (random() % bucket_size);
         auto temp = table[rand_table_index];
 
@@ -277,7 +278,7 @@ public:
         }
     }
 
-    //void insert_with_pop_attempt(T x, vector<PDType> *pd_vec);
+    //void insert_with_pop_attempt(slot_type x, vector<PDType> *pd_vec);
 
 
     ////Getters
@@ -299,7 +300,7 @@ public:
         cout << "get_max_capacity_reached " << get_max_capacity_reached() << endl;
     }
 
-//    auto get_bucket_address(size_t bucket_index) -> T *;
+//    auto get_bucket_address(size_t bucket_index) -> slot_type *;
 
     auto get_table_size() const -> const size_t {
         return table_size;
@@ -345,7 +346,7 @@ public:
         for (int j = 0; j < bucket_size; ++j) {
             if (is_empty_by_index(table_index + j))
                 continue;
-            T x = table[table_index + j];
+            slot_type x = table[table_index + j];
             for (int i = j + 1; i < bucket_size; ++i) {
                 if (is_empty_by_index(table_index + i))
                     continue;
@@ -356,7 +357,7 @@ public:
         return true;
     }
 
-    auto find_table_location(T x) -> size_t {
+    auto find_table_location(slot_type x) -> size_t {
         uint32_t b1 = -1, b2 = -1;
         my_hash(x, &b1, &b2);
 
@@ -373,22 +374,22 @@ public:
      * @param table_index the index of table, in which the element is stored.
      * @return the element without the counter.
      */
-    auto get_element_by_index(size_t table_index) -> T {
+    auto get_element_by_index(size_t table_index) -> slot_type {
         return table[table_index];
     }
 
-    auto get_element_by_bucket_index_and_location(size_t bucket_index, size_t location) -> T {
+    auto get_element_by_bucket_index_and_location(size_t bucket_index, size_t location) -> slot_type {
         return get_element_by_index(bucket_index * bucket_size + location);
     }
 
-    auto get_element(T element) -> T;
+    auto get_element(slot_type element) -> slot_type;
 
     /**
      * currently define for clarity.
      * @param table_index
      * @return
      */
-    auto get_element_with_counter(size_t table_index) -> T;
+    auto get_element_with_counter(size_t table_index) -> slot_type;
 
     void update_max_cuckoo_insert(size_t i) {
         max_cuckoo_insert = (max_cuckoo_insert >= i) ? max_cuckoo_insert : i;
@@ -412,7 +413,7 @@ public:
         return is_empty_by_index(bucket_index * bucket_size + location);
     }
 
-    auto is_empty_by_slot(T slot) -> bool {
+    auto is_empty_by_slot(slot_type slot) -> bool {
         return (slot == EMPTY);
     }
 
@@ -420,7 +421,7 @@ public:
         return get_bucket_capacity(bucket_index) == bucket_size;
     }
 
-    inline void my_hash(T x, uint32_t *b1, uint32_t *b2) const {
+    inline void my_hash(slot_type x, uint32_t *b1, uint32_t *b2) const {
         size_t number_of_buckets_in_each_table = (table_size / bucket_size) / 2;
         *b1 = (s_pd_filter::hashint(x)) % number_of_buckets_in_each_table;
         *b2 = (s_pd_filter::hashint2(x) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
@@ -428,7 +429,7 @@ public:
 
 private:
 
-    auto insert_helper(T x, size_t bucket_index) {
+    auto insert_helper(slot_type x, size_t bucket_index) {
         auto table_index = bucket_index * bucket_size;
         for (int i = 0; i < bucket_size; ++i) {
             if (is_empty_by_index(table_index + i)) {
@@ -442,7 +443,7 @@ private:
         assert(false);
     }
 
-    inline auto find_helper(T x, size_t bucket_index) const -> bool {
+    inline auto find_helper(slot_type x, size_t bucket_index) const -> bool {
         auto table_index = bucket_index * bucket_size;
         for (int i = 0; i < bucket_size; ++i) {
             if (is_equal(table[table_index + i], x))
@@ -451,7 +452,7 @@ private:
         return false;
     }
 
-    auto find_helper_table_location(T x, size_t bucket_index) -> int {
+    auto find_helper_table_location(slot_type x, size_t bucket_index) -> int {
         auto table_index = bucket_index * bucket_size;
         for (int i = 0; i < bucket_size; ++i) {
             if (is_equal(table[table_index + i], x))
@@ -460,7 +461,7 @@ private:
         return -1;
     }
 
-    auto remove_helper(T x, size_t bucket_index) -> bool {
+    auto remove_helper(slot_type x, size_t bucket_index) -> bool {
         auto table_index = bucket_index * bucket_size;
         for (int i = 0; i < bucket_size; ++i) {
             if (is_equal(table[table_index + i], x)) {
@@ -485,9 +486,9 @@ private:
      * @param without_counter
      * @return compares x,y first "element length" bits.
      */
-    auto is_equal(T with_counter, T without_counter) const-> bool  {
-        T after_mask = without_counter & MASK(element_length);
-        assert((without_counter & MASK(element_length)) == without_counter);
+    auto is_equal(slot_type with_counter, slot_type without_counter) const-> bool  {
+        slot_type after_mask = without_counter & MASK(element_length);
+//        assert((without_counter & MASK(element_length)) == without_counter);
         return (with_counter & MASK(element_length)) == without_counter;
     }
 
@@ -514,7 +515,7 @@ private:
      * @param bucket_index The bucket from whom elements will try to be moved.
      * @return pointer to the free location.
      */
-    auto move_el_from_bucket_to_other(size_t bucket_index) -> T * {
+    auto move_el_from_bucket_to_other(size_t bucket_index) -> slot_type * {
         auto table_index = bucket_index * bucket_size;
         for (int i = 0; i < bucket_size; ++i) {
 
@@ -532,7 +533,7 @@ private:
         return nullptr;
     }
 /*
-//    inline void my_hash(T x, uint32_t *i1, uint32_t *i2) {
+//    inline void my_hash(slot_type x, uint32_t *i1, uint32_t *i2) {
 //        *i1 = hashint(x);
 //        *i2 = hashint2(x);
 //    }*/

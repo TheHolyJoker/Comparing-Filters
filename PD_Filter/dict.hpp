@@ -74,7 +74,13 @@ public:
 
 
     auto lookup(const itemType s) const -> bool {
-        return lookup_helper(wrap_hash(s));
+        auto hash_val = wrap_hash(s);
+        size_t pd_index = -1;
+        uint32_t quot = -1, r = -1;
+        split(hash_val, &pd_index, &quot, &r);
+        if (pd_vec[pd_index]->lookup(quot, r)) return true;
+
+        return spare->find(hash_val & MASK(sparse_element_length));
     }
 
     void insert(const itemType s) {

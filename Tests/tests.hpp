@@ -7,12 +7,10 @@
 
 #include <set>
 #include <chrono>
-//#include "../PD_Filter/dict.hpp"
-//#include "../Bloom_Filter/bloom.hpp"
 #include "wrappers.hpp"
 
-#define UNIVERSE_SIZE (0xffffffffffffffff)
 #define BITS_PER_ELEMENT_MACRO (8)
+#define UNIVERSE_SIZE (0xffffffffffffffff)
 
 
 //typedef dict<PD, hash_table<uint32_t>, uint32_t> s_dict32;
@@ -42,6 +40,8 @@ void print_single_round(size_t var_num, string *var_names, const size_t *values,
 void
 table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_count, size_t mid_load_FP_count);
 
+void
+print_single_round_false_positive_rates(size_t lookups_repetitions, size_t expected_false_positive, size_t true_positive_counter, size_t false_positive_counter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -60,45 +60,33 @@ unsigned long xorshf96();
 
 template<typename itemType>
 auto rand_item() -> itemType {
-    return (itemType) xorshf96();
+    return (itemType) random();
+//    return (itemType) xorshf96();
 }
 
 auto rand_item() -> string;
-
 
 template<typename itemType>
 void set_init(size_t size, set<itemType> *mySet) {
     for (int i = 0; i < size; ++i) mySet->insert(rand_item<uint64_t>());
 }
 
-//void set_init(size_t size, set<string> *mySet);
-
-
 template<typename itemType>
 auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
     for (int i = 0; i < number_of_elements; ++i) vec->push_back(rand_item<uint64_t>());
-
 }
+
+
+/*
+auto fill_vec(std::vector<uint64_t> *vec, size_t number_of_elements, ulong universe_mask) -> void {
+    for (int i = 0; i < number_of_elements; ++i) {
+        vec->push_back(xorshf96() & universe_mask);
+    }
+}*/
 
 
 /*Validation functions*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-/*
-template<class D>
-auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-                       double level1_load_factor, double level2_load_factor) -> bool {
-    auto filter = D(filter_max_capacity, error_power_inv, level1_load_factor, level2_load_factor);
-    cout << "\nexpected #fp is: " << ((double) lookup_reps / (1u << error_power_inv)) << endl;
-    return validate_filter_core(&filter, filter_max_capacity, lookup_reps);
-
-}
-*/
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 template<typename itemType, size_t bits_per_item, bool brancless, typename HashFamily, template<typename, std::size_t, bool, typename> class Filter>
 auto v_insertion_plus_imm_lookups(Filter<itemType, bits_per_item, brancless, HashFamily> *filter,
@@ -221,6 +209,7 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
 
     /**Count False positive*/
     size_t fp_counter = 0;
+    size_t tp_counter = 0;
     for (auto iter : lookup_set) {
         /*For debugging:
          bool iter_not_in_filter = !FilterAPI<Table>::Contain(iter, &wrap_filter);
@@ -233,6 +222,8 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
         //Exact answer to: is "iter" in filter.
         c2 = to_be_deleted_set.find(iter) != to_be_deleted_set.end();
         if (c1 || c2) {
+            //Validating there is no false negative.
+            tp_counter++;
             assert(FilterAPI<Table>::Contain(iter, wrap_filter));
             continue;
         } else if (FilterAPI<Table>::Contain(iter, wrap_filter)) {
@@ -240,9 +231,10 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
         }
     }
 
-    cout << "\nnumber of false-positive is: " << fp_counter << endl;
-    cout << "filter_max_capacity: " << filter_max_capacity << endl;
-    cout << "Expected FP count: " << (lookup_set.size() >> error_power_inv) << endl;
+    print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter, fp_counter);
+//    cout << "filter_max_capacity: " << filter_max_capacity << endl;
+//    cout << "\nnumber of false-positive is out of total number of lookups: " << fp_counter << "/ " << lookup_reps << endl;
+//    cout << "Expected FP count: " << (lookup_set.size() >> error_power_inv) << endl;
 
 
     counter = 0;
@@ -263,6 +255,7 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
                        double level1_load_factor, double level2_load_factor) -> bool {
 
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+    print_name(FilterAPI<Table>::get_name());
     return v_filter_core<Table, itemType, block_insertion>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                            error_power_inv, level1_load_factor, level2_load_factor);
 
@@ -274,12 +267,15 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
 //    using HT = hashTable<hashTableType>;
 //    using Table = dict<PD, HT, itemType>;
     using Table = dict<PD, hashTable, itemType, uint32_t>;
+    print_name(FilterAPI<Table>::get_name());
+
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity, error_power_inv);
     return v_filter_core<Table, itemType, false>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                  error_power_inv, level1_load_factor, level2_load_factor);
 
 }
 
+void validate_example1();
 
 /*Old function for sanity checks*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -384,7 +380,6 @@ auto time_deletions(Table *wrap_filter, set<itemType> *element_set) -> ulong {
 
 }
 
-
 template<class Table, typename itemType>
 auto benchmark_single_round(Table *wrap_filter, set<itemType> *to_add_set, set<itemType> *to_lookup_set,
                             set<itemType> *to_delete_set, size_t round_counter, size_t total_rounds_num,
@@ -425,10 +420,7 @@ auto benchmark_single_round(Table *wrap_filter, set<itemType> *to_add_set, set<i
         cout << "set_ratio=" << set_ratio << endl;
     }
 */
-
-
-
-    /*
+/*
     const size_t var_num = 7;
     string names[var_num] = {"init_time", "member_set_init_time", "insertion_time", "insertion_time_higher_load",
                              "lookup_time", "removal_time", "total_time"};
@@ -439,10 +431,8 @@ auto benchmark_single_round(Table *wrap_filter, set<itemType> *to_add_set, set<i
                                 to_be_deleted_set.size(), 1};
     name_compare::table_print_rates(var_num, names, values, divisors);
     */
-
 //    size_t exp_FP_count = ceil(((double) lookup_reps / (1u << error_power_inv)));
 //    table_print_false_positive_rates(exp_FP_count, FP_count_higher_load, FP_count_mid_load);
-
 
 }
 
@@ -460,8 +450,8 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
     /**Member set init*/
     auto t0 = chrono::high_resolution_clock::now();
     for (int i = 0; i < bench_precision; ++i) {
-        set_init(filter_max_capacity / (bench_precision << 1u), &member_vec[i]);
-        set_init(filter_max_capacity / (bench_precision << 1u), &to_be_deleted[i]);
+        set_init(filter_max_capacity, &member_vec[i]);
+//        set_init(filter_max_capacity / (bench_precision << 1u), &to_be_deleted[i]);
         set_init(lookup_reps / bench_precision, &lookup_vec[i]);
         set_init(lookup_reps / bench_precision, &lookup_vec[i]);
     }
@@ -472,7 +462,8 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
     print_round_header();
     for (int round = 0; round < bench_precision; ++round) {
 //        benchmark_single_round<Table, itemType>(wrap_filter, member_vec[round], lookup_vec[round], to_be_deleted[round])
-        benchmark_single_round<Table, itemType>(wrap_filter, &member_vec[round], &lookup_vec[round], &empty_set, round + 1,
+        benchmark_single_round<Table, itemType>(wrap_filter, &member_vec[round], &lookup_vec[round], &empty_set,
+                                                round + 1,
                                                 bench_precision, os);
     }
 //    print_line();
@@ -533,7 +524,6 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
     return os;*/
 }
 
-
 template<class Table, typename itemType>
 auto
 benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
@@ -577,6 +567,9 @@ benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_p
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 template<class D>
 auto

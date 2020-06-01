@@ -21,15 +21,18 @@
 #include "../cuckoo/cuckoofilter.h"
 #include "../morton/compressed_cuckoo_filter.h"
 #include "../morton/morton_sample_configs.h"
-#include "xorfilter.h"
-#include "../xorfilter/xorfilter_2.h"
-#include "../xorfilter/xorfilter_2n.h"
-#include "../xorfilter/xorfilter_10bit.h"
-#include "../xorfilter/xorfilter_10_666bit.h"
-#include "../xorfilter/xorfilter_13bit.h"
-#include "../xorfilter/xorfilter_plus.h"
-#include "../xorfilter/xorfilter_singleheader.h"
-#include "../xorfilter/xor_fuse_filter.h"
+#include "../Bloom_Filter/simd-block.h"
+#include "../Bloom_Filter/simd-block-fixed-fpp.h"
+
+//#include "xorfilter.h"
+//#include "../xorfilter/xorfilter_2.h"
+//#include "../xorfilter/xorfilter_2n.h"
+//#include "../xorfilter/xorfilter_10bit.h"
+//#include "../xorfilter/xorfilter_10_666bit.h"
+//#include "../xorfilter/xorfilter_13bit.h"
+//#include "../xorfilter/xorfilter_plus.h"
+//#include "../xorfilter/xorfilter_singleheader.h"
+//#include "../xorfilter/xor_fuse_filter.h"
 
 
 #define CONTAIN_ATTRIBUTES  __attribute__ ((noinline))
@@ -88,11 +91,15 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     }
 
     static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table *table) {
-        throw std::runtime_error("Unsupported");
+        for (int i = start; i < end; ++i) {
+            table->Add(keys[i]);
+        }
     }
 
     static void AddAll(const std::vector<ItemType> keys, Table *table) {
-        throw std::runtime_error("Unsupported");
+        for (int i = 0; i < keys.size(); ++i) {
+            table->Add(keys[i]);
+        }
 //        table->AddAll(keys, 0, keys.size());
     }
 
@@ -175,11 +182,16 @@ struct FilterAPI<MortonFilter> {
     }
 
     static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
-        table->AddAll(keys, start, end);
+        for (int i = start; i < end; ++i) {
+            table->Add(keys[i]);
+        }
+//        table->AddAll(keys, start, end);
     }
 
     static void AddAll(const std::vector<uint64_t> keys, Table *table) {
-        table->AddAll(keys, 0, keys.size());
+        for (unsigned long key : keys) {
+            table->Add(key);
+        }
     }
 
     static void Remove(uint64_t key, Table *table) {
@@ -208,12 +220,13 @@ struct FilterAPI<dict<PD, TableType, itemType, uint32_t>> {
 //    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
     using Table = dict<PD, TableType, itemType, uint32_t>;
 
-    static Table ConstructFromAddCount(size_t add_count, size_t bits_per_item) { return Table(add_count, bits_per_item, .95, .5); }
+    static Table ConstructFromAddCount(size_t add_count, size_t bits_per_item) {
+        return Table(add_count, bits_per_item, .95, .5);
+    }
 
     static void Add(itemType key, Table *table) {
         table->insert(key);
     }
-
 
     static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
         for (int i = start; i < end; ++i) {
@@ -234,10 +247,148 @@ struct FilterAPI<dict<PD, TableType, itemType, uint32_t>> {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
         return table->lookup(key);
     }
+
     static string get_name() {
         return "PD";
     }
 };
+
+
+/*
+#ifdef __AVX2__
+
+template<typename HashFamily>
+struct FilterAPI<SimdBlockFilter<HashFamily>> {
+    using Table = SimdBlockFilter<HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        Table ans(ceil(log2(add_count * 8.0 / CHAR_BIT)));
+        return ans;
+    }
+
+    static void Add(uint64_t key, Table *table) {
+        table->Add(key);
+    }
+
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+
+    static void AddAll(const vector<uint64_t> keys, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+
+    static void Remove(uint64_t key, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
+        return table->Find(key);
+    }
+
+    static string get_name() {
+        return "SimdBlockFilter";
+    }
+
+};
+
+template<typename HashFamily>
+struct FilterAPI<SimdBlockFilterFixed64<HashFamily>> {
+    using Table = SimdBlockFilterFixed64<HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+        return ans;
+    }
+
+    static void Add(uint64_t key, Table *table) {
+        table->Add(key);
+    }
+
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+    static void AddAll(const vector<uint64_t> keys, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+
+    static void Remove(uint64_t key, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
+        return table->Find(key);
+    }
+
+    static string get_name() {
+        return "SimdBlockFilterFixed64";
+    }
+};
+
+*/
+/*
+
+template <typename HashFamily>
+struct FilterAPI<SimdBlockFilterFixed16<HashFamily>> {
+  using Table = SimdBlockFilterFixed16<HashFamily>;
+  static Table ConstructFromAddCount(size_t add_count) {
+    Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+    return ans;
+  }
+  static void Add(uint64_t key, Table* table) {
+    table->Add(key);
+  }
+  static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table* table) {
+    throw std::runtime_error("Unsupported");
+  }
+  static void Remove(uint64_t key, Table * table) {
+    throw std::runtime_error("Unsupported");
+  }
+  CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table * table) {
+    return table->Find(key);
+  }
+};
+*//*
+
+
+template<typename HashFamily>
+struct FilterAPI<SimdBlockFilterFixed<HashFamily>> {
+    using Table = SimdBlockFilterFixed<HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        Table ans(ceil(add_count * 8.0 / CHAR_BIT));
+        return ans;
+    }
+
+    static void Add(uint64_t key, Table *table) {
+        table->Add(key);
+    }
+
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
+        table->AddAll(keys, start, end);
+    }
+    static void AddAll(const vector<uint64_t> keys, Table *table) {
+        table->AddAll(keys, 0, keys.size());
+    }
+
+    static void Remove(uint64_t key, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
+        return table->Find(key);
+    }
+
+    static string get_name() {
+        return "SimdBlockFilterFixed";
+    }
+
+
+};
+
+#endif
+*/
+
 
 /*
 template<typename itemType>

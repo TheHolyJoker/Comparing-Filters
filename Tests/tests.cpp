@@ -19,12 +19,6 @@ uint64_t xorshf96() {          //period 2^96-1
     return z;
 }
 
-auto fill_vec(std::vector<uint64_t> *vec, size_t number_of_elements, ulong universe_mask) -> void {
-    for (int i = 0; i < number_of_elements; ++i) {
-        vec->push_back(xorshf96() & universe_mask);
-    }
-}
-
 
 auto rand_item() -> string {
     int minLength = 8, charsNum = 32, numOfDiffLength = 8;
@@ -200,6 +194,7 @@ table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_c
     const int total_width = default_line_width;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
     std::cout << line << '\n' << sep << left;
+
     size_t counter = 0;
     while (counter < var_num - 1) {
         cout << std::setw(name_width) << names[counter++] << sep;
@@ -219,6 +214,73 @@ table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_c
 }
 
 
+void print_single_round_false_positive_rates(size_t lookups_repetitions, size_t expected_false_positive,
+                                             size_t true_positive_counter, size_t false_positive_counter) {
+    /**every lookup result is one of the following:
+     * FP - False Positive
+     * TP - True Positive
+     * TN - True Negative.
+      */
+    const size_t var_num = 6;
+    string names[var_num] = {"#reps", "#expected FP", "#FP", "#TP", "expected FP ratio", "actual FP ratio"};
+    size_t values[var_num - 2] = {lookups_repetitions, expected_false_positive, false_positive_counter,
+                                  true_positive_counter};
+    size_t max_length = 24;
+    for (auto &name : names) {
+        max_length = max(name.length(), max_length);
+    }
+
+// values for controlling format
+    const uint32_t name_width = int(max_length);
+    const std::string sep = " |";
+    const uint32_t total_width = (name_width + sep.size()) * var_num;
+    const std::string line = sep + std::string(total_width - 1, '-') + '|';
+    std::cout << line << '\n' << sep << left;
+
+    size_t counter = 0;
+    while (counter < var_num) {
+        cout << std::setw(name_width) << names[counter++] << sep;
+    }
+    cout << '\n' << line << '\n' + sep;
+
+
+    counter = 0;
+    while (counter < var_num - 2) {
+        cout << std::setw(name_width) << values[counter++] << sep;
+    }
+//    std::cout << values[0] << "/" << std::setw(name_width - is_round_contain_two_digits) << values[1];
+    cout << std::setw(name_width) << values[1] / ((double) values[0]) << sep;
+
+    cout << std::setw(name_width) << values[2] / ((double) values[0]) << sep;
+    cout << '\n' << line << '\n';
+
+
+}
+
+void validate_example1() {
+    size_t filter_indicator = 0;
+    ulong shift = 18u;
+    size_t shift_add_to_lookups = 2u;
+    size_t bench_precision = 20;
+    size_t remainder_length = BITS_PER_ELEMENT_MACRO;
+
+    size_t reps = 1u << (shift + shift_add_to_lookups), max_distinct_capacity = 1u << shift;
+    double l1_LF = 0.95, l2_LF = 0.65;
+
+
+    bool cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
+                                                          l2_LF);
+    assert(cond);
+    cond = w_validate_filter<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+    assert(cond);
+    cond = w_validate_filter<MortonFilter, uint64_t, false>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
+                                                            l2_LF);
+    assert(cond);
+    cond = w_validate_filter<uint64_t, hash_table>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+    assert(cond);
+
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -242,9 +304,76 @@ auto CF_rates_wrapper<s_dict32>(size_t filter_max_capacity, size_t lookup_reps,
 }*/
 
 
+int old_main(int argc, char **argv) {
+    //Default values
+    size_t filter_indicator = 0;
+    ulong shift = 18u;
+    size_t shift_add_to_lookups = 2u;
+    size_t bench_precision = 20;
+    size_t remainder_length = BITS_PER_ELEMENT_MACRO;
 
-int main(int argc, char **argv) {
-    std::cout << "Hello" << std::endl;
+    size_t reps = 1u << (shift + shift_add_to_lookups), max_distinct_capacity = 1u << shift;
+
+    /**Validation of the filters */
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//    size_t l1_counter_size = 3, l2_counter_size = 7;
+    double l1_LF = 0.95, l2_LF = 0.65;
+
+    bool cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
+                                                          l2_LF);
+    assert(cond);
+    cond = w_validate_filter<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+    assert(cond);
+    cond = w_validate_filter<MortonFilter, uint64_t, false>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
+                                                            l2_LF);
+    assert(cond);
+    cond = w_validate_filter<uint64_t, hash_table>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+    assert(cond);
+
+    /**Parsing*/
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    char *end;
+    size_t values[4]{filter_indicator, shift, shift_add_to_lookups, bench_precision};
+    for (int i = 1; i < argc; ++i) {
+        values[i - 1] = strtol(argv[i], &end, 10);
+    }
+
+    filter_indicator = values[0];
+    shift = values[1];
+    shift_add_to_lookups = values[2];
+    bench_precision = values[3];
+
+    /**Old Benchmarking*/
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    reps = 1u << (shift + shift_add_to_lookups), max_distinct_capacity = 1u << shift;
+    switch (filter_indicator) {
+        case 0:
+            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+                    max_distinct_capacity, reps, remainder_length, bench_precision);
+            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+            break;
+        case 1:
+            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        case 2:
+            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+                    max_distinct_capacity, reps, remainder_length, bench_precision);
+        case 3:
+            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        case 4:
+            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        default:
+            break;
+    }
+
+    return 0;
+}
+
 /*
 
 //    v_true_positive<simple_pd>(1u << 12u);
@@ -266,76 +395,10 @@ int main(int argc, char **argv) {
 //    assert(cond);
 
 //    using Table_bloom = FilterAPI<simple_bloom>;
-*/
 //    ulong shift = 15u;
 //    size_t reps = 1u << (shift + 3u), max_distinct_capacity = 1u << shift;
 //    size_t remainder_length = BITS_PER_ELEMENT_MACRO;
 //    size_t l1_counter_size = 3, l2_counter_size = 7;
 //    double l1_LF = 0.95, l2_LF = 0.65;
 //    bool cond;
-
-    ulong shift = 16u;
-    size_t reps = 1u << (22u), max_distinct_capacity = 1u << shift;
-    size_t remainder_length = BITS_PER_ELEMENT_MACRO;
-    std::size_t bench_precision = 20;
-    size_t l1_counter_size = 3, l2_counter_size = 7;
-    double l1_LF = 0.95, l2_LF = 0.65;
-//    cout <<" argc is :" << argc;
-
-//    benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-    int filter_indicator;
-    if (argc == 1) filter_indicator == 0;
-    else if (argc == 2){
-        char *end;
-        filter_indicator = strtol(argv[1], &end, 10);
-//        cout <<" filter_indicator is:" << filter_indicator;
-    }
-
-    switch (filter_indicator) {
-        case 0:
-            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-                    max_distinct_capacity, reps, remainder_length, bench_precision);
-            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
-            break;
-        case 1:
-            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-        case 2:
-            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-                    max_distinct_capacity, reps, remainder_length, bench_precision);
-        case 3:
-            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-        case 4:
-            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
-        default:
-            break;
-    }
-    /**Validation of the filters */
-//    cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
-//    assert(cond);
-    /*cond = w_validate_filter<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
-    assert(cond);
-    cond = w_validate_filter<MortonFilter, uint64_t, false>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
-                                                            l2_LF);
-    assert(cond);
-    cond = w_validate_filter<uint64_t, hash_table>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
-    assert(cond);
 */
-    /**Benchmarking of the filters */
-
-/*
-
-    benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(max_distinct_capacity,
-                                                                                              reps, remainder_length,
-                                                                                              bench_precision);
-
-    benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-
-    benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
-*/
-
-
-    return 0;
-}

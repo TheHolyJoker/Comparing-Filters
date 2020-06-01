@@ -44,7 +44,7 @@ namespace bloomfilter {
 //                                                  {
             seed_array = new uint32_t[k];
             for (int i = 0; i < k; ++i) {
-                seed_array[i] = random() + random();
+                seed_array[i] = random();
             }
         }
 
@@ -54,12 +54,8 @@ namespace bloomfilter {
 
         // Add an item to the filter.
         bloomfilter::Status Add(const ItemType &item) {
-//            std::cout << "Add" << std::endl;
             for (int i = 0; i < k; ++i) {
-                size_t index = (seed_array[i] * (item) ) % size;
-
-//                size_t index = HashUtil::MurmurHash(&item, sizeof(itemType) * CHAR_BIT, seed_array[i]) & size;
-//                std::cout << "(" << i << ", " << index << ")" << std::endl;
+                size_t index = wrap_hash(item, seed_array[i]);
                 bit_array[index] = true;
             }
             return bloomfilter::Ok;
@@ -71,10 +67,6 @@ namespace bloomfilter {
             for (int i = start; i < end; ++i) {
                 Add(data[i]);
             }
-            /*for (auto item : data) {
-
-            }
-            return AddAll(data.data(), start, end);*/
             return Ok;
 
         }
@@ -89,11 +81,8 @@ namespace bloomfilter {
 
         // Report if the item is inserted, with false positive rate.
         bloomfilter::Status Contain(const ItemType &item) const {
-//            std::cout << "Contain" << std::endl;
             for (int i = 0; i < k; ++i) {
-//                size_t index = HashUtil::MurmurHash(item, sizeof(itemType) * CHAR_BIT, seed_array[i]) & size;
-                size_t index = (seed_array[i] * (item) ) % size;
-//                std::cout << "(" << i << ", " << index << ")" << std::endl;
+                size_t index = wrap_hash(item, seed_array[i]);
                 if (!bit_array[index])
                     return bloomfilter::NotFound;
             }
@@ -108,10 +97,11 @@ namespace bloomfilter {
         // number of current inserted items;
         size_t Size() const { return size; }
 
+        inline size_t wrap_hash(const ItemType &item, uint32_t seed) const {
+            return hashing::hashint(item + seed) % size;
+        }
+
     };
-
-//    bloomfilter::bloom<uint64_t, 8, false, HashUtil>
 }
-
 
 #endif //FILTERS_BLOOM_HPP
