@@ -2,8 +2,9 @@
 Currently benchmarking:
 1. Bloomfilter (BF)
 2. Cuckoo filter (CF)
-3. Morton filter (MF)
-4. Pocket Dictionary filter (PD)
+3. SIMD blocked Bloom filter (SIMD) 
+4. Morton filter (MF)
+5. Pocket Dictionary filter (PD)
 
 ## Validation
   The files `test.hpp test.cpp` contain validation tests on the filter.
@@ -27,12 +28,13 @@ Currently benchmarking:
  ```
  
  ## Credit
- Large parts of the code and its sturcture are taken from https://github.com/FastFilter/fastfilter_cpp.<br />
- The cuckoo filter is from https://github.com/efficient/cuckoofilter by Bin Fan et al. <br />
- The SIMD blocked Bloom filter is from https://github.com/apache/impala (Currently not in use). <br />
- The Morton filter is from https://github.com/AMDComputeLibraries/morton_filter .<br />
- The Counting Quotient Filter (CQF) is from https://github.com/splatlab/cqf. (Currently not in use). <br />
- The Pocket Dictionary is work in progress see https://github.com/TomerEven/Pocket_Dictionary.
+ Large parts of the code and its sturcture are taken from https://github.com/FastFilter/fastfilter_cpp.
+ 
+ Cuckoo filter is from https://github.com/efficient/cuckoofilter by Bin Fan et al. <br />
+ SIMD blocked Bloom filter is from https://github.com/apache/impala. <br />
+ Morton filter is from https://github.com/AMDComputeLibraries/morton_filter .<br />
+ Counting Quotient Filter (CQF) is from https://github.com/splatlab/cqf. (Currently not in use). <br />
+ Pocket Dictionary is work in progress see https://github.com/TomerEven/Pocket_Dictionary.
  
  ### Papers
  **Bloom filter** https://en.wikipedia.org/wiki/Bloom_filter
@@ -40,7 +42,11 @@ Currently benchmarking:
  **Cuckoo Filter**
  ["Cuckoo Filter: Better Than Bloom" by Bin Fan, Dave Andersen and Michael Kaminsky](https://www.cs.cmu.edu/~dga/papers/cuckoo-conext2014.pdf)
 
-**Morton filter** (https://www.vldb.org/pvldb/vol11/p1041-breslow.pdf), 
+**SIMD blocked Bloom filter**
+[Cache-, Hash- and Space-Efficient Bloom Filters](https://algo2.iti.kit.edu/singler/publications/cacheefficientbloomfilters-wea2007.pdf)
+
+**Morton filter** [Morton Filters: Faster, Space-Efficient Cuckoo Filters via
+Biasing, Compression, and Decoupled Logical Sparsity](https://www.vldb.org/pvldb/vol11/p1041-breslow.pdf), 
 
 **Pocket Dictionary** [Fully-Dynamic Space-Efficient Dictionaries and Filters with
 Constant Number of Memory Accesses](https://arxiv.org/pdf/1911.05060.pdf)
