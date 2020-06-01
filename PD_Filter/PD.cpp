@@ -587,3 +587,4 @@ uint32_t select_r(uint64_t slot, uint32_t rank) {
     //current res between [0,63]
     return 64 - s;
 }
+

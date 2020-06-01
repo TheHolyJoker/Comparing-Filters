@@ -8,42 +8,13 @@
 #include <set>
 #include <chrono>
 #include "wrappers.hpp"
+#include "printutil.hpp"
 
 #define BITS_PER_ELEMENT_MACRO (8)
-#define UNIVERSE_SIZE (0xffffffffffffffff)
-
-
-//typedef dict<PD, hash_table<uint32_t>, uint32_t> s_dict32;
-//typedef dict<PD, hash_table<uint64_t>, uint64_t> s_dict64;
-typedef bloomfilter::bloom<uint64_t, BITS_PER_ELEMENT_MACRO, false, hashing::TwoIndependentMultiplyShift> simple_bloom;
-//typedef dict<PD, hash_table<uint64_t>,uint64_t,BITS_PER_ELEMENT_MACRO, false, HashUtil> simple_pd;
 
 typedef chrono::nanoseconds ns;
 
 
-
-
-/*Printers*/
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-static const size_t default_line_width = 116;
-
-void print_name(std::string filter_name);
-
-void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t *divisors);
-
-void print_line();
-
-void print_round_header();
-
-void print_single_round(size_t var_num, string *var_names, const size_t *values, const size_t *divisors);
-
-void
-table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_count, size_t mid_load_FP_count);
-
-void
-print_single_round_false_positive_rates(size_t lookups_repetitions, size_t expected_false_positive, size_t true_positive_counter, size_t false_positive_counter);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 /*Basic functions*/
@@ -74,8 +45,12 @@ void set_init(size_t size, set<itemType> *mySet) {
 template<typename itemType>
 auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
     for (int i = 0; i < number_of_elements; ++i) vec->push_back(rand_item<uint64_t>());
+    /*unordered_set<itemType> temp_set(vec->begin(), vec->end());
+    if (temp_set.size() < 0.95 * vec->size()) {
+        std::cout << "unique size is: " << temp_set.size() << "( " << temp_set.size() / ((double) vec->size()) << ")"
+                  << std::endl;
+    }*/
 }
-
 
 /*
 auto fill_vec(std::vector<uint64_t> *vec, size_t number_of_elements, ulong universe_mask) -> void {
@@ -231,7 +206,8 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
         }
     }
 
-    print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter, fp_counter);
+    print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter,
+                                            fp_counter);
 //    cout << "filter_max_capacity: " << filter_max_capacity << endl;
 //    cout << "\nnumber of false-positive is out of total number of lookups: " << fp_counter << "/ " << lookup_reps << endl;
 //    cout << "Expected FP count: " << (lookup_set.size() >> error_power_inv) << endl;
@@ -255,6 +231,7 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
                        double level1_load_factor, double level2_load_factor) -> bool {
 
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+    size_t line_width = 160; // number of columns (6) * column's width (24)
     print_name(FilterAPI<Table>::get_name());
     return v_filter_core<Table, itemType, block_insertion>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                            error_power_inv, level1_load_factor, level2_load_factor);
@@ -276,6 +253,8 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
 }
 
 void validate_example1();
+
+void validate_example2(ulong shift, ulong filter_indicator = -1);
 
 /*Old function for sanity checks*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -396,7 +375,7 @@ auto benchmark_single_round(Table *wrap_filter, set<itemType> *to_add_set, set<i
     size_t values[var_num + 1] = {round_counter, total_rounds_num, insertion_time, lookup_time, removal_time};
 
     size_t divisors[var_num - 1] = {to_add_set->size(), to_lookup_set->size(), to_delete_set->size()};
-    print_single_round(var_num, names, values, divisors);
+    print_single_round(var_num, values, divisors);
     return os;
 /*
     vector<set<string> *> member_sets_vector;

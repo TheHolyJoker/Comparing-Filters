@@ -24,6 +24,15 @@
 
 using namespace std;
 
+template<typename T>
+auto my_ceil(T x, T y) -> T {
+    return (x + y - 1) / y;
+}
+
+
+auto
+compute_max_capacity(size_t max_capacity, double max_load_factor) -> size_t;
+
 
 //template<typename slot_type, size_t bucket_size>
 template<typename slot_type>
@@ -52,7 +61,7 @@ public:
                size_t bucket_size = DEFAULT_BUCKET_SIZE) :
             max_capacity(max_capacity), element_length(element_length), bucket_size(bucket_size),
             max_load_factor(max_load_factor), capacity(0),
-            table_size(std::ceil(((double) max_capacity) / max_load_factor)), seed1(42), seed2(43),
+            table_size(compute_max_capacity(max_capacity, max_load_factor)), seed1(42), seed2(43),
             max_cuckoo_insert(0), cuckoo_insert_counter(0), max_capacity_reached(0) {
         table = new slot_type[table_size];
         // The msb is indicator to whether the cell is free or not. (0 might be valid fingerprint)
@@ -486,7 +495,7 @@ private:
      * @param without_counter
      * @return compares x,y first "element length" bits.
      */
-    auto is_equal(slot_type with_counter, slot_type without_counter) const-> bool  {
+    auto is_equal(slot_type with_counter, slot_type without_counter) const -> bool {
         slot_type after_mask = without_counter & MASK(element_length);
 //        assert((without_counter & MASK(element_length)) == without_counter);
         return (with_counter & MASK(element_length)) == without_counter;
@@ -543,10 +552,6 @@ private:
 
 //auto compute_size(const size_t max_capacity, const double max_load_factor) -> size_t;
 
-
-auto
-compute_max_capacity(size_t number_of_pd, size_t quotient_range, size_t single_pd_capacity,
-                     size_t remainder_length) -> size_t;
 
 auto
 compute_element_length(size_t number_of_pd, size_t quotient_range, size_t single_pd_capacity,

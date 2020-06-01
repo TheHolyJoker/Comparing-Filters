@@ -18,7 +18,8 @@
 
 #include "../Bloom_Filter/bloom.hpp"
 #include "../PD_Filter/dict.hpp"
-#include "../cuckoo/cuckoofilter.h"
+//#include "../cuckoo/cuckoofilter.h"
+#include "../cuckoofilter/src/cuckoofilter.h"
 #include "../morton/compressed_cuckoo_filter.h"
 #include "../morton/morton_sample_configs.h"
 #include "../Bloom_Filter/simd-block.h"
@@ -62,7 +63,6 @@ struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFam
     }
 
     static void Remove(uint64_t key, Table *table) {
-//        return;
         throw std::runtime_error("Unsupported");
     }
 
@@ -103,7 +103,6 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
 //        table->AddAll(keys, 0, keys.size());
     }
 
-
     static void Remove(uint64_t key, Table *table) {
         table->Delete(key);
     }
@@ -117,15 +116,52 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     }
 };
 
+template <>
+struct FilterAPI<SimdBlockFilter<>> {
+    using Table = SimdBlockFilter<>;
+    static Table ConstructFromAddCount(size_t add_count) {
+        Table ans(ceil(log2(add_count * 8.0 / CHAR_BIT)));
+        return ans;
+    }
+    static void Add(uint64_t key, Table* table) {
+        table->Add(key);
+    }
 
-/**Morton filter does not pass validation tests. (Probably due to wrong usage)*/
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->Add(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<uint64_t> keys, Table *table) {
+        AddAll(keys, 0,keys.size(), table);
+      /*  for (int i = 0; i < keys.size(); ++i) {
+            table->Add(keys[i]);
+        }*/
+    }
+
+    static bool Contain(uint64_t key, const Table * table) {
+        return table->Find(key);
+    }
+
+    static void Remove(uint64_t key, Table *table) {
+        throw std::runtime_error("Unsupported");
+    }
+    static string get_name() {
+        return "SimdBlockFIlter";
+    }
+};
+
+
 class MortonFilter {
-    CompressedCuckoo::Morton3_8 *filter;
+    using mf7_6 = CompressedCuckoo::Morton7_6;
+    mf7_6 *filter;
     size_t size;
 public:
     MortonFilter(const size_t size) {
 //        filter = new CompressedCuckoo::Morton3_8((size_t) (size / 0.95) + 64);
-        filter = new CompressedCuckoo::Morton3_8((size_t) (2.1 * size) + 64);
+//        filter = new CompressedCuckoo::Morton3_8((size_t) (2.1 * size) + 64);
+        filter = new mf7_6((size_t) (size/0.95) + 64);
         this->size = size;
     }
 
@@ -215,10 +251,10 @@ struct FilterAPI<MortonFilter> {
 //template<template<typename> class TableType, typename itemType, size_t bits_per_item>
 //struct FilterAPI<dict<PD, TableType, itemType, bits_per_item>> {
 
-template<template<typename> class TableType, typename itemType>
-struct FilterAPI<dict<PD, TableType, itemType, uint32_t>> {
+template<template<typename> class TableType, typename itemType, typename spareItemType>
+struct FilterAPI<dict<PD, TableType, itemType, spareItemType>> {
 //    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
-    using Table = dict<PD, TableType, itemType, uint32_t>;
+    using Table = dict<PD, TableType, itemType, spareItemType>;
 
     static Table ConstructFromAddCount(size_t add_count, size_t bits_per_item) {
         return Table(add_count, bits_per_item, .95, .5);

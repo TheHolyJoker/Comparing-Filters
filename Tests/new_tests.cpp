@@ -11,13 +11,18 @@ auto example1() {
     size_t error_power_inv = BITS_PER_ELEMENT_MACRO;
     size_t bench_precision = 20;
     b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
-                                                    1, 1, 1, 1);
+                                                    1, 1, 1, 1, 1);
 }
 
 
 
 
 int main(int argc, char **argv) {
+//    validate_example2(16, 16);
+//    example2<8>(22, 16);
+//    example2<4>(22, 16);
+//    return 0;
+
     validate_example1();
 
 
@@ -51,5 +56,6 @@ int main(int argc, char **argv) {
         filter_indicator = -1;
     reps = 1u << (shift + shift_add_to_lookups), max_distinct_capacity = 1u << shift;
     using itemType = uint64_t ;
-    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision, filter_indicator & 1,  filter_indicator & 2,  filter_indicator & 4,  filter_indicator & 8);
+
+    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision, filter_indicator & 1,  filter_indicator & 2,  filter_indicator & 4,  filter_indicator & 8,  filter_indicator & 16);
 }

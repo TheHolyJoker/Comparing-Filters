@@ -14,7 +14,6 @@
 typedef chrono::nanoseconds ns;
 
 
-
 template<typename itemType>
 auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements) {
     fill_vec(elements->at(0), max_filter_capacity);
@@ -65,7 +64,9 @@ auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     size_t delete_step = delete_vec->size() / benchmark_precision;
     auto insertion_time = time_insertions(wrap_filter, add_vec, round_counter * add_step,
                                           (round_counter + 1) * add_step);
-    auto lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step, (round_counter + 1) * find_step);
+    auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step,
+                                            (round_counter + 1) * find_step);
+    auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, add_step);
 
     size_t removal_time = 0;
     if (delete_vec->size()) {
@@ -73,12 +74,13 @@ auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
                                       (round_counter + 1) * delete_step);
     }
 
-    const size_t var_num = 4;
-    string names[var_num] = {"Load", "insertion_time", "lookup_time", "removal_time"};
-    size_t values[var_num + 1] = {round_counter + 1, benchmark_precision, insertion_time, lookup_time, removal_time};
+    const size_t var_num = 6;
+//    string names[var_num] = {"Load", "insertion_time", "uniform_lookup_time", "true_lookup_time", "removal_time"};
+    size_t values[var_num] = {round_counter + 1, benchmark_precision, insertion_time, uniform_lookup_time,
+                                  true_lookup_time, removal_time};
 
-    size_t divisors[var_num - 1] = {add_vec->size(), find_vec->size(), delete_vec->size()};
-    print_single_round(var_num, names, values, divisors);
+    size_t divisors[var_num - 2] = {add_vec->size(), find_vec->size(), delete_vec->size()};
+    print_single_round(var_num, values, divisors);
     return os;
 }
 
@@ -108,7 +110,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
 
-    print_name(FilterAPI<Table>::get_name());
+    print_name(FilterAPI<Table>::get_name(), 134);
     benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
     return os;
 }
@@ -116,7 +118,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
 template<typename itemType, template<typename> class hashTable>
 auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
                                      vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream & {
-    using Table = dict<PD, hashTable, itemType, uint32_t>;
+    using Table = dict<PD, hashTable, itemType, uint64_t>;
 
     auto start_run_time = chrono::high_resolution_clock::now();
     auto t0 = chrono::high_resolution_clock::now();
@@ -127,7 +129,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
 
-    print_name(FilterAPI<Table>::get_name());
+    print_name(FilterAPI<Table>::get_name(), 134);
     benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
     return os;
 }
@@ -136,7 +138,8 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
 template<typename itemType, size_t bits_per_element>
 auto
 b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
-              bool BF = true, bool CF = true, bool MT = true, bool call_PD = true, ostream &os = cout) -> ostream & {
+              bool BF = true, bool CF = true, bool MT = true, bool SIMD = true, bool call_PD = true,
+              ostream &os = cout) -> ostream & {
 
     vector<itemType> v_add, v_find, v_delete;
     vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
@@ -149,6 +152,11 @@ b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power
     }
     if (CF) {
         using Table = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>;
+        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, error_power_inv, bench_precision,
+                                                         &elements);
+    }
+    if (SIMD) {
+        using Table = SimdBlockFilter<>;
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, error_power_inv, bench_precision,
                                                          &elements);
     }
@@ -170,12 +178,13 @@ auto example1();
 
 
 template<size_t bits_per_item>
-auto example2(ulong shift, size_t bench_precision = 20) {
+auto example2(ulong shift, ulong filters_indicator = -1, size_t bench_precision = 20) {
     size_t filter_max_capacity = 1u << shift;
     size_t lookup_reps = 1u << (shift + 2u);
     size_t error_power_inv = bits_per_item;
     b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
-                                                    1, 1, 1, 1);
+                                                    filters_indicator & 1, filters_indicator & 2, filters_indicator & 4,
+                                                    filters_indicator & 8, filters_indicator & 16);
 }
 
 

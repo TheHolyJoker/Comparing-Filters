@@ -22,7 +22,12 @@ THE SOFTWARE.
 Author: Alex D. Breslow
         Advanced Micro Devices, Inc.
         AMD Research
-*/
+
+Code Source: https://github.com/AMDComputeLibraries/morton_filter
+
+ VLDB 2018 Paper: https://www.vldb.org/pvldb/vol11/p1041-breslow.pdf
+
+ */
 #ifndef _BF_H
 #define _BF_H
 

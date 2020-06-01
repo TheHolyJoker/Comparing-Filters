@@ -18,13 +18,12 @@
 
 #define CG_TYPE uint32_t
 #define CG_TYPE_SIZE (sizeof(CG_TYPE) * (CHAR_BIT))
-#define DEFAULT_PD_CAPACITY (64u)
-#define DEFAULT_QUOTIENT_LENGTH (6u)
+#define DEFAULT_PD_CAPACITY (32u)
+#define DEFAULT_QUOTIENT_LENGTH (5u)
 #define DEFAULT_QUOTIENT_RANGE (1u<<DEFAULT_QUOTIENT_LENGTH)
 
 
 using namespace std;
-
 
 class PD {
     CG_TYPE *a;

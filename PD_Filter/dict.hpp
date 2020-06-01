@@ -10,15 +10,18 @@
 #define DICT_DB_MODE1 (true & DICT_DB_MODE0)
 #define DICT_DB_MODE2 (true & DICT_DB_MODE1)
 
-
-template<typename T>
-auto my_ceil(T x, T y) -> T {
-    return (x + y - 1) / y;
-}
-
+/*
+static inline auto get_single_pd_max_capacity(size_t error_power_inv, double level1_load_factor) -> size_t {
+    if (error_power_inv <= 8)
+        return DEFAULT_PD_CAPACITY;
+    assert(false);
+//    auto temp = (512u / (error_power_inv + 2)) * level1_load_factor;
+//    return std::floor(temp);
+//    return my_ceil<size_t>(512u, error_power_inv + 2);
+}*/
 
 //template<class PDType, template<typename> class spareType, typename itemType, size_t bits_per_item>
-template<class PDType, template<typename> class spareType, typename itemType,  typename spareItemType>
+template<class PDType, template<typename> class spareType, typename itemType, typename spareItemType>
 class dict {
     vector<PDType *> pd_vec;
     vector<uint> pd_capacity_vec;
@@ -34,18 +37,17 @@ public:
     dict(size_t max_number_of_elements, size_t error_power_inv, double level1_load_factor, double level2_load_factor) :
             capacity(0),
             single_pd_capacity(DEFAULT_PD_CAPACITY),
-            number_of_pd(my_ceil(max_number_of_elements, (size_t) DEFAULT_PD_CAPACITY)),
+            number_of_pd(my_ceil(max_number_of_elements, single_pd_capacity)),
             quotient_range(DEFAULT_QUOTIENT_RANGE),
             remainder_length(error_power_inv),
-            pd_index_length(ceil(log2(my_ceil(max_number_of_elements, (size_t) DEFAULT_PD_CAPACITY)))),
+            pd_index_length(ceil(log2(my_ceil(max_number_of_elements, (size_t) single_pd_capacity)))),
             quotient_length(DEFAULT_QUOTIENT_LENGTH),
             sparse_element_length(remainder_length + pd_index_length + quotient_length),
             sparse_counter_length(sizeof(D_TYPE) * CHAR_BIT - sparse_element_length)
 //        spare(get_spare_max_capacity(max_number_of_elements, level1_load_factor),
 //              remainder_length + pd_index_length + quotient_length, level2_load_factor)
     {
-
-        assert(sparse_element_length <= sizeof(D_TYPE) * CHAR_BIT);
+        assert(sparse_element_length <= sizeof(spareItemType) * CHAR_BIT);
 
         size_t log2_size = ceil(log2(max_number_of_elements));
         auto res = my_ceil(max_number_of_elements, log2_size * log2_size) << 6u;
@@ -108,18 +110,18 @@ public:
         return insert_helper(wrap_hash(s));
     }
 
-    void insert_to_spare_without_pop(S_TYPE hash_val) {
+    void insert_to_spare_without_pop(spareItemType hash_val) {
         spare->insert(hash_val & MASK(sparse_element_length));
     }
 
-    void insert_to_spare_with_pop(S_TYPE hash_val) {
+    void insert_to_spare_with_pop(spareItemType hash_val) {
         uint32_t b1 = -1, b2 = -1;
         spare->my_hash(hash_val, &b1, &b2);
 
         if (pop_attempt_with_insertion_by_bucket(hash_val, b2))
             return;
 
-        S_TYPE hold = hash_val;
+        spareItemType hold = hash_val;
         size_t bucket = b1;
         for (size_t i = 0; i < MAX_CUCKOO_LOOP; ++i) {
             if (pop_attempt_with_insertion_by_bucket(hold, bucket)) {
@@ -172,7 +174,7 @@ public:
 private:
 
 
-    inline bool lookup_helper(S_TYPE hash_val) const {
+    inline bool lookup_helper(spareItemType hash_val) const {
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
@@ -181,7 +183,7 @@ private:
         return spare->find(hash_val & MASK(sparse_element_length));
     }
 
-    inline void insert_helper(S_TYPE hash_val) {
+    inline void insert_helper(spareItemType hash_val) {
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
@@ -194,7 +196,7 @@ private:
 
     }
 
-    inline void remove_helper(S_TYPE hash_val) {
+    inline void remove_helper(spareItemType hash_val) {
         if (DICT_DB_MODE2)
             assert (lookup_helper(hash_val));
         size_t pd_index = -1;
@@ -207,10 +209,10 @@ private:
         spare->remove(hash_val);
     }
 
-//    void insert_full_PD_helper(S_TYPE hash_val, size_t pd_index, uint32_t quot, uint32_t r);
+//    void insert_full_PD_helper(spareItemType hash_val, size_t pd_index, uint32_t quot, uint32_t r);
 /*
 
-    void insert_to_spare(S_TYPE y) {
+    void insert_to_spare(spareItemType y) {
         uint32_t b1 = -1, b2 = -1;
         spare->my_hash(y, &b1, &b2);
 
@@ -239,24 +241,24 @@ private:
 
 
 /*
-    auto insert_to_bucket_attempt(S_TYPE y, size_t bucket_index, bool pop_attempt) -> counter_status;
+    auto insert_to_bucket_attempt(spareItemType y, size_t bucket_index, bool pop_attempt) -> counter_status;
 
-    auto insert_inc_to_bucket_attempt(S_TYPE y, size_t bucket_index) -> std::tuple<counter_status, size_t>;
+    auto insert_inc_to_bucket_attempt(spareItemType y, size_t bucket_index) -> std::tuple<counter_status, size_t>;
 
-    auto pop_attempt_by_bucket(S_TYPE y, size_t bucket_index) -> size_t;
+    auto pop_attempt_by_bucket(spareItemType y, size_t bucket_index) -> size_t;
 
-//    auto single_pop_attempt(S_TYPE element) -> bool;
+//    auto single_pop_attempt(spareItemType element) -> bool;
 
-    auto single_pop_attempt(S_TYPE temp_el, S_TYPE counter) -> bool;
+    auto single_pop_attempt(spareItemType temp_el, spareItemType counter) -> bool;
 
 
-    auto pop_attempt(string *s) -> S_TYPE *;
+    auto pop_attempt(string *s) -> spareItemType *;
 
-    auto pop_attempt_by_bucket(size_t bucket_index) -> S_TYPE *;
+    auto pop_attempt_by_bucket(size_t bucket_index) -> spareItemType *;
 
 */
 
-    auto pop_attempt_with_insertion_by_bucket(S_TYPE hash_val, size_t bucket_index) -> bool {
+    auto pop_attempt_with_insertion_by_bucket(spareItemType hash_val, size_t bucket_index) -> bool {
         for (int i = 0; i < spare->get_bucket_size(); ++i) {
             if (spare->is_empty_by_bucket_index_and_location(bucket_index, i)) {
                 spare->insert_by_bucket_index_and_location(hash_val, bucket_index, i);
@@ -276,7 +278,7 @@ private:
      * @param element
      * @return
      */
-    auto single_pop_attempt(S_TYPE element) -> bool {
+    auto single_pop_attempt(spareItemType element) -> bool {
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
         split(element, &pd_index, &quot, &r);
@@ -295,16 +297,16 @@ private:
     }
 
 
-    inline auto wrap_hash(itemType x) const -> S_TYPE {
+    inline auto wrap_hash(itemType x) const -> spareItemType {
         return s_pd_filter::hashint(x) & MASK(sparse_element_length);
     }
 
-//    auto wrap_hash(uint64_t x) const -> S_TYPE; {
-//    inline auto wrap_hash(uint64_t x) const -> S_TYPE {
+//    auto wrap_hash(uint64_t x) const -> spareItemType; {
+//    inline auto wrap_hash(uint64_t x) const -> spareItemType {
 //        return s_pd_filter::hashint3(x) & MASK(sparse_element_length);
 //    }
 
-    inline auto wrap_hash(const string *s) const -> S_TYPE {
+    inline auto wrap_hash(const string *s) const -> spareItemType {
         return s_pd_filter::my_hash(s, HASH_SEED) & MASK(sparse_element_length);
     }
 
