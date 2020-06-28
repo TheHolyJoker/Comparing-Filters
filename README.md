@@ -13,10 +13,15 @@ Currently benchmarking:
   Filter often have a parameter controlling on the false positive probability $\epsilon$, when it is increased, the filter uses more space, and has smaller error probability.  
   
  ## Benchmark
- Currently checking only insertions and lookups performances, in different loads.
+ Currently, checking only insertions and lookups performances, in different loads.
  
  
  ## Usage
+ 
+ ### Dependencies
+ 
+ Since CF uses `openssl` library, the project won't compile unless it is installed.
+ 
  ### To build
  ```
  git clone -b Simpler https://github.com/TheHolyJoker/Comparing_Filters.git
@@ -33,11 +38,11 @@ Currently benchmarking:
  ./Filters <filter indicator> <exponent of number of keys> <lookup factor> <rounds>
  ```
  1. `filter indicator`: Which filter to test. 
-    1. To include BF in the test,`filter indicator & 1` should be true.
-    2. To include CF in the test,`filter indicator & 2` should be true.
-    3. To include SIMD in the test,`filter indicator & 4` should be true.
-    4. To include MF in the test,`filter indicator & 8` should be true.
-    5. To include PD in the test,`filter indicator & 16` should be true.
+    1. To include BF in the test, `filter indicator & 1` should be true.
+    2. To include CF in the test, `filter indicator & 2` should be true.
+    3. To include SIMD in the test, `filter indicator & 4` should be true.
+    4. To include MF in the test, `filter indicator & 8` should be true.
+    5. To include PD in the test, `filter indicator & 16` should be true.
     
     The default value is -1 to test all filters.
  2. `exponent of the number of keys`: Every filter is built to contain at most 2^`exponent of the number of keys`.<br> 
