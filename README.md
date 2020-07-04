@@ -13,10 +13,14 @@ Currently benchmarking:
   Filter often have a parameter controlling on the false positive probability $\epsilon$, when it is increased, the filter uses more space, and has smaller error probability.  
   
  ## Benchmark
- Currently checking only insertions and lookups performances, in different loads.
- 
+ Currently checking only insertions and lookups performances, in different loads. 
  
  ## Usage
+ 
+ ### Dependencies
+ Since CF uses `openssl` library, the project won't compile unless it is installed. (See CF [git](https://github.com/efficient/cuckoofilter))
+
+
  ### To build
  ```
  git clone -b Simpler https://github.com/TheHolyJoker/Comparing_Filters.git
@@ -27,7 +31,7 @@ Currently benchmarking:
  make
  ```
  ### To run
- in `build` directory run
+ In `build` directory run
  
  ```
  ./Filters <filter indicator> <exponent of number of keys> <lookup factor> <rounds>
