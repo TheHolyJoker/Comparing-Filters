@@ -10,9 +10,6 @@
 
 namespace bloomfilter {
 
-//    static const s
-
-// status returned by a Bloom filter operation
     enum Status {
         Ok = 0,
         NotFound = 1,
@@ -43,8 +40,9 @@ namespace bloomfilter {
 //                                                  ,k(bits_per_item)
 //                                                  {
             seed_array = new uint32_t[k];
+            srand(NULL);
             for (int i = 0; i < k; ++i) {
-                seed_array[i] = random();
+                seed_array[i] = random() + random();
             }
         }
 
@@ -62,8 +60,7 @@ namespace bloomfilter {
         }
 
         // Add multiple items to the filter.
-        bloomfilter::Status AddAll(const std::vector<ItemType> data, const size_t start,
-                                   const size_t end) {
+        bloomfilter::Status AddAll(const std::vector<ItemType> data, const size_t start, const size_t end) {
             for (int i = start; i < end; ++i) {
                 Add(data[i]);
             }
@@ -71,8 +68,7 @@ namespace bloomfilter {
 
         }
 
-        bloomfilter::Status AddAll(const ItemType *data, const size_t start,
-                                   const size_t end) {
+        bloomfilter::Status AddAll(const ItemType *data, const size_t start, const size_t end) {
             for (int i = start; i < end; ++i) {
                 Add(data[i]);
             }

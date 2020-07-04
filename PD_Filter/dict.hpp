@@ -37,7 +37,7 @@ public:
     dict(size_t max_number_of_elements, size_t error_power_inv, double level1_load_factor, double level2_load_factor) :
             capacity(0),
             single_pd_capacity(DEFAULT_PD_CAPACITY),
-            number_of_pd(my_ceil(max_number_of_elements, single_pd_capacity)),
+            number_of_pd(std::ceil(max_number_of_elements / DEFAULT_PD_CAPACITY)),
             quotient_range(DEFAULT_QUOTIENT_RANGE),
             remainder_length(error_power_inv),
             pd_index_length(ceil(log2(my_ceil(max_number_of_elements, (size_t) single_pd_capacity)))),
@@ -50,7 +50,8 @@ public:
         assert(sparse_element_length <= sizeof(spareItemType) * CHAR_BIT);
 
         size_t log2_size = ceil(log2(max_number_of_elements));
-        auto res = my_ceil(max_number_of_elements, log2_size * log2_size) << 6u;
+//        auto res = my_ceil(max_number_of_elements, log2_size * log2_size)  << 8u;
+        auto res = my_ceil(max_number_of_elements, log2_size) << 6u;
 
         size_t spare_max_capacity = res;
         spare = new spareType<spareItemType>(spare_max_capacity, sparse_element_length, level2_load_factor);
@@ -94,6 +95,7 @@ public:
 
     }
 
+
     auto lookup(const string *s) const -> bool {
         return lookup_helper(wrap_hash(s));
         /*auto hash_val = wrap_hash(s);
@@ -125,8 +127,11 @@ public:
         size_t bucket = b1;
         for (size_t i = 0; i < MAX_CUCKOO_LOOP; ++i) {
             if (pop_attempt_with_insertion_by_bucket(hold, bucket)) {
-                spare->update_max_cuckoo_insert(i);
-                spare->update_cuckoo_insert_counter(i);
+                if (i > 4) {
+//                    cout << "here with hash_val: " << hash_val << endl;
+                    spare->update_max_cuckoo_insert(i);
+                    spare->update_cuckoo_insert_counter(i);
+                }
                 return;
             }
             if (DICT_DB_MODE1)
@@ -141,23 +146,6 @@ public:
         return remove_helper(wrap_hash(s));
     }
 
-    template<typename P>
-    auto lookup_int(P x) const -> bool {
-        return lookup_helper(wrap_hash(x));
-    }
-
-    template<typename P>
-    void insert_int(P x) {
-        return insert_helper(wrap_hash(x));
-    }
-
-    template<typename P>
-    void remove_int(P x) {
-        return remove_helper(wrap_hash(x));
-
-    }
-
-
     void get_info() {
         const size_t num = 9;
         size_t val[num] = {number_of_pd, capacity, quotient_range, single_pd_capacity, remainder_length,
@@ -171,6 +159,31 @@ public:
         }
     }
 
+    auto get_elements_buckets(itemType x) -> std::tuple<uint32_t, uint32_t> {
+        return get_hash_val_buckets(wrap_hash(x));
+        /*auto hash_val = wrap_hash(x);
+        uint32_t b1 = -1, b2 = -1;
+        spare->my_hash(hash_val, &b1, &b2);
+        return std::make_tuple(b1, b2);*/
+    }
+
+    auto get_hash_val_buckets(itemType hash_val) -> std::tuple<uint32_t, uint32_t> {
+        uint32_t b1 = -1, b2 = -1;
+        spare->my_hash(hash_val, &b1, &b2);
+        return std::make_tuple(b1, b2);
+    }
+/*
+    auto get_second_level_max_reached_capacity()->std::size_t {
+        return spare->get_max_capacity_reached();
+    }*/
+
+    auto get_second_level_capacity()->std::size_t {
+        return spare->get_capacity();
+    }
+
+    auto get_second_level_load_ratio() ->double {
+        return spare->get_capacity() / ((double) spare->get_max_capacity());
+    }
 private:
 
 
@@ -207,6 +220,7 @@ private:
             return;
         }
         spare->remove(hash_val);
+//        pop_attempt_by_hash_val(hash_val);
     }
 
 //    void insert_full_PD_helper(spareItemType hash_val, size_t pd_index, uint32_t quot, uint32_t r);
@@ -237,9 +251,6 @@ private:
 
     }
 */
-
-
-
 /*
     auto insert_to_bucket_attempt(spareItemType y, size_t bucket_index, bool pop_attempt) -> counter_status;
 
@@ -252,11 +263,35 @@ private:
     auto single_pop_attempt(spareItemType temp_el, spareItemType counter) -> bool;
 
 
-    auto pop_attempt(string *s) -> spareItemType *;
 
-    auto pop_attempt_by_bucket(size_t bucket_index) -> spareItemType *;
 
 */
+
+    auto pop_attempt_by_element(const itemType s) {
+        uint32_t b1, b2;
+        std::tie(b1, b2) = get_elements_buckets(s);
+        pop_attempt_by_bucket(b1);
+        pop_attempt_by_bucket(b2);
+    }
+
+    auto pop_attempt_by_hash_val(const itemType hash_val) {
+        uint32_t b1, b2;
+        std::tie(b1, b2) = get_hash_val_buckets(hash_val);
+        pop_attempt_by_bucket(b1);
+        pop_attempt_by_bucket(b2);
+    }
+
+    auto pop_attempt_by_bucket(size_t bucket_index) -> void {
+        for (int i = 0; i < spare->get_bucket_size(); ++i) {
+            if (spare->is_empty_by_bucket_index_and_location(bucket_index, i))
+                continue;
+            auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
+            if (single_pop_attempt(temp_el)) {
+//                cout << "here" << endl;
+                spare->clear_slot_bucket_index_and_location(bucket_index, i); }
+
+        }
+    }
 
     auto pop_attempt_with_insertion_by_bucket(spareItemType hash_val, size_t bucket_index) -> bool {
         for (int i = 0; i < spare->get_bucket_size(); ++i) {
@@ -288,7 +323,7 @@ private:
             pd_vec[pd_index]->insert(quot, r);
             ++(pd_capacity_vec[pd_index]);
             spare->decrease_capacity();
-            cout << "element with hash_val: (" << element << ") was pop." << endl;
+//            cout << "element with hash_val: (" << element << ") was pop." << endl;
             return true;
         }
         if (DICT_DB_MODE1)

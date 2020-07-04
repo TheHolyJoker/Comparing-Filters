@@ -38,13 +38,14 @@ auto rand_item() -> itemType {
 auto rand_item() -> string;
 
 template<typename itemType>
-void set_init(size_t size, set<itemType> *mySet) {
+void set_init(size_t size, unordered_set<itemType> *mySet) {
     for (int i = 0; i < size; ++i) mySet->insert(rand_item<uint64_t>());
 }
 
 template<typename itemType>
 auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
-    for (int i = 0; i < number_of_elements; ++i) vec->push_back(rand_item<uint64_t>());
+    vec->resize(number_of_elements);
+    for (int i = 0; i < number_of_elements; ++i) vec->at(i) = rand_item<uint64_t>();
     /*unordered_set<itemType> temp_set(vec->begin(), vec->end());
     if (temp_set.size() < 0.95 * vec->size()) {
         std::cout << "unique size is: " << temp_set.size() << "( " << temp_set.size() / ((double) vec->size()) << ")"
@@ -65,7 +66,7 @@ auto fill_vec(std::vector<uint64_t> *vec, size_t number_of_elements, ulong unive
 
 template<typename itemType, size_t bits_per_item, bool brancless, typename HashFamily, template<typename, std::size_t, bool, typename> class Filter>
 auto v_insertion_plus_imm_lookups(Filter<itemType, bits_per_item, brancless, HashFamily> *filter,
-                                  set<itemType> *el_set) -> bool {
+                                  unordered_set<itemType> *el_set) -> bool {
     size_t counter = 0;
     for (auto el: *el_set) {
         bool already_in_filter = filter->Contain(el);         //For debugging
@@ -86,7 +87,7 @@ auto v_insertion_plus_imm_lookups(Filter<itemType, bits_per_item, brancless, Has
 
 
 template<class Table, typename itemType, bool block_insertion = false>
-auto v_insertion_plus_imm_lookups(Table *wrap_filter, set<itemType> *el_set) -> bool {
+auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *el_set) -> bool {
     size_t counter = 0;
     if (block_insertion) {
         vector<itemType> vec(el_set->begin(), el_set->end());
@@ -122,7 +123,7 @@ auto v_insertion_plus_imm_lookups(Table *wrap_filter, set<itemType> *el_set) -> 
 }
 
 template<class Table, typename itemType>
-auto v_true_positive_elements(Table *wrap_filter, set<itemType> *el_set) -> bool {
+auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_set) -> bool {
     size_t counter = 0;
     for (auto el : *el_set) {
         counter++;
@@ -135,7 +136,8 @@ auto v_true_positive_elements(Table *wrap_filter, set<itemType> *el_set) -> bool
 }
 
 template<class Table, typename itemType>
-auto v_deleting(Table *wrap_filter, set<itemType> *to_be_deleted_set, set<itemType> *to_keep_elements_set) -> bool {
+auto v_deleting(Table *wrap_filter, unordered_set<itemType> *to_be_deleted_set,
+                unordered_set<itemType> *to_keep_elements_set) -> bool {
     size_t counter = 0;
     for (auto el : *to_be_deleted_set) {
         if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
@@ -156,13 +158,39 @@ auto v_deleting(Table *wrap_filter, set<itemType> *to_be_deleted_set, set<itemTy
 }
 
 
+template<class Table, typename itemType>
+auto v_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t start, size_t end) -> bool {
+    try {
+        FilterAPI<Table>::Remove(to_be_deleted_vec->at(start), wrap_filter);
+    } catch (std::runtime_error &msg) {
+        std::cout << FilterAPI<Table>::get_name() << "Does not support deletions" << std::endl;
+        return true;
+    }
+    for (int i = start + 1; i < end; ++i) {
+        auto el = to_be_deleted_vec->at(i);
+        if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
+            auto db_res = FilterAPI<Table>::Contain(el, wrap_filter);
+            return false;
+        }
+        FilterAPI<Table>::Remove(el, wrap_filter);
+    }
+    return true;
+}
+
+template<class Table, typename itemType>
+auto v_insertions(Table *wrap_filter, vector<itemType> *to_add_vec, size_t start, size_t end) -> void {
+    for (int i = start; i < end; ++i)
+        FilterAPI<Table>::Add(to_add_vec->at(i), wrap_filter);
+}
+
+
 template<class Table, typename itemType, bool block_insertion = false>
 auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
                    double level1_load_factor, double level2_load_factor) -> bool {
 //    Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
 //    auto number_of_elements_in_the_filter = filter_max_capacity;
 
-    set<itemType> member_set, lookup_set, to_be_deleted_set;
+    unordered_set<itemType> member_set, lookup_set, to_be_deleted_set;
     set_init(filter_max_capacity / 2, &member_set);
     set_init(filter_max_capacity / 2, &to_be_deleted_set);
     set_init(lookup_reps, &lookup_set);
@@ -334,7 +362,7 @@ auto v_return_false_when_empty() -> bool {
 
 
 template<class Table, typename itemType>
-auto time_lookups(Table *wrap_filter, set<itemType> *element_set) -> ulong {
+auto time_lookups(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set) FilterAPI<Table>::Contain(iter, wrap_filter);
     auto t1 = chrono::high_resolution_clock::now();
@@ -343,7 +371,7 @@ auto time_lookups(Table *wrap_filter, set<itemType> *element_set) -> ulong {
 }
 
 template<class Table, typename itemType>
-auto time_insertions(Table *wrap_filter, set<itemType> *element_set) -> ulong {
+auto time_insertions(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set) FilterAPI<Table>::Add(iter, wrap_filter);
     auto t1 = chrono::high_resolution_clock::now();
@@ -351,7 +379,7 @@ auto time_insertions(Table *wrap_filter, set<itemType> *element_set) -> ulong {
 }
 
 template<class Table, typename itemType>
-auto time_deletions(Table *wrap_filter, set<itemType> *element_set) -> ulong {
+auto time_deletions(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set) FilterAPI<Table>::Remove(iter, wrap_filter);
     auto t1 = chrono::high_resolution_clock::now();
@@ -360,9 +388,10 @@ auto time_deletions(Table *wrap_filter, set<itemType> *element_set) -> ulong {
 }
 
 template<class Table, typename itemType>
-auto benchmark_single_round(Table *wrap_filter, set<itemType> *to_add_set, set<itemType> *to_lookup_set,
-                            set<itemType> *to_delete_set, size_t round_counter, size_t total_rounds_num,
-                            ostream &os) -> ostream & {
+auto
+benchmark_single_round(Table *wrap_filter, unordered_set<itemType> *to_add_set, unordered_set<itemType> *to_lookup_set,
+                       unordered_set<itemType> *to_delete_set, size_t round_counter, size_t total_rounds_num,
+                       ostream &os) -> ostream & {
 
     auto insertion_time = time_insertions(wrap_filter, to_add_set);
     auto lookup_time = time_lookups(wrap_filter, to_lookup_set);
@@ -422,9 +451,9 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
 
 
     /**Sets initializing*/
-    vector<set<itemType>> member_vec(bench_precision);
-    vector<set<itemType>> lookup_vec(bench_precision);
-    vector<set<itemType>> to_be_deleted(bench_precision);
+    vector<unordered_set<itemType>> member_vec(bench_precision);
+    vector<unordered_set<itemType>> lookup_vec(bench_precision);
+    vector<unordered_set<itemType>> to_be_deleted(bench_precision);
 
     /**Member set init*/
     auto t0 = chrono::high_resolution_clock::now();
@@ -437,7 +466,7 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
     auto t1 = chrono::high_resolution_clock::now();
     ulong member_set_init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
-    set<itemType> empty_set;
+    unordered_set<itemType> empty_set;
     print_round_header();
     for (int round = 0; round < bench_precision; ++round) {
 //        benchmark_single_round<Table, itemType>(wrap_filter, member_vec[round], lookup_vec[round], to_be_deleted[round])
@@ -592,7 +621,7 @@ benchmark_core(FilterAPI<Table> *filter, size_t filter_max_capacity, size_t look
     */
 /**Sets initializing*//*
 
-    set<uint64_t> member_set, lookup_set, to_be_deleted_set;
+    unordered_set<uint64_t> member_set, lookup_set, to_be_deleted_set;
     */
 /**Member set init*//*
 
@@ -677,7 +706,7 @@ CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps, ulo
 
 
     /**Sets initializing*/
-    set<string> member_set, lookup_set, to_be_deleted_set;
+    unordered_set<string> member_set, lookup_set, to_be_deleted_set;
     /**Member set init*/
     auto t0 = chrono::high_resolution_clock::now();
     set_init(filter_max_capacity / 2, &member_set);
@@ -693,14 +722,14 @@ CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps, ulo
     auto insertion_time_higher_load = time_insertions(filter, &to_be_deleted_set);
     auto lookup_time = time_lookups(filter, &member_set);
 
-    vector<set<string> *> member_sets_vector;
+    vector<unordered_set<string> *> member_sets_vector;
     member_sets_vector.insert(member_sets_vector.end(), &member_set);
     member_sets_vector.insert(member_sets_vector.end(), &to_be_deleted_set);
     auto FP_count_higher_load = v_FP_counter(filter, &lookup_set, &member_sets_vector);
 
     auto removal_time = time_deletions(filter, &to_be_deleted_set);
 //    member_sets_vector.erase(member_sets_vector.begin() + 1);
-    vector<set<string> *> vector_of_single_set;
+    vector<unordered_set<string> *> vector_of_single_set;
     vector_of_single_set.insert(vector_of_single_set.begin(), &member_set);
     auto FP_count_mid_load = v_FP_counter(filter, &lookup_set, &vector_of_single_set);
 
@@ -744,7 +773,7 @@ CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps, ulo
 
 
 template<class D>
-auto time_lookups(D *filter, set<string> *element_set) -> ulong {
+auto time_lookups(D *filter, unordered_set<string> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set) filter->lookup(&iter);
     auto t1 = chrono::high_resolution_clock::now();
@@ -754,7 +783,7 @@ auto time_lookups(D *filter, set<string> *element_set) -> ulong {
 
 
 template<class D>
-auto time_insertions(D *filter, set<string> *element_set) -> ulong {
+auto time_insertions(D *filter, unordered_set<string> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set) filter->insert(&iter);
     auto t1 = chrono::high_resolution_clock::now();
@@ -763,7 +792,7 @@ auto time_insertions(D *filter, set<string> *element_set) -> ulong {
 
 
 template<class D>
-auto time_deletions(D *filter, set<string> *element_set) -> ulong {
+auto time_deletions(D *filter, unordered_set<string> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set) filter->remove(&iter);
     auto t1 = chrono::high_resolution_clock::now();
@@ -810,7 +839,7 @@ CF_rates_wrapper<basic_cf>(size_t filter_max_capacity, size_t lookup_reps, size_
 //
 //
 //    /**Sets initializing*/
-//    set<string> member_set, lookup_set, to_be_deleted_set;
+//    unordered_set<string> member_set, lookup_set, to_be_deleted_set;
 //    /**Member set init*/
 //    auto t0 = chrono::high_resolution_clock::now();
 //    set_init(filter_max_capacity / 2, &member_set);
@@ -869,7 +898,7 @@ validate_filter_core(Table *wrap_filter, size_t filter_max_capacity,
                      size_t lookup_reps) -> bool {
     auto number_of_elements_in_the_filter = filter_max_capacity;
 
-    set<itemType> member_set, lookup_set, to_be_deleted_set;
+    unordered_set<itemType> member_set, lookup_set, to_be_deleted_set;
     set_init(number_of_elements_in_the_filter / 2, &member_set);
     set_init(number_of_elements_in_the_filter / 2, &to_be_deleted_set);
     set_init(lookup_reps, &lookup_set);
@@ -989,7 +1018,7 @@ auto w_validate_filter_core(Table *wrap_filter, size_t filter_max_capacity, size
 
     auto number_of_elements_in_the_filter = filter_max_capacity;
 
-    set<itemType> member_set, lookup_set, to_be_deleted_set;
+    unordered_set<itemType> member_set, lookup_set, to_be_deleted_set;
     set_init(number_of_elements_in_the_filter / 2, &member_set);
     set_init(number_of_elements_in_the_filter / 2, &to_be_deleted_set);
     set_init(lookup_reps, &lookup_set);
@@ -1082,7 +1111,7 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
 
 
 
-    set<itemType> member_set, lookup_set, to_be_deleted_set;
+    unordered_set<itemType> member_set, lookup_set, to_be_deleted_set;
     set_init(filter_max_capacity / 2, &member_set);
     set_init(filter_max_capacity / 2, &to_be_deleted_set);
     set_init(lookup_reps, &lookup_set);

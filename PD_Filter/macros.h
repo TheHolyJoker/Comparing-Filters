@@ -38,7 +38,7 @@
 
 
 #define S_TYPE uint32_t
-#define MAX_CUCKOO_LOOP (32)
+#define MAX_CUCKOO_LOOP (64)
 #define EMPTY (0x80000000)
 #define DEFAULT_BUCKET_SIZE (4)
 //#define MAX_CUCKOO_LOOP_MULT (128)

@@ -9,6 +9,6 @@ auto compute_element_length(size_t number_of_pd, size_t quotient_range, size_t s
 }
 
 auto compute_max_capacity(size_t max_capacity, double max_load_factor) -> size_t {
-    return ((size_t) std::ceil(max_capacity / max_load_factor)) << 4u;
+    return ((size_t) std::ceil(max_capacity / max_load_factor)) << 6u;
 
 }

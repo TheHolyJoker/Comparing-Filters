@@ -61,7 +61,9 @@ public:
                size_t bucket_size = DEFAULT_BUCKET_SIZE) :
             max_capacity(max_capacity), element_length(element_length), bucket_size(bucket_size),
             max_load_factor(max_load_factor), capacity(0),
-            table_size(compute_max_capacity(max_capacity, max_load_factor)), seed1(42), seed2(43),
+//            table_size(compute_max_capacity(max_capacity, max_load_factor))
+            table_size(std::ceil(max_capacity/max_load_factor))
+            , seed1(42), seed2(43),
             max_cuckoo_insert(0), cuckoo_insert_counter(0), max_capacity_reached(0) {
         table = new slot_type[table_size];
         // The msb is indicator to whether the cell is free or not. (0 might be valid fingerprint)
@@ -346,6 +348,9 @@ public:
         capacity--;
     }
 
+    void clear_slot_bucket_index_and_location(size_t bucket_index, size_t location){
+        table[bucket_index * bucket_size + location] = EMPTY;
+    }
 
     ////validation
     auto is_state_valid() -> bool;
@@ -418,7 +423,7 @@ public:
     }
 
     auto is_empty_by_bucket_index_and_location(size_t bucket_index, size_t location) -> bool {
-        assert (location < bucket_size);
+//        assert (location < bucket_size);
         return is_empty_by_index(bucket_index * bucket_size + location);
     }
 

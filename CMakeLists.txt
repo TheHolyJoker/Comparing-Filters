@@ -2,26 +2,11 @@ cmake_minimum_required(VERSION 3.14)
 project(Filters)
 
 set(CMAKE_CXX_STANDARD 14)
-#SET(CMAKE_CXX_FLAGS "-O3")
-SET(CMAKE_CXX_FLAGS "-O3 -march=native")
-#SET(CMAKE_C_FLAGS "-O3")
-#
-#SET(CMAKE_CXX_FLAGS "-O0")
-#SET(CMAKE_C_FLAGS "-O0")
+#SET(CMAKE_CXX_FLAGS "-O3 -march=native")
+SET(CMAKE_CXX_FLAGS "-march=native")
+#SET(CMAKE_CXX_FLAGS "-O0 -march=native")
 
-#SET(CMAKE_CXX_FLAGS "-O3 -fno-strict-aliasing -march=native")
-#SET(CMAKE_C_FLAGS "-O3 -fno-strict-aliasing -march=native")
-
-#SET(CMAKE_CXX_FLAGS "-O3 -fno-strict-aliasing -mavx2")
-#SET(CMAKE_C_FLAGS "-O3 -fno-strict-aliasing -mavx2")
-
-#SET(CMAKE_CXX_FLAGS "-O0 -g -ggdb")
 #SET(CMAKE_C_FLAGS "-O0 -g -ggdb")
-
-
-#SET(CMAKE_CXX_FLAGS  "-g -ggdb")
-#SET(CMAKE_C_FLAGS "-g -ggdb")
-
 
 #include_directories(.)
 include_directories(Bloom_Filter)

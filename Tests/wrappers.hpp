@@ -18,9 +18,9 @@
 
 #include "../Bloom_Filter/bloom.hpp"
 #include "../PD_Filter/dict.hpp"
-//#include "../cuckoo/cuckoofilter.h"
+#include "../cuckoo/cuckoofilter.h"
 #include "../cuckoofilter/src/cuckoofilter.h"
-#include "../morton/compressed_cuckoo_filter.h"
+//#include "../morton/compressed_cuckoo_filter.h"
 #include "../morton/morton_sample_configs.h"
 #include "../Bloom_Filter/simd-block.h"
 #include "../Bloom_Filter/simd-block-fixed-fpp.h"
