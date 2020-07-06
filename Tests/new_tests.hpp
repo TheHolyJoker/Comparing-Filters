@@ -24,9 +24,14 @@ auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template<class Table, typename itemType>
 auto time_lookups(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong {
+    static volatile bool dummy;
+    bool x = 0;
+
     auto t0 = chrono::high_resolution_clock::now();
-    for (int i = start; i < end; ++i) FilterAPI<Table>::Contain(element_set->at(i), wrap_filter);
+    for (int i = start; i < end; ++i) x |= FilterAPI<Table>::Contain(element_set->at(i), wrap_filter);
     auto t1 = chrono::high_resolution_clock::now();
+
+    dummy = x;
     return chrono::duration_cast<ns>(t1 - t0).count();
 
 }
