@@ -140,6 +140,26 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
 }
 
 
+//template<template <typename slot_type, size_t bits_per_item, size_t max_capacity> class temp_PD ,typename itemType, template<typename> class hashTable>
+template<typename itemType, template<typename> class hashTable>
+auto att_benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
+                                         vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream & {
+    using Table = dict<TPD_name::TPD<uint32_t, 8, 64>, hashTable, itemType, uint64_t>;
+
+    auto start_run_time = chrono::high_resolution_clock::now();
+    auto t0 = chrono::high_resolution_clock::now();
+
+    Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity, error_power_inv);
+
+    auto t1 = chrono::high_resolution_clock::now();
+    auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
+
+
+    print_name(FilterAPI<Table>::get_name(), 134);
+    benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
+    return os;
+}
+
 template<typename itemType, size_t bits_per_element>
 auto
 b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
@@ -171,15 +191,59 @@ b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, error_power_inv, bench_precision,
                                                          &elements);
     }
+    att_benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
+                                                              &elements);
+
     if (call_PD) {
 //        using Table = dict<PD, hash_table, itemType, uint32_t>;
         benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
                                                               &elements);
     }
+
+
     return os;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//template<typename itemType, template<typename> class hashTable>
+//template<template <typename slot_type, size_t bits_per_item, size_t max_capacity> class temp_PD ,typename itemType, template<typename> class hashTable>
+template<template<typename, size_t, size_t> class temp_PD, typename slot_type, size_t bits_per_item, size_t max_capacity, typename itemType,
+        template<typename> class hashTable>
+auto benchmark_single_TPD_filter(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
+                                 vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream & {
+    using Table = dict<temp_PD<slot_type, bits_per_item, max_capacity>, hashTable, itemType, uint64_t>;
+
+    auto start_run_time = chrono::high_resolution_clock::now();
+    auto t0 = chrono::high_resolution_clock::now();
+
+    Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+
+    auto t1 = chrono::high_resolution_clock::now();
+    auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
+
+
+    print_name(FilterAPI<Table>::get_name(), 134);
+    benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
+    return os;
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename itemType, size_t bits_per_element, size_t max_capacity>
+auto bench_all_PD(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
+                  ostream &os = cout) -> ostream & {
+    assert(filter_max_capacity % bench_precision == 0);
+    vector<itemType> v_add, v_find, v_delete;
+    vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
+    init_elements(filter_max_capacity, lookup_reps, &elements);
+
+    using tpd1 = dict<TPD_name::TPD<uint32_t, bits_per_element, max_capacity>, hashTable, itemType, uint64_t>;
+
+    benchmark_single_TPD_filter<TPD_name::TPD, uint32_t, 8, 64, uint64_t, hash_table>(filter_max_capacity,
+                                                                                      error_power_inv, bench_precision,
+                                                                                      &elements);
+
+}
+
 auto example1();
 
 

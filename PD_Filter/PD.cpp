@@ -7,7 +7,11 @@
 PD::PD(size_t m, size_t f, size_t l) : max_capacity(f), fp_size(l), size(get_a_size(m, f, l)),
                                        deal_with_joined_slot(should_deal_with_joined_slot(m, f, l)) {
     static_assert(CG_TYPE_SIZE == 32, "");
+
+//    auto temp = posix_memalign((void**)&a, 32, size*sizeof(CG_TYPE));
+//    assert(temp != 0);
     a = new CG_TYPE[size]();
+
     for (size_t i = 0; i < size; ++i) {
         a[i] = 0;
     }

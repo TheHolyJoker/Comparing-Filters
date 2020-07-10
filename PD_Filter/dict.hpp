@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include "PD.h"
+#include "TPD.hpp"
 #include "hash_table.hpp"
 
 #define DICT_DB_MODE0 (false)
@@ -197,14 +198,21 @@ private:
     }
 
     inline void insert_helper(spareItemType hash_val) {
+
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
+//        size_t a = pd_capacity_vec[pd_index];
+//        size_t b = pd_vec[pd_index]->get_capacity();
+//        assert(pd_capacity_vec[pd_index] == pd_vec[pd_index]->get_capacity());
         if (pd_capacity_vec[pd_index] == single_pd_capacity) {
             insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
             return;
         }
         pd_vec[pd_index]->insert(quot, r);
+//        a = pd_capacity_vec[pd_index];
+//        b = pd_vec[pd_index]->get_capacity();
+//        assert(pd_capacity_vec[pd_index] + 1 == pd_vec[pd_index]->get_capacity());
         ++(pd_capacity_vec[pd_index]);
 
     }

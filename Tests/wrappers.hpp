@@ -116,14 +116,16 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     }
 };
 
-template <>
+template<>
 struct FilterAPI<SimdBlockFilter<>> {
     using Table = SimdBlockFilter<>;
+
     static Table ConstructFromAddCount(size_t add_count) {
         Table ans(ceil(log2(add_count * 8.0 / CHAR_BIT)));
         return ans;
     }
-    static void Add(uint64_t key, Table* table) {
+
+    static void Add(uint64_t key, Table *table) {
         table->Add(key);
     }
 
@@ -134,19 +136,20 @@ struct FilterAPI<SimdBlockFilter<>> {
     }
 
     static void AddAll(const std::vector<uint64_t> keys, Table *table) {
-        AddAll(keys, 0,keys.size(), table);
-      /*  for (int i = 0; i < keys.size(); ++i) {
-            table->Add(keys[i]);
-        }*/
+        AddAll(keys, 0, keys.size(), table);
+        /*  for (int i = 0; i < keys.size(); ++i) {
+              table->Add(keys[i]);
+          }*/
     }
 
-    static bool Contain(uint64_t key, const Table * table) {
+    static bool Contain(uint64_t key, const Table *table) {
         return table->Find(key);
     }
 
     static void Remove(uint64_t key, Table *table) {
         throw std::runtime_error("Unsupported");
     }
+
     static string get_name() {
         return "SimdBlockFilter";
     }
@@ -161,7 +164,7 @@ public:
     MortonFilter(const size_t size) {
 //        filter = new CompressedCuckoo::Morton3_8((size_t) (size / 0.95) + 64);
 //        filter = new CompressedCuckoo::Morton3_8((size_t) (2.1 * size) + 64);
-        filter = new mf7_6((size_t) (size/0.95) + 64);
+        filter = new mf7_6((size_t) (size / 0.95) + 64);
         this->size = size;
     }
 
@@ -288,6 +291,89 @@ struct FilterAPI<dict<PD, TableType, itemType, spareItemType>> {
         return "PD";
     }
 };
+
+template<template<typename> class TableType, typename itemType, typename spareItemType>
+struct FilterAPI<dict<TPD_name::TPD<uint32_t, 8, 64>, TableType, itemType, spareItemType>> {
+//    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
+    using Table = dict<TPD_name::TPD<uint32_t, 8, 64>, TableType, itemType, spareItemType>;
+
+    static Table ConstructFromAddCount(size_t add_count, size_t bits_per_item) {
+        return Table(add_count, bits_per_item, .95, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
+        return table->lookup(key);
+    }
+
+    static string get_name() {
+//        string res = "TPD";
+//        res += sizeof()
+        return "TPD";
+    }
+};
+
+template<template<typename, size_t, size_t> class temp_PD, typename slot_type, size_t bits_per_item, size_t max_capacity, typename itemType,
+        template<typename> class TableType, typename spareItemType>
+struct FilterAPI<dict<temp_PD<slot_type, bits_per_item, max_capacity>, TableType, itemType, spareItemType>> {
+//    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
+    using Table = dict<TPD_name::TPD<slot_type, bits_per_item, max_capacity>, TableType, itemType, spareItemType>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count, bits_per_item, .95, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
+        return table->lookup(key);
+    }
+
+    static string get_name() {
+//        string res = "TPD";
+//        res += sizeof()
+        return "TPD";
+    }
+};
+
+
 
 
 /*

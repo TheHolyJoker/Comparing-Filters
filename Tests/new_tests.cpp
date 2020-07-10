@@ -37,6 +37,15 @@ auto example3() {
 
 
 int main(int argc, char **argv) {
+//    auto tpd = TPD_name::TPD<uint32_t, 8, 64>(0,0,0);
+//    tpd.insert(0, 1);
+//    assert(tpd.lookup(0, 1));
+
+//    auto d = dict<TPD_name::TPD<uint32_t, 8, 48>, />
+//    cout << << endl;
+//    dict<
+
+//    return 0;
 //    validate_example2( 18,16);
 //    validate_example2( 20,16);
 //    validate_example2( 22,16);
@@ -55,13 +64,16 @@ int main(int argc, char **argv) {
 
 
     //Default values
-    size_t filter_indicator = -1;
+    size_t filter_indicator = (-1) ^15;
     ulong shift = 24u;
     size_t shift_add_to_lookups = 2u;
     size_t bench_precision = 32;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
 
     size_t reps = 1u << (shift + shift_add_to_lookups), max_distinct_capacity = 1u << shift;
+    bench_all_PD<uint64_t, 8>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
+                              bench_precision);
+    return 0;
 
     /**Parsing*/
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
