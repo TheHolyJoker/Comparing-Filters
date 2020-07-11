@@ -37,6 +37,7 @@ auto example3() {
 
 
 int main(int argc, char **argv) {
+/*
 //    auto tpd = TPD_name::TPD<uint32_t, 8, 64>(0,0,0);
 //    tpd.insert(0, 1);
 //    assert(tpd.lookup(0, 1));
@@ -46,6 +47,8 @@ int main(int argc, char **argv) {
 //    dict<
 
 //    return 0;
+*/
+/*
 //    validate_example2( 18,16);
 //    validate_example2( 20,16);
 //    validate_example2( 22,16);
@@ -62,19 +65,19 @@ int main(int argc, char **argv) {
 //    return 0;
 //    validate_example1();
 
+*/
 
     //Default values
-    size_t filter_indicator = (-1) ^15;
+    size_t filter_indicator = 15 ^ 127;
     ulong shift = 24u;
-    size_t shift_add_to_lookups = 2u;
+    size_t shift_add_to_lookups = 1u;
     size_t bench_precision = 32;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
 
     size_t reps = 1u << (shift + shift_add_to_lookups), max_distinct_capacity = 1u << shift;
-    bench_all_PD<uint64_t, 8>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-                              bench_precision);
-    return 0;
-
+    /*bench_all_PD<uint64_t, 8, 64>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
+                                  bench_precision);
+    return 0;*/
     /**Parsing*/
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

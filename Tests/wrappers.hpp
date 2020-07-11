@@ -292,10 +292,11 @@ struct FilterAPI<dict<PD, TableType, itemType, spareItemType>> {
     }
 };
 
-template<template<typename> class TableType, typename itemType, typename spareItemType>
-struct FilterAPI<dict<TPD_name::TPD<uint32_t, 8, 64>, TableType, itemType, spareItemType>> {
-//    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
-    using Table = dict<TPD_name::TPD<uint32_t, 8, 64>, TableType, itemType, spareItemType>;
+/*
+
+template<class temp_PD, template<typename> class TableType, typename itemType, typename spareItemType>
+struct FilterAPI<dict<temp_PD, TableType, itemType, spareItemType>> {
+    using Table = dict<temp_PD, TableType, itemType, spareItemType>;
 
     static Table ConstructFromAddCount(size_t add_count, size_t bits_per_item) {
         return Table(add_count, bits_per_item, .95, .5);
@@ -331,6 +332,7 @@ struct FilterAPI<dict<TPD_name::TPD<uint32_t, 8, 64>, TableType, itemType, spare
         return "TPD";
     }
 };
+*/
 
 template<template<typename, size_t, size_t> class temp_PD, typename slot_type, size_t bits_per_item, size_t max_capacity, typename itemType,
         template<typename> class TableType, typename spareItemType>
