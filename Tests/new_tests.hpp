@@ -115,7 +115,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity,
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
 
-    print_name(FilterAPI<Table>::get_name(), 134);
+    print_name(FilterAPI<Table>::get_name(&filter), 134);
     benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
     return os;
 }
@@ -134,7 +134,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
 
-    print_name(FilterAPI<Table>::get_name(), 134);
+    print_name(FilterAPI<Table>::get_name(&filter), 134);
     benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
     return os;
 }
@@ -144,8 +144,8 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
 template<typename itemType, template<typename> class hashTable>
 auto att_benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
                                          vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream & {
-    using temp_PD =TPD_name::TPD<uint32_t, 8, 64>;
-    using Table = dict<temp_PD , hashTable, itemType, uint64_t>;
+    using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
+    using Table = dict<temp_PD, hashTable, itemType, uint64_t>;
 
     auto start_run_time = chrono::high_resolution_clock::now();
     auto t0 = chrono::high_resolution_clock::now();
@@ -192,9 +192,17 @@ b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
                                                          &elements);
     }
-    using temp_PD =TPD_name::TPD<uint32_t, 8, 64>;
-    using Table = dict<temp_PD , hash_table, itemType, uint64_t>;
-    benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+//    using temp_PD2 = TPD_name::TPD<uint64_t, 8, 64>;
+//    using Table2 = dict<temp_PD2 , hash_table, itemType, uint64_t>;
+//    benchmark_single_filter_wrapper<Table2, itemType>(filter_max_capacity, bench_precision, &elements);
+
+//    using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
+//    using Table = dict<temp_PD, hash_table, itemType, uint64_t>;
+//    benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+//
+//    using temp_PD2 = TPD_name::TPD<uint32_t, 8, 32>;
+//    using Table2 = dict<temp_PD2, hash_table, itemType, uint64_t>;
+//    benchmark_single_filter_wrapper<Table2, itemType>(filter_max_capacity, bench_precision, &elements);
 //    att_benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
 //                                                              &elements);
 
@@ -207,6 +215,43 @@ b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power
 
     return os;
 }
+
+template<typename itemType, size_t bits_per_element>
+auto
+att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
+                uint indicator = -1, ostream &os = cout) -> ostream & {
+    assert(filter_max_capacity % bench_precision == 0);
+    vector<itemType> v_add, v_find, v_delete;
+    vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
+    init_elements(filter_max_capacity, lookup_reps, &elements);
+
+    uint b = 1u;
+    if (indicator & b) {
+        using spare_item = uint64_t;
+        using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
+        using temp_hash = att_hTable<spare_item , 4>;
+        using Table = T_dict<temp_PD, uint64_t, 8, 64, temp_hash, spare_item , itemType>;
+        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+    }
+    b <<= 1u;
+    if (indicator & b) {
+//        auto triple = <uint32_t, bits_per_element, 64>;
+        using basic_tpd = TPD_name::TPD<uint32_t, bits_per_element, 64>;
+        using Table = T_dict<basic_tpd, uint32_t, bits_per_element, 64, hash_table<uint64_t>, itemType, uint64_t>;
+        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+//        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
+//                                                              &elements);
+    }
+
+    b <<= 1u;
+    if (indicator & b) {
+        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
+                                                              &elements);
+    }
+
+
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //template<typename itemType, template<typename> class hashTable>

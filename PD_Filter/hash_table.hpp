@@ -4,7 +4,6 @@
 #define CLION_CODE_HASH_TABLE_HPP
 
 #include <iostream>
-//#include <zconf.h>
 #include <vector>
 #include <cstdint>
 #include <cassert>
@@ -61,24 +60,17 @@ public:
                size_t bucket_size = DEFAULT_BUCKET_SIZE) :
             max_capacity(max_capacity), element_length(element_length), bucket_size(bucket_size),
             max_load_factor(max_load_factor), capacity(0),
-//            table_size(compute_max_capacity(max_capacity, max_load_factor))
-            table_size(std::ceil(max_capacity/max_load_factor))
-            , seed1(42), seed2(43),
+//            num_of_buckets(compute_max_capacity(max_capacity, max_load_factor))
+            table_size(std::ceil(max_capacity / max_load_factor)), seed1(42), seed2(43),
             max_cuckoo_insert(0), cuckoo_insert_counter(0), max_capacity_reached(0) {
         table = new slot_type[table_size];
         // The msb is indicator to whether the cell is free or not. (0 might be valid fingerprint)
         assert(element_length <= sizeof(slot_type) * CHAR_BIT);
-//    cout << "table_size is: " << table_size << endl;
+//    cout << "num_of_buckets is: " << num_of_buckets << endl;
         for (int i = 0; i < table_size; ++i) {
             table[i] = EMPTY;
         }
     }
-
-
-//    hash_table(size_t max_capacity, size_t element_length, double max_load_factor = DEFAULT_MAX_LOAD_FACTOR) {
-////    cout << "Constructor 2" << endl;
-//
-//    }
 
 
     virtual ~hash_table() {
@@ -289,6 +281,7 @@ public:
         }
     }
 
+
     //void insert_with_pop_attempt(slot_type x, vector<PDType> *pd_vec);
 
 
@@ -348,7 +341,7 @@ public:
         capacity--;
     }
 
-    void clear_slot_bucket_index_and_location(size_t bucket_index, size_t location){
+    void clear_slot_bucket_index_and_location(size_t bucket_index, size_t location) {
         table[bucket_index * bucket_size + location] = EMPTY;
     }
 
@@ -441,7 +434,10 @@ public:
         *b2 = (s_pd_filter::hashint2(x) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
     }
 
-private:
+    auto get_name() -> std::string {
+        return "Default Hash Table";
+    }
+        private:
 
     auto insert_helper(slot_type x, size_t bucket_index) {
         auto table_index = bucket_index * bucket_size;

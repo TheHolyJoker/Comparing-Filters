@@ -163,7 +163,7 @@ auto v_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t 
     try {
         FilterAPI<Table>::Remove(to_be_deleted_vec->at(start), wrap_filter);
     } catch (std::runtime_error &msg) {
-        std::cout << FilterAPI<Table>::get_name() << "Does not support deletions" << std::endl;
+        std::cout << FilterAPI<Table>::get_name(wrap_filter) << "Does not support deletions" << std::endl;
         return true;
     }
     for (int i = start + 1; i < end; ++i) {
@@ -260,7 +260,7 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
 
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     size_t line_width = 160; // number of columns (6) * column's width (24)
-    print_name(FilterAPI<Table>::get_name());
+    print_name(FilterAPI<Table>::get_name(&wrap_filter));
     return v_filter_core<Table, itemType, block_insertion>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                            error_power_inv, level1_load_factor, level2_load_factor);
 
@@ -272,9 +272,9 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
 //    using HT = hashTable<hashTableType>;
 //    using Table = dict<PD, HT, itemType>;
     using Table = dict<PD, hashTable, itemType, uint32_t>;
-    print_name(FilterAPI<Table>::get_name());
 
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity, error_power_inv);
+    print_name(FilterAPI<Table>::get_name(&wrap_filter));
     return v_filter_core<Table, itemType, false>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                  error_power_inv, level1_load_factor, level2_load_factor);
 
@@ -546,7 +546,7 @@ benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_p
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
 
-    print_name(FilterAPI<Table>::get_name());
+    print_name(FilterAPI<Table>::get_name(&filter));
     benchmark_core<Table, itemType>(&filter, filter_max_capacity, lookup_reps, init_time, error_power_inv,
                                     bench_precision, os);
     return os;
@@ -568,7 +568,7 @@ benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_p
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
 
-    print_name(FilterAPI<Table>::get_name());
+    print_name(FilterAPI<Table>::get_name(&filter));
     benchmark_core<Table, itemType>(&filter, filter_max_capacity, lookup_reps, init_time, error_power_inv,
                                     bench_precision, os);
     return os;
@@ -599,7 +599,7 @@ CF_rates_wrapper_old(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 //    cout << "\nexpected #fp is: " << ((double) lookup_reps / (1u << error_power_inv)) << endl;
 
-    print_name(filter.get_name());
+    print_name(filter.get_name(&filter));
     CF_rates_core(&filter, filter_max_capacity, lookup_reps, init_time, error_power_inv, os);
     return os;
 }

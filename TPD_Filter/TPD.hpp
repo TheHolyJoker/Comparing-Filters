@@ -131,6 +131,12 @@ namespace TPD_name {
             return res + __builtin_popcount(temp);
         }
 
+        auto get_name() -> std::string {
+            string a = to_string(sizeof(slot_type) * CHAR_BIT);
+            string b = to_string(bits_per_item);
+            string c = to_string(max_capacity);
+            return "TPD:<" + a + ", " + b + ", " + c + ">";
+        }
 
     private:
         auto get_header_size_in_bits() -> size_t {
@@ -157,7 +163,10 @@ namespace TPD_name {
             return (*start_index != *end_index);
         }
 
+        /*
         void header_find(slot_type q, size_t *start, size_t *end) {
+//            slot_type old_q = q;
+//            size_t old_s = -1, old_e = -1;
             if (q == 0) {
                 *start = 0;
                 size_t j = 0;
@@ -184,7 +193,7 @@ namespace TPD_name {
 //            *end_index = (j) * (sizeof(slot_type) * CHAR_BIT) + select_r(~slot2, 1);
 //            std::cout << "h5" << std::endl;
                     return;
-                    /*if (bit_pos == (sizeof(slot_type) * CHAR_BIT) - 1) {
+                    *//*if (bit_pos == (sizeof(slot_type) * CHAR_BIT) - 1) {
                      * start = (i + 1) * (sizeof(slot_type) * CHAR_BIT);
                         size_t j = i + 1;
                         while (a[j] == MASK32) j++;
@@ -199,7 +208,7 @@ namespace TPD_name {
                      * end_index = (j) * (sizeof(slot_type) * CHAR_BIT) + select_r(~slot2, 1);
                         std::cout << "h2" << std::endl;
                        }
-                       return;*/
+                       return;*//*
                 } else {
                     assert(q < (sizeof(slot_type) * CHAR_BIT));
                     uint64_t slot = ((ulong) (a[i]) << 32ul) | 4294967295ul;
@@ -212,8 +221,76 @@ namespace TPD_name {
 
                 }
             }
+//            header_find(old_q, &old_s, &old_e);
             assert(false);
 
+        }*/
+
+        void header_find(uint32_t q, size_t *start, size_t *end) {
+            if (q == 0) {
+                *start = 0;
+                size_t j = 0;
+                while (a[j] == MASK32) j++;
+                *end = (j) * (sizeof(uint32_t) * CHAR_BIT) + __builtin_clz(~a[j]);
+                return;
+            }
+            for (size_t i = 0; i <= get_last_a_index_containing_the_header(); ++i) {
+                auto cz = __builtin_popcount(~a[i]);
+                if (cz < q) q -= cz;
+                else if (cz == q) {
+                    uint64_t slot = ((ulong) (a[i]) << 32ul) | 4294967295ul;
+                    uint32_t bit_pos = select_r(~slot, q);
+                    assert(bit_pos < (sizeof(uint32_t) * CHAR_BIT));
+                    *start = (i + (bit_pos + 1 == (sizeof(uint32_t) * CHAR_BIT))) * (sizeof(uint32_t) * CHAR_BIT) +
+                             (bit_pos + 1) % (sizeof(uint32_t) * CHAR_BIT);
+                    size_t j = i + 1;
+                    while (a[j] == MASK32) j++;
+                    *end = (j) * (sizeof(uint32_t) * CHAR_BIT) + __builtin_clz(~a[j]);
+                    return;
+                } else {
+                    assert(q < (sizeof(uint32_t) * CHAR_BIT));
+                    uint64_t slot = ((ulong) (a[i]) << 32ul) | 4294967295ul;
+                    uint32_t bit_pos = select_r(~slot, q);
+                    assert(bit_pos < (sizeof(uint32_t) * CHAR_BIT));
+                    *start = i * (sizeof(uint32_t) * CHAR_BIT) + select_r(~slot, q) + 1;
+                    *end = i * (sizeof(uint32_t) * CHAR_BIT) + select_r(~slot, q + 1);
+                    return;
+
+                }
+            }
+            assert(false);
+        }
+
+        void header_find(uint64_t q, size_t *start, size_t *end) {
+            if (q == 0) {
+                *start = 0;
+                size_t j = 0;
+                while (a[j] == -1) j++;
+                *end = (j) * (sizeof(uint64_t) * CHAR_BIT) + __builtin_clzl(~a[j]);
+                return;
+            }
+            for (size_t i = 0; i <= get_last_a_index_containing_the_header(); ++i) {
+                auto cz = __builtin_popcountl(~a[i]);
+                if (cz < q) q -= cz;
+                else if (cz == q) {
+                    uint32_t bit_pos = select_r(~a[i], q);
+                    assert(bit_pos < (sizeof(slot_type) * CHAR_BIT));
+                    *start = (i + (bit_pos + 1 == (sizeof(slot_type) * CHAR_BIT))) * (sizeof(slot_type) * CHAR_BIT) +
+                             (bit_pos + 1) % (sizeof(slot_type) * CHAR_BIT);
+                    size_t j = i + 1;
+                    while (a[j] == -1) j++;
+                    *end = (j) * (sizeof(slot_type) * CHAR_BIT) + __builtin_clzl(~a[j]);
+                    return;
+                } else {
+                    assert(q < (sizeof(slot_type) * CHAR_BIT));
+                    uint32_t bit_pos = select_r(~a[i], q);
+                    assert(bit_pos < (sizeof(slot_type) * CHAR_BIT));
+                    *start = i * (sizeof(slot_type) * CHAR_BIT) + bit_pos + 1;
+                    *end = i * (sizeof(slot_type) * CHAR_BIT) + select_r(~a[i], q + 1);
+                    return;
+                }
+            }
+            assert(false);
         }
 
         void header_insert(slot_type q, size_t *start_index, size_t *end_index) {

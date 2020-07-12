@@ -1,15 +1,31 @@
 
-#ifndef CLION_CODE_DICT_HPP
-#define CLION_CODE_DICT_HPP
+#ifndef CLION_CODE_T_DICT_HPP
+#define CLION_CODE_T_DICT_HPP
 
 #include <cstring>
-#include "PD.h"
-#include "../TPD_Filter/TPD.hpp"
-#include "hash_table.hpp"
+#include "../PD_Filter/PD.h"
+#include "../PD_Filter/hash_table.hpp"
+#include "TPD.hpp"
+#include "att_hTable.hpp"
 
 #define DICT_DB_MODE0 (false)
 #define DICT_DB_MODE1 (true & DICT_DB_MODE0)
 #define DICT_DB_MODE2 (true & DICT_DB_MODE1)
+
+template<typename T>
+static auto ceil_log2(T x) -> size_t {
+    assert(x > 1);
+    size_t res = std::ceil(log2(x));
+    assert ((1ULL << res) >= x);
+    return res;
+}
+
+static auto compute_number_of_PD(size_t max_number_of_elements, size_t max_capacity, double l1_load) -> size_t {
+    double b = max_capacity * l1_load;
+    auto res = (std::size_t) ceil(max_number_of_elements / b);
+//    std::cout << "res is: " << res << std::endl;
+    return (std::size_t) ceil(max_number_of_elements / b);
+}
 
 /*
 static inline auto get_single_pd_max_capacity(size_t error_power_inv, double level1_load_factor) -> size_t {
@@ -21,54 +37,69 @@ static inline auto get_single_pd_max_capacity(size_t error_power_inv, double lev
 //    return my_ceil<size_t>(512u, error_power_inv + 2);
 }*/
 
-//template<class PDType, template<typename> class spareType, typename itemType, size_t bits_per_item>
-template<class PDType, template<typename> class spareType, typename itemType, typename spareItemType>
-class dict {
-    vector<PDType *> pd_vec;
+//template<class <> PDType, template<typename> class spareType, typename itemType, typename spareItemType>
+template<
+        class temp_PD,
+        typename slot_type,
+        size_t bits_per_item,
+        size_t max_capacity,
+        class spareType, typename spareItemType,
+        typename itemType
+>
+class T_dict {
+//    using basic_tpd = temp_PD<slot_type, bits_per_item, max_capacity>;
+//    using temp_spare = att_hTable<uint16_t, 4>;
+//    temp_spare *spare;
+    vector<temp_PD *> pd_vec;
     vector<uint> pd_capacity_vec;
-    hash_table<spareItemType> *spare;
-//    spareType<spareItemType> *spare;
+    spareType* spare;
 
-    size_t capacity;
-//    const size_t number_of_pd, remainder_length{bits_per_item}, quotient_range, single_pd_capacity;
-    const size_t number_of_pd, remainder_length, quotient_range, single_pd_capacity;
-    const size_t quotient_length, pd_index_length;
-    const size_t sparse_element_length, sparse_counter_length;
+    size_t capacity{0};
+    const size_t remainder_length{bits_per_item},
+            quotient_range{max_capacity},
+            quotient_length{ceil_log2(max_capacity)},
+            single_pd_capacity{max_capacity};
+
+    const size_t pd_index_length, number_of_pd;
+    const size_t sparse_element_length;
+//    , sparse_counter_length;
 
 public:
-    dict(size_t max_number_of_elements, size_t error_power_inv, double level1_load_factor, double level2_load_factor, size_t pd_max_capacity = DEFAULT_PD_CAPACITY) :
-            capacity(0),
-            single_pd_capacity(pd_max_capacity),
-            number_of_pd(std::ceil(max_number_of_elements / pd_max_capacity)),
-            quotient_range(DEFAULT_QUOTIENT_RANGE),
-            remainder_length(error_power_inv),
-            pd_index_length(ceil(log2(my_ceil(max_number_of_elements, (size_t) single_pd_capacity)))),
-            quotient_length(DEFAULT_QUOTIENT_LENGTH),
-            sparse_element_length(remainder_length + pd_index_length + quotient_length),
-            sparse_counter_length(sizeof(D_TYPE) * CHAR_BIT - sparse_element_length)
+    T_dict(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor) :
+//            number_of_pd(std::ceil(max_number_of_elements / (double) (max_capacity * level1_load_factor))),
+            number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
+            pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
+            sparse_element_length(pd_index_length + quotient_length + remainder_length)
+/*
+//            capacity(0),
+//            single_pd_capacity(pd_max_capacity),
+//            quotient_range(DEFAULT_QUOTIENT_RANGE),
+//            remainder_length(error_power_inv),
+//            quotient_length(DEFAULT_QUOTIENT_LENGTH),
+//            sparse_counter_length(sizeof(D_TYPE) * CHAR_BIT - sparse_element_length)
 //        spare(get_spare_max_capacity(max_number_of_elements, level1_load_factor),
 //              remainder_length + pd_index_length + quotient_length, level2_load_factor)
+*/
     {
         assert(sparse_element_length <= sizeof(spareItemType) * CHAR_BIT);
 
-        size_t log2_size = ceil(log2(max_number_of_elements));
-//        auto res = my_ceil(max_number_of_elements, log2_size * log2_size)  << 8u;
+        size_t log2_size = ceil_log2(max_number_of_elements);
         auto res = my_ceil(max_number_of_elements, log2_size) << 6u;
 
         size_t spare_max_capacity = res;
-        spare = new spareType<spareItemType>(spare_max_capacity, sparse_element_length, level2_load_factor);
+        spare = new spareType(spare_max_capacity, sparse_element_length, level2_load_factor);
 
         pd_capacity_vec.resize(number_of_pd);
 
         for (size_t i = 0; i < number_of_pd; ++i) {
-            PDType *temp = new PDType(quotient_range, single_pd_capacity, remainder_length);
+            auto *temp = new temp_PD(quotient_range, single_pd_capacity, remainder_length);
             pd_vec.push_back(temp);
         }
 //    get_info();
     }
 
 
-    virtual ~dict() {
+    virtual ~T_dict() {
         for (int i = 0; i < pd_vec.size(); ++i) {
             delete pd_vec[i];
         }
@@ -125,19 +156,14 @@ public:
         if (pop_attempt_with_insertion_by_bucket(hash_val, b2))
             return;
 
-        spareItemType hold = hash_val;
+        auto hold = hash_val;
         size_t bucket = b1;
         for (size_t i = 0; i < MAX_CUCKOO_LOOP; ++i) {
             if (pop_attempt_with_insertion_by_bucket(hold, bucket)) {
-                if (i > 4) {
-//                    cout << "here with hash_val: " << hash_val << endl;
-                    spare->update_max_cuckoo_insert(i);
-                    spare->update_cuckoo_insert_counter(i);
-                }
                 return;
             }
-            if (DICT_DB_MODE1)
-                assert(spare->is_bucket_full_by_index(bucket));
+            /*if (DICT_DB_MODE1)
+                assert(spare->is_bucket_full_by_index(bucket));*/
             spare->cuckoo_swap(&hold, &bucket);
         }
         cout << spare->get_capacity() / ((double) spare->get_max_capacity()) << endl;
@@ -149,13 +175,13 @@ public:
     }
 
     void get_info() {
-        const size_t num = 9;
+        const size_t num = 8;
         size_t val[num] = {number_of_pd, capacity, quotient_range, single_pd_capacity, remainder_length,
                            pd_index_length,
-                           quotient_length, sparse_element_length, sparse_counter_length};
+                           quotient_length, sparse_element_length};
 
         string names[num] = {"number_of_pd", "capacity", "quotient_range", "single_pd_capacity", "remainder_length",
-                             "pd_index_length", "quotient_length", "spare_element_length", "sparse_counter_length"};
+                             "pd_index_length", "quotient_length", "spare_element_length"};
         for (int i = 0; i < num; ++i) {
             cout << names[i] << ": " << val[i] << endl;
         }
@@ -174,18 +200,28 @@ public:
         spare->my_hash(hash_val, &b1, &b2);
         return std::make_tuple(b1, b2);
     }
+
 /*
     auto get_second_level_max_reached_capacity()->std::size_t {
         return spare->get_max_capacity_reached();
     }*/
 
-    auto get_second_level_capacity()->std::size_t {
+    auto get_second_level_capacity() -> std::size_t {
         return spare->get_capacity();
     }
 
-    auto get_second_level_load_ratio() ->double {
+    auto get_second_level_load_ratio() -> double {
         return spare->get_capacity() / ((double) spare->get_max_capacity());
     }
+
+
+    auto get_name() -> std::string {
+        string a = "T_dict:\t";
+        string b = pd_vec[0]->get_name() + "\t";
+        string c = spare->get_name();
+        return a + b + c;
+    }
+
 private:
 
 
@@ -207,8 +243,9 @@ private:
 //        size_t b = pd_vec[pd_index]->get_capacity();
 //        assert(pd_capacity_vec[pd_index] == pd_vec[pd_index]->get_capacity());
         if (pd_capacity_vec[pd_index] == single_pd_capacity) {
-            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
-//            insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
+            /**Todo!*/
+            insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
+//            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
             return;
         }
         pd_vec[pd_index]->insert(quot, r);
@@ -298,7 +335,8 @@ private:
             auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
             if (single_pop_attempt(temp_el)) {
 //                cout << "here" << endl;
-                spare->clear_slot_bucket_index_and_location(bucket_index, i); }
+                spare->clear_slot_bucket_index_and_location(bucket_index, i);
+            }
 
         }
     }
@@ -384,4 +422,4 @@ static auto get_max_elements_in_level2(size_t number_of_pd, size_t single_pd_cap
 //typedef dict<PD, hash_table<uint32_t>> dict64;
 
 
-#endif //CLION_CODE_DICT_HPP
+#endif //CLION_CODE_T_DICT_HPP
