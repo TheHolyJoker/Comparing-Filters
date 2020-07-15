@@ -6,9 +6,17 @@
 
 void print_name(const std::string &filter_name, size_t line_width) {
     size_t temp_width = line_width - 5;
+    bool cond = (filter_name.find('\t') != std::string::npos);
+    cond |= (filter_name.find('\t') != std::string::npos);
+    std::size_t fixed_width = (cond) ? temp_width - 2u : temp_width;
+    if (filter_name.size() >= 10) {
+
+    }
     std::string line = " |" + std::string(temp_width, '-') + '|';
-    std::cout << line << "\n |" << std::left << std::setw(temp_width) << filter_name << "|\n" << line
-              << std::endl;
+    std::cout << line
+              << "\n |" << std::left << std::setw(fixed_width) << filter_name << "|\n"
+              //              << " |" << std::left << std::setw(temp_width) << filter_name.size() << "|\n"
+              << line << std::endl;
 }
 
 void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t *divisors) {
@@ -55,6 +63,37 @@ void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t
     std::cout << line << endl;
 
 }
+
+void table_print(size_t var_num, string *var_names, size_t *values) {
+    size_t max_length = 0;
+    for (int i = 0; i < var_num; ++i) {
+        max_length = max(var_names[i].length(), max_length);
+    }
+
+    // values for controlling format
+    const uint32_t name_width = int(max_length);
+    const std::string sep = " |";
+    const int total_width = default_line_width;
+    const std::string line = sep + std::string(total_width - 1, '-') + '|';
+    std::cout << line << '\n' << sep << left;
+
+    size_t counter = 0;
+    while (counter < var_num - 1) {
+        cout << std::setw(name_width) << var_names[counter++] << sep;
+    }
+    cout << std::setw(name_width - 1) << var_names[counter] << sep;
+    cout << '\n' << line << '\n' + sep;
+
+
+    counter = 0;
+    while (counter < var_num - 1) {
+        cout << std::setw(name_width) << values[counter++] << sep;
+    }
+    cout << std::setw(name_width - 1) << values[counter] << sep;
+    cout << '\n' << line << '\n';
+
+}
+
 
 void print_line() {
     const uint32_t name_width = 24;
@@ -148,7 +187,9 @@ table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_c
     size_t var_num = 3;
     string names[3] = {"expected_FP_count", "high_load_FP_count", "mid_load_FP_count"};
     size_t values[3] = {expected_FP_count, high_load_FP_count, mid_load_FP_count};
-    size_t max_length = 0;
+    table_print(var_num, names, values);
+
+    /*size_t max_length = 0;
     for (int i = 0; i < var_num; ++i) {
         max_length = max(names[i].length(), max_length);
     }
@@ -173,11 +214,55 @@ table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_c
         cout << std::setw(name_width) << values[counter++] << sep;
     }
     cout << std::setw(name_width - 1) << values[counter] << sep;
-    cout << '\n' << line << '\n';
-
+    cout << '\n' << line << '\n';*/
 
 }
 
+void att_print_single_round_false_positive_rates(size_t lookups_repetitions, size_t bits_per_item,
+                                                 size_t false_positive_counter, size_t true_positive_counter) {
+
+    const size_t var_num = 6;
+    string names[var_num] = {"#reps", "#expected FP", "#Actual FP", "#TP", "expected FP prob", "actual FP prob"};
+    size_t num_of_expected_fp = (lookups_repetitions - true_positive_counter) >> bits_per_item;
+    size_t values[var_num - 2] = {lookups_repetitions, num_of_expected_fp, false_positive_counter,
+                                  true_positive_counter};
+    size_t max_length = 24;
+    for (auto &name : names) {
+        max_length = max(name.length(), max_length);
+    }
+
+// values for controlling format
+    const uint32_t name_width = int(max_length);
+    const std::string sep = " |";
+    const uint32_t total_width = (name_width + sep.size()) * var_num;
+    const std::string line = sep + std::string(total_width - 1, '-') + '|';
+    std::cout << line << '\n' << sep << left;
+
+    size_t counter = 0;
+    while (counter < var_num) {
+        cout << std::setw(name_width) << names[counter++] << sep;
+    }
+    cout << '\n' << line << '\n' + sep;
+
+
+    counter = 0;
+    while (counter < var_num - 2) {
+        cout << std::setw(name_width) << values[counter++] << sep;
+    }
+//    std::cout << values[0] << "/" << std::setw(name_width - is_round_contain_two_digits) << values[1];
+    double expected_fp_prob = 1 / ((double) (1u << bits_per_item));
+    double actual_fp_prob = false_positive_counter / ((double) (lookups_repetitions - true_positive_counter));
+    assert(expected_fp_prob > 0);
+    assert(expected_fp_prob < 1);
+    assert(actual_fp_prob > 0);
+    assert(actual_fp_prob < 1);
+
+    cout << std::setw(name_width) << expected_fp_prob << sep;
+
+    cout << std::setw(name_width) << actual_fp_prob << sep;
+    cout << '\n' << line << '\n';
+
+}
 
 void print_single_round_false_positive_rates(size_t lookups_repetitions, size_t expected_false_positive,
                                              size_t true_positive_counter, size_t false_positive_counter) {

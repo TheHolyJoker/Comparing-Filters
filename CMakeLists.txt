@@ -2,10 +2,19 @@ cmake_minimum_required(VERSION 3.14)
 project(Filters)
 
 set(CMAKE_CXX_STANDARD 14)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -O3")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -DNDEBUG -O3")
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -mbmi2 -DNDEBUG")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx -mavx2")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512cd")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse4.1 -msse4.2")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mmmx")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse -msse2 -msse3")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -O3 -ggdb3")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG -O3")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb")
 
 #include_directories(.)
 include_directories(Bloom_Filter)
@@ -20,6 +29,7 @@ find_package(OpenSSL REQUIRED)
 add_executable(
         Filters
         hashutil.h
+        robin_hood.h
         Tests/wrappers.hpp
         Tests/tests.hpp Tests/tests.cpp
         Tests/new_tests.hpp Tests/new_tests.cpp
@@ -48,7 +58,12 @@ add_executable(
         #        morton/test_util.h
         #        morton/util.h
         #        morton/vector_types.h
+        TPD_Filter/T_dict.hpp
+        TPD_Filter/att_hTable.hpp
         TPD_Filter/TPD.hpp
-        TPD_Filter/T_dict.hpp TPD_Filter/att_hTable.hpp)
+#        TPD_Filter/pd512.h
+#        TPD_Filter/pd-test.cpp
+#        TPD_Filter/pd512_wrapper.hpp
+)
 
 target_link_libraries(Filters OpenSSL::SSL)

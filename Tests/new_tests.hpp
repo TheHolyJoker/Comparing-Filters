@@ -86,6 +86,9 @@ auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 
     size_t divisors[var_num - 2] = {add_step, find_step, delete_step};
     print_single_round(var_num, values, divisors);
+
+//    if (FilterAPI<Table>::get_ID(wrap_filter) == tpd_id)
+//        FilterAPI<Table>::get_dynamic_info(wrap_filter);
     return os;
 }
 
@@ -97,6 +100,8 @@ auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *el
     for (int round = 0; round < bench_precision; ++round) {
         benchmark_single_round<Table, itemType>(wrap_filter, elements, round, bench_precision, os);
     }
+
+
     return os;
 }
 
@@ -226,11 +231,31 @@ att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_pow
     init_elements(filter_max_capacity, lookup_reps, &elements);
 
     uint b = 1u;
+    /*if (indicator & b) {
+        using spare_item = uint64_t;
+//        const size_t max_capacity = 50u;
+        using temp_PD = pd512_wrapper;
+        using temp_hash = att_hTable<spare_item , 4>;
+        using Table = T_dict<temp_PD, uint64_t, 8, 50, temp_hash, spare_item , itemType>;
+        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+    }*/
+    b <<= 1u;
+
+    /*if (indicator & b) {
+        using spare_item = uint64_t;
+        const size_t max_capacity = 48u;
+        using temp_PD = TPD_name::TPD<uint32_t, 8, max_capacity>;
+        using temp_hash = att_hTable<spare_item , 4>;
+        using Table = T_dict<temp_PD, uint64_t, 8, max_capacity, temp_hash, spare_item , itemType>;
+        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+    }*/
+    b <<= 1u;
     if (indicator & b) {
         using spare_item = uint64_t;
         using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
         using temp_hash = att_hTable<spare_item , 4>;
         using Table = T_dict<temp_PD, uint64_t, 8, 64, temp_hash, spare_item , itemType>;
+        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     }
     b <<= 1u;
@@ -238,6 +263,7 @@ att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_pow
 //        auto triple = <uint32_t, bits_per_element, 64>;
         using basic_tpd = TPD_name::TPD<uint32_t, bits_per_element, 64>;
         using Table = T_dict<basic_tpd, uint32_t, bits_per_element, 64, hash_table<uint64_t>, itemType, uint64_t>;
+        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
 //        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
 //                                                              &elements);
@@ -245,6 +271,7 @@ att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_pow
 
     b <<= 1u;
     if (indicator & b) {
+        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
                                                               &elements);
     }

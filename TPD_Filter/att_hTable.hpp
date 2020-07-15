@@ -31,31 +31,20 @@ class att_hTable {
     const double max_load_factor;
     const bucket_type empty_slot{(bucket_type) -1};
 
-/*
-
-    size_t max_cuckoo_insert;
-    */
-/** "cuckoo_insert_counter" is used to measure the total length of cuckoo chain occurred during all insertion.
-     * The measure over single insertion "I_1", equal to the length of the cuckoo chain this insertion caused,
-     * multiplied by the size of a bucket.
-     *//*
-
-    size_t cuckoo_insert_counter;
-    size_t max_capacity_reached;
-*/
-
 
 public:
     att_hTable(size_t max_capacity, size_t element_length, double max_load_factor)
             : max_capacity(max_capacity), element_length(element_length), max_load_factor(max_load_factor),
-              num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size)))
-    /*,
-       seed1(42), seed2(43), max_cuckoo_insert(0),
-       cuckoo_insert_counter(0), max_capacity_reached(0)*/
-    {
-        Table = new Bucket[num_of_buckets];
+              num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))) {
 
-        // The msb is indicator to whether the cell is free or not. (0 might be valid fingerprint)
+        int ok = posix_memalign((void**)&Table, sizeof(Bucket) * CHAR_BIT, sizeof(Bucket) * num_of_buckets);
+
+        if (ok != 0){
+            cout << "Failed!!!" << endl;
+            return;
+        }
+//        Table = new Bucket[num_of_buckets];
+
         assert(element_length < sizeof(bucket_type) * CHAR_BIT);
         for (int i = 0; i < num_of_buckets; ++i) {
             auto bp = Table[i].bits_;
@@ -67,8 +56,6 @@ public:
 
 
     virtual ~att_hTable() {
-//    cout << "max_cuckoo_insert " << this->max_cuckoo_insert << endl;
-//    cout << "cuckoo_insert_counter " << this->cuckoo_insert_counter << endl;
         delete[] Table;
     }
 
@@ -90,10 +77,9 @@ public:
             std::cout << "Trying to insert into fully loaded hash table" << std::endl;
             assert(false);
         }
-        capacity++;
+//        capacity++;
         /* http://www.cs.toronto.edu/~noahfleming/CuckooHashing.pdf (Algorithm 2)*/
 
-//        max_capacity_reached = (max_capacity_reached >= capacity) ? max_capacity_reached : capacity;
         uint32_t b1 = -1, b2 = -1;
 
         my_hash(x, &b1, &b2);
@@ -102,13 +88,33 @@ public:
         auto hold = x;
         size_t bucket_index = b1;
         for (int i = 0; i < MAX_CUCKOO_LOOP; ++i) {
-            if (insert_if_bucket_not_full(hold, bucket_index)) {
+            if (insert_if_bucket_not_full(hold, bucket_index))
                 return;
-            }
+
             cuckoo_swap(&hold, bucket_index);
         }
 
         assert(false);
+    }
+
+    void remove(bucket_type x) {
+//    if (HT_DB_MODE2)
+//        assert(find(x));
+
+        if (capacity == 0) {
+            std::cout << "Trying to delete from empty hash table" << std::endl;
+//        assert(false);
+        }
+
+
+        uint32_t b1 = -1, b2 = -1;
+        my_hash(x, &b1, &b2);
+
+        // remove_helper will return "true" if x in the hash_table.
+        if (remove_helper(x, b1))
+            return;
+        remove_helper(x, b2);
+
     }
 
     /**
@@ -122,13 +128,6 @@ public:
     void cuckoo_swap(bucket_type *hold, size_t *bucket_index) {
         auto junk = swap_elements_from_bucket(*bucket_index, *hold);
         hold = &junk;
-/*
-        auto rand_table_index = (*bucket_index * bucket_size) + (random() % bucket_size);
-        auto temp = table[rand_table_index];
-
-        table[rand_table_index] = *hold;
-        *hold = temp;
-*/
 
         uint32_t temp_b1 = -1, temp_b2 = -1;
         my_hash(*hold, &temp_b1, &temp_b2);
@@ -146,7 +145,6 @@ public:
 
     auto swap_elements_from_bucket(size_t bucket_index, bucket_type x) -> bucket_type {
         auto rand_bucket_index = random() % bucket_size;
-//        auto rand_table_index = (bucket_index * bucket_size) + (random() % bucket_size);
         auto *bp = Table[bucket_index].bits_;
         bucket_type temp = bp[rand_bucket_index];
         bp[rand_bucket_index] = x;
@@ -155,13 +153,13 @@ public:
 
 
     /**
- * Tries to insert "x" to bucket in "bucket_index".
- * If the bucket is not full, x will be inserted, and true will be returned.
- * Otherwise, x was not inserted, and false will be returned.
- * @param x
- * @param bucket_index
- * @return
- */
+     * Tries to insert "x" to bucket in "bucket_index".
+     * If the bucket is not full, x will be inserted, and true will be returned.
+     * Otherwise, x was not inserted, and false will be returned.
+     * @param x
+     * @param bucket_index
+     * @return
+     */
     auto insert_if_bucket_not_full(bucket_type x, size_t bucket_index) -> bool {
         assert((x & MASK(element_length)) == x);
         auto *bp = Table[bucket_index].bits_;
@@ -199,28 +197,6 @@ public:
 
 //        insert_by_table_index(x, bucket_index * bucket_size + location);
     }
-
-
-    void remove(bucket_type x) {
-//    if (HT_DB_MODE2)
-//        assert(find(x));
-
-        if (capacity == 0) {
-            std::cout << "Trying to delete from empty hash table" << std::endl;
-//        assert(false);
-        }
-
-
-        uint32_t b1 = -1, b2 = -1;
-        my_hash(x, &b1, &b2);
-
-        // remove_helper will return "true" if x in the hash_table.
-        if (remove_helper(x, b1))
-            return;
-        remove_helper(x, b2);
-
-    }
-
 
 
     ////Getters

@@ -22,6 +22,17 @@ static auto compute_size(size_t max_capacity, size_t bits_per_item) -> size_t {
     return INTEGER_ROUND(total_bit_size, slot_size);
 }
 
+//bool is_aligned(void *p, int N) {
+//    return (int) p % N == 0;
+//}
+
+template<class T>
+bool
+is_aligned(const void * ptr) noexcept {
+    auto iptr = reinterpret_cast<std::uintptr_t>(ptr);
+    return !(iptr % alignof(T));
+}
+
 namespace TPD_name {
 
     static inline void
@@ -31,18 +42,21 @@ namespace TPD_name {
     }
 
 
-    template<typename slot_type, size_t bits_per_item, size_t max_capacity>
+    template<typename slot_type, size_t bits_per_item, size_t max_capacity, size_t quotient_range = 64u>
     class TPD {
         const size_t size = compute_size<slot_type>(max_capacity, bits_per_item);
 //                (max_capacity * (bits_per_item + 2)) / (sizeof(slot_type) * CHAR_BIT);
-        slot_type a[max_capacity * (bits_per_item + 2)];
-//        const bool deal_with_joined_slot = false;
+        slot_type a[max_capacity * bits_per_item + (quotient_range << 1u)];
+        const bool deal_with_joined_slot{(quotient_range << 1u) % (sizeof(slot_type) * CHAR_BIT) != 0};
+
     public:
         TPD(size_t m, size_t f, size_t l) {
-            assert((max_capacity * 2) % (sizeof(slot_type) * CHAR_BIT) == 0);
+            memset(a, 0, max_capacity * bits_per_item + (quotient_range << 1u));
 
+
+            assert(is_aligned<slot_type*>(a));
             for (int i = 0; i < max_capacity; ++i) {
-                a[i] = 0;
+                assert(a[i] == 0);
             }
         }
 
@@ -62,13 +76,8 @@ namespace TPD_name {
         }
 
         void insert(slot_type q, slot_type r) {
-            auto temp_size = get_capacity();
-            if (get_capacity() >= max_capacity) {
-                auto temp = get_capacity();
-                temp = get_capacity();
-            }
-//            size_t a = get_capacity();
             assert(get_capacity() < max_capacity);
+            assert(q < quotient_range);
             size_t start_index = -1, end_index = -1;
             header_insert(q, &start_index, &end_index);
 
@@ -140,12 +149,12 @@ namespace TPD_name {
 
     private:
         auto get_header_size_in_bits() -> size_t {
-            return max_capacity << 1u;
+            return quotient_range << 1u;
         }
 
-        auto should_deal_with_joined_slot(size_t m, size_t f, size_t l) -> bool {
-            return bool((f * 2) % (sizeof(slot_type) * CHAR_BIT));
-        }
+        /* auto should_deal_with_joined_slot(size_t m, size_t f, size_t l) -> bool {
+             return bool((f * 2) % (sizeof(slot_type) * CHAR_BIT));
+         }*/
 
 /*
     auto naive_conditional_remove(slot_type q, slot_type r)->bool {
@@ -163,70 +172,8 @@ namespace TPD_name {
             return (*start_index != *end_index);
         }
 
-        /*
-        void header_find(slot_type q, size_t *start, size_t *end) {
-//            slot_type old_q = q;
-//            size_t old_s = -1, old_e = -1;
-            if (q == 0) {
-                *start = 0;
-                size_t j = 0;
-                while (a[j] == MASK32) j++;
-                *end = (j) * (sizeof(slot_type) * CHAR_BIT) + __builtin_clz(~a[j]);
-//        uint64_t slot2 = ((ulong) (a[j]) << 32ul) | 4294967295ul;
-//        *end_index = (j) * (sizeof(slot_type) * CHAR_BIT) + select_r(~slot2, 1);
-//        std::cout << "h0" << std::endl;
-                return;
-            }
-            for (size_t i = 0; i <= get_last_a_index_containing_the_header(); ++i) {
-                auto cz = __builtin_popcount(~a[i]);
-                if (cz < q) q -= cz;
-                else if (cz == q) {
-                    uint64_t slot = ((ulong) (a[i]) << 32ul) | 4294967295ul;
-                    uint32_t bit_pos = select_r(~slot, q);
-                    assert(bit_pos < (sizeof(slot_type) * CHAR_BIT));
-                    *start = (i + (bit_pos + 1 == (sizeof(slot_type) * CHAR_BIT))) * (sizeof(slot_type) * CHAR_BIT) +
-                             (bit_pos + 1) % (sizeof(slot_type) * CHAR_BIT);
-                    size_t j = i + 1;
-                    while (a[j] == MASK32) j++;
-                    *end = (j) * (sizeof(slot_type) * CHAR_BIT) + __builtin_clz(~a[j]);
-//            uint64_t slot2 = ((ulong) (a[j]) << 32ul) | 4294967295ul;
-//            *end_index = (j) * (sizeof(slot_type) * CHAR_BIT) + select_r(~slot2, 1);
-//            std::cout << "h5" << std::endl;
-                    return;
-                    *//*if (bit_pos == (sizeof(slot_type) * CHAR_BIT) - 1) {
-                     * start = (i + 1) * (sizeof(slot_type) * CHAR_BIT);
-                        size_t j = i + 1;
-                        while (a[j] == MASK32) j++;
-                        uint64_t slot2 = ((ulong) (a[j]) << 32ul) | 4294967295ul;
-                     * end_index = (j) * (sizeof(slot_type) * CHAR_BIT) + bit_rank(~slot2, 1);
-                        std::cout << "h1" << std::endl;
-                       } else {
-                     * start = (i) * (sizeof(slot_type) * CHAR_BIT) + bit_pos + 1;
-                        size_t j = i + 1;
-                        while (a[j] == MASK32) j++;
-                        uint64_t slot2 = ((ulong) (a[j]) << 32ul) | 4294967295ul;
-                     * end_index = (j) * (sizeof(slot_type) * CHAR_BIT) + select_r(~slot2, 1);
-                        std::cout << "h2" << std::endl;
-                       }
-                       return;*//*
-                } else {
-                    assert(q < (sizeof(slot_type) * CHAR_BIT));
-                    uint64_t slot = ((ulong) (a[i]) << 32ul) | 4294967295ul;
-                    uint32_t bit_pos = select_r(~slot, q);
-                    assert(bit_pos < (sizeof(slot_type) * CHAR_BIT));
-                    *start = i * (sizeof(slot_type) * CHAR_BIT) + select_r(~slot, q) + 1;
-                    *end = i * (sizeof(slot_type) * CHAR_BIT) + select_r(~slot, q + 1);
-//            std::cout << "h3" << std::endl;
-                    return;
-
-                }
-            }
-//            header_find(old_q, &old_s, &old_e);
-            assert(false);
-
-        }*/
-
         void header_find(uint32_t q, size_t *start, size_t *end) {
+            auto old_q = q;
             if (q == 0) {
                 *start = 0;
                 size_t j = 0;
@@ -258,6 +205,8 @@ namespace TPD_name {
 
                 }
             }
+            std::size_t a = -1, b = -1;
+            header_find(old_q, &a, &b);
             assert(false);
         }
 
@@ -290,7 +239,7 @@ namespace TPD_name {
                     return;
                 }
             }
-            assert(false);
+
         }
 
         void header_insert(slot_type q, size_t *start_index, size_t *end_index) {
@@ -298,19 +247,19 @@ namespace TPD_name {
 //            assert(max_capacity * 2 % ((sizeof(slot_type) * CHAR_BIT)) == 0);
             size_t temp_index;
             slot_type temp_slot;
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 temp_index = get_joined_slot_index();
                 temp_slot = a[temp_index];
-            }*/
+            }
 
             header_find(q, start_index, end_index);
             header_push(*end_index);
 
 //            /*Restore body's part in the joined cell*/
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 auto mask_bit = (sizeof(slot_type) * CHAR_BIT) - get_header_bit_index();
                 a[temp_index] = (a[temp_index] & (~MASK(mask_bit))) | (temp_slot & MASK(mask_bit));
-            }*/
+            }
 
         }
 
@@ -339,10 +288,10 @@ namespace TPD_name {
 
             size_t temp_index;
             slot_type temp_slot;
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 temp_index = get_joined_slot_index();
                 temp_slot = a[temp_index];
-            }*/
+            }
 
             header_find(q, start_index, end_index);
             if (DB) {
@@ -355,12 +304,12 @@ namespace TPD_name {
             header_pull(*end_index);
 
             /*Restore body's part in the joined cell*/
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 //Plus one to insure that body's first bit did not effect header last bit.
                 //This bit (header last bit) should always be zero.
                 auto mask_bit = (sizeof(slot_type) * CHAR_BIT) - get_header_bit_index() + 1;
                 a[temp_index] = (a[temp_index] & (~MASK(mask_bit))) | (temp_slot & MASK(mask_bit));
-            }*/
+            }
 
         }
 
@@ -465,19 +414,19 @@ namespace TPD_name {
         void body_insert(slot_type r, size_t unpacked_start_index, size_t unpacked_end_index) {
             size_t temp_index;
             slot_type temp_slot;
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 temp_index = get_joined_slot_index();
                 temp_slot = a[temp_index];
-            }*/
+            }
 
             size_t B_index = -1, bit_index = -1;
             auto res = body_find(r, unpacked_start_index, unpacked_end_index, &B_index, &bit_index);
             body_push(r, B_index, bit_index);
 
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 auto mask_bit = (sizeof(slot_type) * CHAR_BIT) - get_header_bit_index();
                 a[temp_index] = (a[temp_index] & (~MASK(mask_bit))) | (temp_slot & MASK(mask_bit));
-            }*/
+            }
         }
 
         void body_push(slot_type r, size_t B_index, size_t bit_index) {
@@ -519,10 +468,10 @@ namespace TPD_name {
 
             size_t temp_index;
             slot_type temp_slot;
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 temp_index = get_joined_slot_index();
                 temp_slot = a[temp_index];
-            }*/
+            }
 
             size_t B_index = -1, bit_index = -1;
             auto res = body_find(r, unpacked_start_index, unpacked_end_index, &B_index, &bit_index);
@@ -534,10 +483,10 @@ namespace TPD_name {
             }
             body_pull(B_index, bit_index);
 
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 auto mask_bit = (sizeof(slot_type) * CHAR_BIT) - get_header_bit_index();
                 a[temp_index] = (a[temp_index] & (MASK(mask_bit))) | (temp_slot & (~MASK(mask_bit)));
-            }*/
+            }
         }
 
         auto body_conditional_remove(slot_type r, size_t unpacked_start_index, size_t unpacked_end_index) -> bool {
@@ -547,10 +496,10 @@ namespace TPD_name {
             size_t temp_index;
             slot_type temp_slot;
 
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 temp_index = get_joined_slot_index();
                 temp_slot = a[temp_index];
-            }*/
+            }
 
             size_t B_index = -1, bit_index = -1;
             auto res = body_find(r, unpacked_start_index, unpacked_end_index, &B_index, &bit_index);
@@ -559,10 +508,10 @@ namespace TPD_name {
             }
             body_pull(B_index, bit_index);
 
-            /*if (deal_with_joined_slot) {
+            if (deal_with_joined_slot) {
                 auto mask_bit = (sizeof(slot_type) * CHAR_BIT) - get_header_bit_index();
                 a[temp_index] = (a[temp_index] & (MASK(mask_bit))) | (temp_slot & (~MASK(mask_bit)));
-            }*/
+            }
             return true;
         }
 
@@ -619,16 +568,11 @@ namespace TPD_name {
         }
 
         auto get_last_a_index_containing_the_header() -> size_t {
-            /*Body does not start in a new slot*/
-//            assert(max_capacity * 2 % ((sizeof(slot_type) * CHAR_BIT)) == 0);
-            return ((max_capacity * 2) - 1) / ((sizeof(slot_type) * CHAR_BIT));
-//            - int(1);
-//            return (max_capacity << 1u) / ((sizeof(slot_type) * CHAR_BIT)) - int(1);
-//    return INTEGER_ROUND(temp, (sizeof(slot_type) * CHAR_BIT));
+            return (quotient_range * 2 - 1) / ((sizeof(slot_type) * CHAR_BIT));
         }
 
         auto get_header_bit_index() -> size_t {
-            auto temp = (max_capacity << 1u);
+            auto temp = (quotient_range << 1u);
             return temp % ((sizeof(slot_type) * CHAR_BIT));
         }
 
@@ -665,9 +609,9 @@ namespace TPD_name {
         }
 
         auto get_deal_with_joined_slot() const -> const bool {
+            return deal_with_joined_slot;
             /*Body does not start in a new slot*/
 //            assert(max_capacity * 2 % ((sizeof(slot_type) * CHAR_BIT)) == 0);
-            return false;
 //            return deal_with_joined_slot;
         }
 

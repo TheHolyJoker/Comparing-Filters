@@ -234,6 +234,8 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
         }
     }
 
+    att_print_single_round_false_positive_rates(lookup_set.size(), error_power_inv, fp_counter, tp_counter);
+
     print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter,
                                             fp_counter);
 //    cout << "filter_max_capacity: " << filter_max_capacity << endl;

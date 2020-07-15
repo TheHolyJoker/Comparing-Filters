@@ -19,6 +19,7 @@
 #include "../Bloom_Filter/bloom.hpp"
 #include "../PD_Filter/dict.hpp"
 #include "../TPD_Filter/T_dict.hpp"
+//#include "../TPD_Filter/pd512_wrapper.hpp"
 #include "../cuckoo/cuckoofilter.h"
 #include "../cuckoofilter/src/cuckoofilter.h"
 //#include "../morton/compressed_cuckoo_filter.h"
@@ -39,6 +40,9 @@
 
 #define CONTAIN_ATTRIBUTES  __attribute__ ((noinline))
 
+enum filter_id {
+    BF, CF, MF, SIMD, pd_id, tpd_id
+};
 
 template<typename Table>
 struct FilterAPI {
@@ -71,8 +75,15 @@ struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFam
         return "Bloom";
     }
 
+    static void get_dynamic_info(Table *table){
+        assert (false);
+    }
     CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
         return (0 == table->Contain(key));
+    }
+
+    static auto get_ID(Table *table) -> filter_id{
+        return BF;
     }
 };
 
@@ -115,6 +126,14 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     static string get_name(Table *table) {
         return "Cuckoo";
     }
+
+    static void get_dynamic_info(Table *table){
+        assert (false);
+    }
+    static auto get_ID(Table *table) -> filter_id{
+        return CF;
+    }
+
 };
 
 template<>
@@ -153,6 +172,14 @@ struct FilterAPI<SimdBlockFilter<>> {
 
     static string get_name(Table *table) {
         return "SimdBlockFilter";
+    }
+
+    static void get_dynamic_info(Table *table){
+        assert (false);
+    }
+
+    static auto get_ID(Table *table) -> filter_id{
+        return SIMD;
     }
 };
 
@@ -245,6 +272,13 @@ struct FilterAPI<MortonFilter> {
     static string get_name(Table *table) {
         return "Morton";
     }
+
+    static void get_dynamic_info(Table *table){
+        assert (false);
+    }
+    static auto get_ID(Table *table) -> filter_id{
+        return MF;
+    }
 };
 
 //template<typename itemType, size_t bits_per_item,brancless, Hashfam>
@@ -290,6 +324,13 @@ struct FilterAPI<dict<PD, TableType, itemType, spareItemType>> {
 
     static string get_name(Table *table) {
         return "PD";
+    }
+
+    static void get_dynamic_info(Table *table){
+        assert (false);
+    }
+    static auto get_ID(Table *table) -> filter_id{
+        return pd_id;
     }
 };
 
@@ -426,6 +467,14 @@ struct FilterAPI<
 
     static string get_name(Table *table) {
         return table->get_name();
+    }
+
+    static void get_dynamic_info(Table *table){
+        table->get_dynamic_info();
+    }
+
+    static auto get_ID(Table *table) -> filter_id{
+        return tpd_id;
     }
 };
 
