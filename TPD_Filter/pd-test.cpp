@@ -3,7 +3,7 @@
 #endif
 
 extern "C" {
-#include "pd512.h"
+#include "pd512.hpp"
 }
 
 #include <iostream>

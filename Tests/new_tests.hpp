@@ -40,7 +40,7 @@ auto time_lookups(Table *wrap_filter, vector<itemType> *element_set, size_t star
 template<class Table, typename itemType>
 auto time_insertions(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
-    FilterAPI<Table>::AddAll(*element_set, start, end, wrap_filter);
+    FilterAPI<Table>::AddAll(* element_set, start, end, wrap_filter);
     auto t1 = chrono::high_resolution_clock::now();
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
@@ -231,15 +231,23 @@ att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_pow
     init_elements(filter_max_capacity, lookup_reps, &elements);
 
     uint b = 1u;
-    /*if (indicator & b) {
+    if (indicator & b) {
+        using spare_item = uint64_t;
+        using temp_hash = att_hTable<spare_item, 4>;
+        using Table = dict512<temp_hash, spare_item, itemType>;
+        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+    }
+    /*b <<= 1u;
+    if (indicator & b) {
         using spare_item = uint64_t;
 //        const size_t max_capacity = 50u;
         using temp_PD = pd512_wrapper;
-        using temp_hash = att_hTable<spare_item , 4>;
-        using Table = T_dict<temp_PD, uint64_t, 8, 50, temp_hash, spare_item , itemType>;
+        using temp_hash = att_hTable<spare_item, 4>;
+        using Table = T_dict<temp_PD, uint64_t, 8, 50, temp_hash, spare_item, itemType>;
+        *//*False negative possibly due to different insertion policy, (insertion into pd might fail).*//*
+//        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     }*/
-    b <<= 1u;
 
     /*if (indicator & b) {
         using spare_item = uint64_t;
@@ -249,32 +257,32 @@ att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_pow
         using Table = T_dict<temp_PD, uint64_t, 8, max_capacity, temp_hash, spare_item , itemType>;
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     }*/
-    b <<= 1u;
-    if (indicator & b) {
-        using spare_item = uint64_t;
-        using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
-        using temp_hash = att_hTable<spare_item , 4>;
-        using Table = T_dict<temp_PD, uint64_t, 8, 64, temp_hash, spare_item , itemType>;
-        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    }
-    b <<= 1u;
-    if (indicator & b) {
+//    b <<= 1u;
+//    if (indicator & b) {
+//        using spare_item = uint64_t;
+//        using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
+//        using temp_hash = att_hTable<spare_item, 4>;
+//        using Table = T_dict<temp_PD, uint64_t, 8, 64, temp_hash, spare_item, itemType>;
+//        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+//        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+//    }
+//    b <<= 1u;
+//    if (indicator & b) {
 //        auto triple = <uint32_t, bits_per_element, 64>;
-        using basic_tpd = TPD_name::TPD<uint32_t, bits_per_element, 64>;
-        using Table = T_dict<basic_tpd, uint32_t, bits_per_element, 64, hash_table<uint64_t>, itemType, uint64_t>;
-        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+//        using basic_tpd = TPD_name::TPD<uint32_t, bits_per_element, 64>;
+//        using Table = T_dict<basic_tpd, uint32_t, bits_per_element, 64, hash_table<uint64_t>, itemType, uint64_t>;
+//        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+//        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
 //        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
 //                                                              &elements);
-    }
+//    }
 
-    b <<= 1u;
-    if (indicator & b) {
-        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
-                                                              &elements);
-    }
+//    b <<= 1u;
+//    if (indicator & b) {
+////        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+//        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
+//                                                              &elements);
+//    }
 
 
 }

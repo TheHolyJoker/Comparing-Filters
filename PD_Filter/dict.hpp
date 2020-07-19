@@ -21,13 +21,13 @@ static inline auto get_single_pd_max_capacity(size_t error_power_inv, double lev
 //    return my_ceil<size_t>(512u, error_power_inv + 2);
 }*/
 
-//template<class PDType, template<typename> class spareType, typename itemType, size_t bits_per_item>
+//template<class PDType, template<typename> class TableType, typename itemType, size_t bits_per_item>
 template<class PDType, template<typename> class spareType, typename itemType, typename spareItemType>
 class dict {
     vector<PDType *> pd_vec;
     vector<uint> pd_capacity_vec;
     hash_table<spareItemType> *spare;
-//    spareType<spareItemType> *spare;
+//    TableType<spareItemType> *spare;
 
     size_t capacity;
 //    const size_t number_of_pd, remainder_length{bits_per_item}, quotient_range, single_pd_capacity;

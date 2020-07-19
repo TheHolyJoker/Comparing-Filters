@@ -6,24 +6,60 @@
 #define FILTERS_PD512_WRAPPER_HPP
 
 #include <string>
-
+#include "pd512.hpp"
+#include <cstddef>
+#include <memory>
+/*
 extern "C" {
 #include "pd512.h"
 }
+*/
 
+//using namespace pd512;
+
+static const size_t capacity = 50u;
+//static uint counter = 0;
 
 class pd512_wrapper {
-    __m512i x{~INT64_C(0), 0, 0, 0, 0, 0, 0, 0};
+    __m512i x = {(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0};
+//    __m512i x;
 
 public:
+
     pd512_wrapper(size_t m, size_t f, size_t l) {}
+/*
+//        x = = {(INT64_C(1) << 50) - 1,0,0,0,0,0,0,0};
+//        x = {(INT64_C(1) << 50) - 1,0,0,0,0,0,0,0};
+//        x = {static_cast<ulong>((INT64_C(1) << 50) - 1),0,0,0,0,0,0,0};
+//        ulong a[8] = {static_cast<ulong>(~INT64_C(0)),0,0,0,0,0,0,0};
+//        auto b = (INT64_C(1) << 50) - 1;
+//        ulong a[8] = {INT64_C(0),0,0,0,0,0,0,0};
+//        static_assert(sizeof(ulong) == 8, "");
+//        ulong a[8] = {(INT64_C(1) << 50) - 1,0,0,0,0,0,0,0};
+//        memcpy(&x, a, 64);
+//        x = _mm512_setzero_epi32();
+//        x = _mm512_setzero_ps();
+//        {~INT64_C(0), 0, 0, 0, 0, 0, 0, 0};
+//        std::cout << "pd512 constructor" << std::endl;
+//    }
+*/
+    /*explicit pd512_wrapper(){
+//        cout << "here " << counter++ << endl;
+        ulong a[8] = {(INT64_C(1) << 50) - 1,0,0,0,0,0,0,0};
+        memcpy(&x, a, 64);
+//
+//        x = {(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0};
+    }
+*/
+
+//    ~pd512_wrapper(){}
 
     auto lookup(int64_t quot, char rem) -> bool {
-        return pd_find_50(quot, rem, &x);
+        return pd512::pd_find_50(quot % capacity, rem, &x);
     }
 
     auto insert(int64_t quot, char rem) -> bool {
-        return pd_add_50(quot, rem, &x);
+        return pd512::pd_add_50(quot % capacity, rem, &x);
     }
 
     void remove(int64_t quot, char rem) {
@@ -31,8 +67,8 @@ public:
     }
 
     auto conditional_remove(int64_t quot, char rem) -> bool {
-        if (lookup(quot, rem)) {
-            remove(quot, rem);
+        if (lookup(quot % capacity, rem)) {
+            remove(quot % capacity, rem);
             return true;
         }
         return false;
@@ -55,13 +91,34 @@ public:
         const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
         const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
         header = header & kLeftoverMask;
-        return popcount128(header);
+        return pd512::popcount128(header);
 
     }
 
     auto get_name() -> std::string {
         return "pd512 ";
     }
+
+    void* operator new(std::size_t size)
+    {
+        return _mm_malloc(size, alignof(pd512_wrapper));
+    }
+
+    void* operator new[](std::size_t size)
+    {
+        return _mm_malloc(size, alignof(pd512_wrapper));
+    }
+
+    void operator delete(void* ptr)
+    {
+        _mm_free(ptr);
+    }
+
+    void operator delete[](void* ptr)
+    {
+        _mm_free(ptr);
+    }
+
 };
 
 

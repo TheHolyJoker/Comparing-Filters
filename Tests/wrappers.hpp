@@ -20,6 +20,8 @@
 #include "../PD_Filter/dict.hpp"
 #include "../TPD_Filter/T_dict.hpp"
 //#include "../TPD_Filter/pd512_wrapper.hpp"
+//#include "dict512.hpp"
+#include "../TPD_Filter/dict512.hpp"
 #include "../cuckoo/cuckoofilter.h"
 #include "../cuckoofilter/src/cuckoofilter.h"
 //#include "../morton/compressed_cuckoo_filter.h"
@@ -41,7 +43,7 @@
 #define CONTAIN_ATTRIBUTES  __attribute__ ((noinline))
 
 enum filter_id {
-    BF, CF, MF, SIMD, pd_id, tpd_id
+    BF, CF, MF, SIMD, pd_id, tpd_id, d512
 };
 
 template<typename Table>
@@ -75,14 +77,15 @@ struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFam
         return "Bloom";
     }
 
-    static void get_dynamic_info(Table *table){
+    static void get_dynamic_info(Table *table) {
         assert (false);
     }
+
     CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
         return (0 == table->Contain(key));
     }
 
-    static auto get_ID(Table *table) -> filter_id{
+    static auto get_ID(Table *table) -> filter_id {
         return BF;
     }
 };
@@ -127,10 +130,11 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
         return "Cuckoo";
     }
 
-    static void get_dynamic_info(Table *table){
+    static void get_dynamic_info(Table *table) {
         assert (false);
     }
-    static auto get_ID(Table *table) -> filter_id{
+
+    static auto get_ID(Table *table) -> filter_id {
         return CF;
     }
 
@@ -174,11 +178,11 @@ struct FilterAPI<SimdBlockFilter<>> {
         return "SimdBlockFilter";
     }
 
-    static void get_dynamic_info(Table *table){
+    static void get_dynamic_info(Table *table) {
         assert (false);
     }
 
-    static auto get_ID(Table *table) -> filter_id{
+    static auto get_ID(Table *table) -> filter_id {
         return SIMD;
     }
 };
@@ -273,10 +277,11 @@ struct FilterAPI<MortonFilter> {
         return "Morton";
     }
 
-    static void get_dynamic_info(Table *table){
+    static void get_dynamic_info(Table *table) {
         assert (false);
     }
-    static auto get_ID(Table *table) -> filter_id{
+
+    static auto get_ID(Table *table) -> filter_id {
         return MF;
     }
 };
@@ -326,10 +331,11 @@ struct FilterAPI<dict<PD, TableType, itemType, spareItemType>> {
         return "PD";
     }
 
-    static void get_dynamic_info(Table *table){
+    static void get_dynamic_info(Table *table) {
         assert (false);
     }
-    static auto get_ID(Table *table) -> filter_id{
+
+    static auto get_ID(Table *table) -> filter_id {
         return pd_id;
     }
 };
@@ -469,14 +475,69 @@ struct FilterAPI<
         return table->get_name();
     }
 
-    static void get_dynamic_info(Table *table){
+    static void get_dynamic_info(Table *table) {
         table->get_dynamic_info();
     }
 
-    static auto get_ID(Table *table) -> filter_id{
+    static auto get_ID(Table *table) -> filter_id {
         return tpd_id;
     }
 };
+
+
+template<
+        class TableType, typename spareItemType,
+        typename itemType
+>
+struct FilterAPI<
+        dict512<TableType, spareItemType,
+                itemType>
+> {
+    using Table = dict512<TableType, spareItemType, itemType, 8, 51, 50>;
+//    using Table = dict512<TableType, spareItemType, itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count, .95, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static void get_dynamic_info(Table *table) {
+        table->get_dynamic_info();
+    }
+
+    static auto get_ID(Table *table) -> filter_id {
+        return d512;
+    }
+};
+
+
 
 
 
