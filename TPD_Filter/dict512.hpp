@@ -23,8 +23,8 @@ template<
 class dict512 {
 //    using basic_tpd = temp_PD<slot_type, bits_per_item, max_capacity>;
 
-//    pd512_wrapper *pd_array;
-    vector<pd512_wrapper *> pd_vec;
+    pd512_wrapper *pd_array;
+//    vector<pd512_wrapper *> pd_vec;
     vector<uint> pd_capacity_vec;
 //    using temp_spare = att_hTable<uint16_t, 4>;
 //    temp_spare *spare;
@@ -52,14 +52,24 @@ public:
         size_t spare_max_capacity = res;
         spare = new TableType(spare_max_capacity, sparse_element_length, level2_load_factor);
 
+        assert(sizeof(pd512_wrapper) == 64);
+        int ok = posix_memalign((void**)&pd_array, sizeof(pd512_wrapper), sizeof(pd512_wrapper) * number_of_pd);
+
+        if (ok != 0){
+            cout << "Failed!!!" << endl;
+            return;
+        }
+
 //        pd_array = new pd512_wrapper[number_of_pd];
         pd_capacity_vec.resize(number_of_pd, 0);
 
-        for (size_t i = 0; i < number_of_pd; ++i) {
-            auto *temp = new pd512_wrapper(42, 42, 42);
-            pd_vec.push_back(temp);
-        }
-        assert(pd_vec.size() == pd_capacity_vec.size());
+//        for (size_t i = 0; i < number_of_pd; ++i) {
+//            auto *temp = new pd512_wrapper(42, 42, 42);
+//
+//            assert(is_aligned<pd512_wrapper>(temp));
+//            pd_vec.push_back(temp);
+//        }
+//        assert(pd_vec.size() == pd_capacity_vec.size());
     }
 
 
@@ -79,7 +89,7 @@ public:
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
-        if (pd_vec[pd_index]->lookup(quot, r)) return true;
+//        if (pd_array[pd_index].lookup(quot, r)) return true;
 
 //        bool c1 = pd_array[pd_index].lookup(quot, r);
 //        bool c2 = pd_vec[pd_index]->lookup(quot, r);
@@ -162,8 +172,8 @@ public:
 
     auto get_name() -> std::string {
         string a = "dict512:\t";
-//        string b = pd_array[0].get_name() + "\t";
-        string b = pd_vec[0]->get_name() + "\t";
+        string b = pd_array[0].get_name() + "\t";
+//        string b = pd_vec[0]->get_name() + "\t";
         string c = spare->get_name();
         return a + b + c;
     }
@@ -173,10 +183,10 @@ public:
         for (int i = 0; i < number_of_pd; ++i) {
             bool add_cond = (pd_capacity_vec[i] & 1u);
             count_overflowing_PD += add_cond;
-//            bool is_full = pd_array[i].is_full();
-            bool is_full2 = pd_vec[i]->is_full();
+            bool is_full = pd_array[i].is_full();
+//            bool is_full2 = pd_vec[i]->is_full();
 //            assert(is_full == is_full2);
-            bool final = (!add_cond or is_full2);
+            bool final = (!add_cond or is_full);
             assert(final);
         }
         return count_overflowing_PD;
@@ -191,10 +201,11 @@ private:
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
 
+        if (pd_array[pd_index].lookup(quot, r)) return true;
 //        bool c1 = pd_array[pd_index].lookup(quot, r);
-        bool c2 = pd_vec[pd_index]->lookup(quot, r);
+//        bool c2 = pd_vec[pd_index]->lookup(quot, r);
 //        assert(c1 == c2);
-        if (c2) return true;
+//        if (c2) return true;
 
         return spare->find(hash_val & MASK(sparse_element_length));
     }
@@ -211,10 +222,10 @@ private:
 //            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
             return;
         }
-        auto res2 = pd_vec[pd_index]->insert(quot, r);
-//        auto res = pd_array[pd_index].insert(quot, r);
+//        auto res2 = pd_vec[pd_index]->insert(quot, r);
+        auto res = pd_array[pd_index].insert(quot, r);
 //        assert(res == res2);
-        if (!res2) {
+        if (!res) {
             cout << "insertion failed!!!" << std::endl;
             assert(false);
         }
@@ -249,7 +260,7 @@ private:
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
 
-        if (pd_vec[pd_index]->conditional_remove(quot, r)) {
+        if (pd_array[pd_index].conditional_remove(quot, r)) {
 //            assert(pd_array[pd_index].conditional_remove(quot, r));
             (pd_capacity_vec[pd_index]) -= 2;
             return;
@@ -313,13 +324,13 @@ private:
         split(element, &pd_index, &quot, &r);
         if (pd_capacity_vec[pd_index] / 2 < single_pd_capacity) {
 //            cout << " HERE!!!" << endl;
-//            bool r1 = pd_array[pd_index].is_full();
+            assert(pd_array[pd_index].is_full());
 //            bool r2 = pd_vec[pd_index]->is_full();
 //            assert(r1 == r2);
-            assert(!pd_vec[pd_index]->is_full());
+//            assert(!pd_vec[pd_index]->is_full());
 
 //            pd_array[pd_index].insert(quot, r);
-            bool res = pd_vec[pd_index]->insert(quot, r);
+            bool res = pd_array[pd_index].insert(quot, r);
             assert(res);
 
             (pd_capacity_vec[pd_index]) += 2;
@@ -332,7 +343,8 @@ private:
 //            bool r1 = pd_array[pd_index].is_full();
 //            bool r2 = pd_vec[pd_index]->is_full();
 //            assert(r1 == r2);
-            assert(pd_vec[pd_index]->is_full());
+            assert(pd_array[pd_index].is_full());
+//            assert(pd_vec[pd_index]->is_full());
         }
         return false;
     }

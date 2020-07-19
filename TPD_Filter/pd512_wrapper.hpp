@@ -27,6 +27,11 @@ class pd512_wrapper {
 public:
 
     pd512_wrapper(size_t m, size_t f, size_t l) {}
+
+    pd512_wrapper() {
+        long int a[8] = {(INT64_C(1) << 50) - 1,0,0,0,0,0,0,0};
+        memcpy(&x, a, 64);
+    }
 /*
 //        x = = {(INT64_C(1) << 50) - 1,0,0,0,0,0,0,0};
 //        x = {(INT64_C(1) << 50) - 1,0,0,0,0,0,0,0};
@@ -52,7 +57,7 @@ public:
     }
 */
 
-//    ~pd512_wrapper(){}
+    ~pd512_wrapper() {}
 
     auto lookup(int64_t quot, char rem) -> bool {
         return pd512::pd_find_50(quot % capacity, rem, &x);
@@ -99,23 +104,25 @@ public:
         return "pd512 ";
     }
 
-    void* operator new(std::size_t size)
-    {
+    void *operator new(std::size_t size) {
+//        int ok = posix_memalign((void**)&Table, sizeof(Bucket) * CHAR_BIT, sizeof(Bucket) * num_of_buckets);
+//        int ok = posix_memalign((void**)&pd512_wrapper, )
+//        return posix_memalign()
+        auto res = _mm_malloc(size, alignof(pd512_wrapper));
+        assert(res != NULL);
+        return res;
+//        return _mm_malloc(size, alignof(pd512_wrapper));
+    }
+
+    void *operator new[](std::size_t size) {
         return _mm_malloc(size, alignof(pd512_wrapper));
     }
 
-    void* operator new[](std::size_t size)
-    {
-        return _mm_malloc(size, alignof(pd512_wrapper));
-    }
-
-    void operator delete(void* ptr)
-    {
+    void operator delete(void *ptr) {
         _mm_free(ptr);
     }
 
-    void operator delete[](void* ptr)
-    {
+    void operator delete[](void *ptr) {
         _mm_free(ptr);
     }
 

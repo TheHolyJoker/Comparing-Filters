@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
 
     //Default values
     size_t filter_indicator = 127;
-    ulong shift = 24u;
+    ulong shift = 20u;
     size_t shift_add_to_lookups = 1u;
     size_t bench_precision = 16;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;

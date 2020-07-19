@@ -37,7 +37,7 @@ public:
             : max_capacity(max_capacity), element_length(element_length), max_load_factor(max_load_factor),
               num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))) {
 
-        int ok = posix_memalign((void**)&Table, sizeof(Bucket) * CHAR_BIT, sizeof(Bucket) * num_of_buckets);
+        int ok = posix_memalign((void**)&Table, sizeof(Bucket), sizeof(Bucket) * num_of_buckets);
 
         if (ok != 0){
             cout << "Failed!!!" << endl;
