@@ -38,6 +38,14 @@ auto example3() {
 
 int main(int argc, char **argv) {
 
+    // using itemType = uint64_t;
+    // using temp_hash = att_hTable<uint64_t, 4>;
+    // using Table = dict512<temp_hash, uint64_t, itemType>;
+    // Table filter = FilterAPI<Table>::ConstructFromAddCount(1u<<20u);
+    // return 0;
+    // benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+
+
 /*
 //    auto tpd = TPD_name::TPD<uint32_t, 8, 64>(0,0,0);
 //    tpd.insert(0, 1);
@@ -70,7 +78,7 @@ int main(int argc, char **argv) {
 
     //Default values
     size_t filter_indicator = 127;
-    ulong shift = 20u;
+    ulong shift = 21u;
     size_t shift_add_to_lookups = 1u;
     size_t bench_precision = 16;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;

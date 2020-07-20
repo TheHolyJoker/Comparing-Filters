@@ -3,8 +3,8 @@
 #define CLION_CODE_DICT512_HPP
 
 #include <cstring>
-#include <printutil.hpp>
-#include <hash_table.hpp>
+#include "../Tests/printutil.hpp"
+#include "../PD_Filter/hash_table.hpp"
 #include "pd512_wrapper.hpp"
 #include "att_hTable.hpp"
 #include "basic_function_util.h"
@@ -52,13 +52,26 @@ public:
         size_t spare_max_capacity = res;
         spare = new TableType(spare_max_capacity, sparse_element_length, level2_load_factor);
 
-        assert(sizeof(pd512_wrapper) == 64);
-        int ok = posix_memalign((void**)&pd_array, sizeof(pd512_wrapper), sizeof(pd512_wrapper) * number_of_pd);
+        // assert(sizeof(pd512_wrapper) == 64);
 
+        // pd_array = new pd512_wrapper[number_of_pd];
+
+        int ok = posix_memalign((void**)&pd_array, 512, sizeof(pd512_wrapper) * number_of_pd);
+
+        
         if (ok != 0){
             cout << "Failed!!!" << endl;
+            assert(false);
             return;
         }
+        
+        for (size_t i = 0; i < number_of_pd; i++){        
+            new (&(pd_array[i])) pd512_wrapper();
+            // __m512i temp = pd_array[i].x ;
+            // pd512::print512(temp);
+        }
+        
+        
 
 //        pd_array = new pd512_wrapper[number_of_pd];
         pd_capacity_vec.resize(number_of_pd, 0);
@@ -66,22 +79,22 @@ public:
 //        for (size_t i = 0; i < number_of_pd; ++i) {
 //            auto *temp = new pd512_wrapper(42, 42, 42);
 //
-//            assert(is_aligned<pd512_wrapper>(temp));
+        //    assert(is_aligned<pd512_wrapper>(temp));
 //            pd_vec.push_back(temp);
 //        }
 //        assert(pd_vec.size() == pd_capacity_vec.size());
     }
 
 
-//    virtual ~dict512() {
-////        delete [] pd_array;
-////        for (int i = 0; i < pd_vec.size(); ++i) {
-////            delete pd_vec[i];
-////        }
-//        pd_vec.clear();
-//
-//        delete spare;
-//    }
+   virtual ~dict512() {
+       delete [] pd_array;
+//        for (int i = 0; i < pd_vec.size(); ++i) {
+//            delete pd_vec[i];
+//        }
+    //    pd_vec.clear();
+
+       delete spare;
+   }
 
 
     auto lookup(const itemType s) const -> bool {
