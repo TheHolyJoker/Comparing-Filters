@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
     //Default values
     size_t filter_indicator = 127;
-    ulong shift = 21u;
+    ulong shift = 24u;
     size_t shift_add_to_lookups = 1u;
     size_t bench_precision = 16;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
@@ -106,9 +106,9 @@ int main(int argc, char **argv) {
     reps = 1u << (shift ), max_distinct_capacity = 1u << shift;
     using itemType = uint64_t;
 
-//    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-//                                                    bench_precision, filter_indicator & 1, filter_indicator & 2,
-//                                                    false, filter_indicator & 8, filter_indicator & 16);
+   b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
+                                                   bench_precision, filter_indicator & 1, filter_indicator & 2,
+                                                   false, filter_indicator & 8, filter_indicator & 16);
     att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
                                                       bench_precision);
     return 0;
