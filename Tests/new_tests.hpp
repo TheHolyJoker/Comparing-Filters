@@ -236,53 +236,33 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
         // w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     }
-    /*b <<= 1u;
-    if (indicator & b) {
-        using spare_item = uint64_t;
-//        const size_t max_capacity = 50u;
-        using temp_PD = pd512_wrapper;
-        using temp_hash = att_hTable<spare_item, 4>;
-        using Table = T_dict<temp_PD, uint64_t, 8, 50, temp_hash, spare_item, itemType>;
-        */
-    /*False negative possibly due to different insertion policy, (insertion into pd might fail).*/ /*
-//        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    }*/
+    
 
-    /*if (indicator & b) {
+    /* if (indicator & b) {
         using spare_item = uint64_t;
         const size_t max_capacity = 48u;
         using temp_PD = TPD_name::TPD<uint32_t, 8, max_capacity>;
         using temp_hash = att_hTable<spare_item , 4>;
         using Table = T_dict<temp_PD, uint64_t, 8, max_capacity, temp_hash, spare_item , itemType>;
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    }*/
-    //    b <<= 1u;
-    //    if (indicator & b) {
-    //        using spare_item = uint64_t;
-    //        using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
-    //        using temp_hash = att_hTable<spare_item, 4>;
-    //        using Table = T_dict<temp_PD, uint64_t, 8, 64, temp_hash, spare_item, itemType>;
-    //        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-    //        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    //    }
-    //    b <<= 1u;
-    //    if (indicator & b) {
-    //        auto triple = <uint32_t, bits_per_element, 64>;
-    //        using basic_tpd = TPD_name::TPD<uint32_t, bits_per_element, 64>;
-    //        using Table = T_dict<basic_tpd, uint32_t, bits_per_element, 64, hash_table<uint64_t>, itemType, uint64_t>;
-    //        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-    //        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    //        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
-    //                                                              &elements);
-    //    }
-
-    //    b <<= 1u;
-    //    if (indicator & b) {
-    ////        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-    //        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
-    //                                                              &elements);
-    //    }
+    }
+       b <<= 1u;
+       if (indicator & b) {
+           using spare_item = uint64_t;
+           using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
+           using temp_hash = att_hTable<spare_item, 4>;
+           using Table = T_dict<temp_PD, uint64_t, 8, 64, temp_hash, spare_item, itemType>;
+        //    w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+           benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+       }
+       b <<= 1u;
+    
+       b <<= 1u;
+       if (indicator & b) {
+    //        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+           benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
+                                                                 &elements);
+       } */
     return os;
 }
 

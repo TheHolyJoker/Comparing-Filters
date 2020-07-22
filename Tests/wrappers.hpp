@@ -111,7 +111,7 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count);
+        return Table(add_count / 2);
     }
 
     static void Add(uint64_t key, Table *table)
