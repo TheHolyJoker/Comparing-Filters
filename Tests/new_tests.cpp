@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
         bench_precision, true, filter_indicator & 2,
-        false, filter_indicator & 8, 0);
+        false, filter_indicator & 8, true);
 
     att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
         bench_precision);
