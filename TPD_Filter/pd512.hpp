@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
+
 #include <iostream>
 
 #include "immintrin.h"
@@ -33,25 +34,38 @@ namespace pd512
 
     int popcount128(unsigned __int128 x);
 
-    // find an 8-bit value in a pocket dictionary with quotients in [0,64) and 49 values
+    // find an 8-bit value in a pocket dictionary with quotients in [0,64) and 49
+    // values
     bool pd_find_64(int64_t quot, char rem, const __m512i *pd);
 
-    // find an 8-bit value in a pocket dictionary with quotients in [0,50) and 51 values
+    // find an 8-bit value in a pocket dictionary with quotients in [0,50) and 51
+    // values
     bool pd_find_50(int64_t quot, char rem, const __m512i *pd);
 
-    // insert a pair of a quotient (mod 50) and an 8-bit remainder in a pocket dictionary.
-    // Returns false if the dictionary is full.
+    // insert a pair of a quotient (mod 50) and an 8-bit remainder in a pocket
+    // dictionary. Returns false if the dictionary is full.
     bool pd_add_50(int64_t quot, char rem, __m512i *pd);
+
+    auto remove(int64_t quot, char rem, __m512i *pd) -> bool;
+
+    auto conditional_remove(int64_t quot, char rem, __m512i *pd) -> bool;
 
     void print512(__m512i var);
 
+    auto is_full(const __m512i* x) -> bool;
+
+    auto get_capacity(const __m512i* x) -> size_t;
+
+    auto get_capacity_naive(const __m512i* x) -> size_t;
+
+    auto get_name() -> std::string;
+
+
     template <class T>
-    bool
-    is_aligned(const void *ptr) noexcept
+    bool is_aligned(const void *ptr) noexcept
     {
         auto iptr = reinterpret_cast<std::uintptr_t>(ptr);
         return !(iptr % alignof(T));
     }
-
 } // namespace pd512
 #endif // FILTERS_PD512_HPP

@@ -95,6 +95,8 @@ namespace cuckoofilter {
             }
             victim_.used = false;
             table_ = new TableType<bits_per_item>(num_buckets);
+            std::cout << "byte size: "<< SizeInBytes() << std::endl;
+
         }
 
         ~CuckooFilter() { delete table_; }

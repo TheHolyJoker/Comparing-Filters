@@ -53,9 +53,12 @@ public:
 
         size_t log2_size = ceil(log2(max_number_of_elements));
 //        auto res = my_ceil(max_number_of_elements, log2_size * log2_size)  << 8u;
-        auto res = my_ceil(max_number_of_elements, log2_size) << 6u;
+        // auto res = my_ceil(max_number_of_elements, log2_size) << 6u;
+        auto res = my_ceil(max_number_of_elements, log2_size);
 
         size_t spare_max_capacity = res;
+        std::cout << "max_number_of_elements is: " << max_number_of_elements << std::endl;
+        std::cout << "spare size is: " << res << std::endl;
         spare = new spareType<spareItemType>(spare_max_capacity, sparse_element_length, level2_load_factor);
 
         pd_capacity_vec.resize(number_of_pd);

@@ -7,13 +7,13 @@
 
 #include <climits>
 #include <iomanip>
-#include <map>
-#include <stdexcept>
-#include <vector>
-#include <set>
-#include <random>
-#include <stdio.h>
 #include <iostream>
+#include <map>
+#include <random>
+#include <set>
+#include <stdexcept>
+#include <stdio.h>
+#include <vector>
 
 #include "../Bloom_Filter/bloom.hpp"
 #include "../PD_Filter/dict.hpp"
@@ -21,12 +21,13 @@
 //#include "../TPD_Filter/pd512_wrapper.hpp"
 //#include "dict512.hpp"
 #include "../TPD_Filter/dict512.hpp"
+#include "../d512/att_d512.hpp"
 #include "../cuckoo/cuckoofilter.h"
-#include "../cuckoofilter/src/cuckoofilter.h"
+// #include "../cuckoofilter/src/cuckoofilter.h"
 //#include "../morton/compressed_cuckoo_filter.h"
-#include "../morton/morton_sample_configs.h"
-#include "../Bloom_Filter/simd-block.h"
 #include "../Bloom_Filter/simd-block-fixed-fpp.h"
+#include "../Bloom_Filter/simd-block.h"
+#include "../morton/morton_sample_configs.h"
 
 //#include "xorfilter.h"
 //#include "../xorfilter/xorfilter_2.h"
@@ -48,7 +49,8 @@ enum filter_id
     SIMD,
     pd_id,
     tpd_id,
-    d512
+    d512,
+    att_d512_id
 };
 
 template <typename Table>
@@ -573,7 +575,7 @@ struct FilterAPI<
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count, .95, .5);
+        return Table(add_count, .9, .5);
     }
 
     static void Add(itemType key, Table *table)
@@ -620,6 +622,66 @@ struct FilterAPI<
     static auto get_ID(Table *table) -> filter_id
     {
         return d512;
+    }
+};
+
+template <
+    class TableType, typename spareItemType,
+    typename itemType>
+struct FilterAPI<att_d512<TableType, spareItemType,itemType>>
+{
+    using Table = att_d512<TableType, spareItemType, itemType, 8, 51, 50>;
+    //    using Table = dict512<TableType, spareItemType, itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count)
+    {
+        return Table(add_count, .9, .5);
+    }
+
+    static void Add(itemType key, Table *table)
+    {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
+    {
+        for (int i = start; i < end; ++i)
+        {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table)
+    {
+        for (int i = 0; i < keys.size(); ++i)
+        {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table)
+    {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
+    {
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table)
+    {
+        return table->get_name();
+    }
+
+    static void get_dynamic_info(Table *table)
+    {
+        table->get_dynamic_info();
+    }
+
+    static auto get_ID(Table *table) -> filter_id
+    {
+        return att_d512_id;
     }
 };
 

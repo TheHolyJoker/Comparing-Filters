@@ -62,7 +62,8 @@ public:
         assert(sparse_element_length <= sizeof(spareItemType) * CHAR_BIT);
 
         size_t log2_size = ceil_log2(max_number_of_elements);
-        auto res = my_ceil(max_number_of_elements, log2_size) << 6u;
+        // auto res = my_ceil(max_number_of_elements, log2_size) << 6u;
+        auto res = my_ceil(max_number_of_elements, log2_size);
 
         size_t spare_max_capacity = res;
         spare = new spareType(spare_max_capacity, sparse_element_length, level2_load_factor);

@@ -3,7 +3,6 @@
  * https://github.com/jbapple/crate-dictionary
  * */
 
-
 #include "pd512.hpp"
 
 namespace pd512
@@ -183,6 +182,19 @@ namespace pd512
         // v = v >> ((51 + 50 + CHAR_BIT - 1) / CHAR_BIT);
         // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
     }
+    auto remove(int64_t quot, char rem, __m512i *pd) -> bool
+    {
+        assert(false);
+    }
+    auto conditional_remove(int64_t quot, char rem, __m512i *pd) -> bool
+    {
+        if (pd_find_50(quot % 51, rem, pd))
+        {
+            remove(quot % 51, rem, pd);
+            return true;
+        }
+        return false;
+    }
 
     void print512(__m512i var)
     {
@@ -195,7 +207,7 @@ namespace pd512
         }
         std::cout << std::endl;
 
-    /* bool
+        /* bool
     is_aligned(const __m512i *ptr) noexcept
     {
         auto iptr = reinterpret_cast<std::uintptr_t>(ptr);
@@ -206,6 +218,100 @@ namespace pd512
         // printf("Numerical: %i %i %i %i %i %i %i %i \n",
         //        val[0], val[1], val[2], val[3], val[4], val[5],
         //        val[6], val[7]);
+    }
+    auto is_full(const __m512i *x) -> bool
+    {
+        return get_capacity(x) == 51;
+    }
+
+    auto get_capacity(const __m512i *x) -> size_t
+    {
+        // return get_capacity_naive();
+        uint64_t header[2];
+        // We need to copy (50+51) bits, but we copy slightly more and mask out the ones we
+        // don't care about.
+        //
+        // memcpy is the only defined punning operation
+        memcpy(header, x, 13);
+        auto old_header = header[1];
+        header[1] = header[1] & ((UINT64_C(1) << (50 + 51 - 64)) - 1);
+
+        auto h0_one_count = _mm_popcnt_u64(header[0]);
+        if (h0_one_count == 50)
+        {
+            auto index = pd512::select64(header[0], 49);
+            assert(index < 64);
+            auto res = index - 49;
+            assert(res == get_capacity_naive(x));
+            return res;
+        }
+        else
+        {
+            auto h0_zero_count = 64 - h0_one_count;
+            auto ones_left = 49 - h0_one_count;
+            // bool cond =
+            assert(ones_left >= 0);
+            auto index = pd512::select64(header[1], 49 - h0_one_count);
+            if (index == 64)
+            {
+                std::cout << header[0] << std::endl;
+                std::cout << header[1] << std::endl;
+                std::cout << old_header << std::endl;
+                std::cout << h0_one_count << std::endl;
+                std::cout << ones_left << std::endl;
+                std::cout << get_capacity_naive(x) << std::endl;
+                assert(false);
+            }
+            assert(index < 64);
+            assert(index <= 37);
+            assert(index >= ones_left);
+            auto res = index - ones_left + h0_zero_count;
+            bool cond = res == get_capacity_naive(x);
+            if (!cond)
+            {
+                std::cout << "h0_zero_count " << h0_zero_count << std::endl;
+                std::cout << "h0_one_count " << h0_one_count << std::endl;
+                std::cout << res << std::endl;
+                std::cout << get_capacity_naive(x) << std::endl;
+                assert(false);
+            }
+            assert(res == get_capacity_naive(x));
+            return res;
+            return index - ones_left;
+        }
+    }
+
+    auto get_capacity_naive(const __m512i *x) -> size_t
+    {
+        uint64_t header[2];
+        memcpy(header, x, 13);
+        size_t zero_count = 0, one_count = 0;
+        for (size_t j = 0; j < 2; j++)
+        {
+            uint64_t temp = header[j];
+            uint64_t b = 1ULL;
+            for (size_t i = 0; i < 64; i++)
+            {
+                if (b & temp)
+                {
+                    one_count++;
+                    if (one_count == 50)
+                        return zero_count;
+                }
+                else
+                {
+                    zero_count++;
+                }
+                b <<= 1ul;
+            }
+        }
+        std::cout << zero_count << std::endl;
+        std::cout << one_count << std::endl;
+        assert(false);
+    }
+    auto get_name() -> std::string
+    {
+        return "pd512 ";
     }
 
 } // namespace pd512

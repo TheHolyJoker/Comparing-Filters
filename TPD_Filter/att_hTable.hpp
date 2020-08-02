@@ -92,7 +92,7 @@ public:
             if (insert_if_bucket_not_full(hold, bucket_index))
                 return;
 
-            cuckoo_swap(&hold, bucket_index);
+            cuckoo_swap(&hold, &bucket_index);
         }
 
         assert(false);
@@ -140,6 +140,12 @@ public:
         else if (temp_b2 == *bucket_index)
             *bucket_index = temp_b1;
         else {
+            std::cout << temp_b1 << std::endl;
+            std::cout << temp_b2 << std::endl;
+            std::cout << *bucket_index << std::endl;
+            std::cout << num_of_buckets << std::endl;
+            std::cout << *hold << std::endl;
+
             assert(false);
         }
     }

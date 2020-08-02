@@ -80,6 +80,10 @@ auto benchmark_single_round(Table* wrap_filter, vector<vector<itemType>*>* eleme
             (round_counter + 1) * delete_step);
     }
 
+/*     if (FilterAPI<Table>::get_ID(wrap_filter) == d512) {
+        FilterAPI<Table>::get_dynamic_info(wrap_filter);
+    }
+ */
     const size_t var_num = 6;
     //    string names[var_num] = {"Load", "insertion_time", "uniform_lookup_time", "true_lookup_time", "removal_time"};
     size_t values[var_num] = { round_counter + 1, benchmark_precision, insertion_time, uniform_lookup_time,
@@ -101,6 +105,9 @@ auto benchmark_generic_filter(Table* wrap_filter, vector<vector<itemType>*>* ele
     print_round_header();
     for (int round = 0; round < bench_precision; ++round) {
         benchmark_single_round<Table, itemType>(wrap_filter, elements, round, bench_precision, os);
+        /* if (FilterAPI<Table>::get_ID(wrap_filter) == d512){
+
+        } */
     }
 
     return os;
@@ -228,15 +235,25 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     vector<vector<itemType>*> elements { &v_add, &v_find, &v_delete };
     init_elements(filter_max_capacity, lookup_reps, &elements);
 
-    uint b = 1u;
-    if (indicator & b) {
+    // uint b = 1u;
+    // if (indicator & b) {
+    //     using spare_item = uint64_t;
+    //     using temp_hash = att_hTable<spare_item, 4>;
+    //     using Table = dict512<temp_hash, spare_item, itemType>;
+    //     w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+    //     benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+    // }
+
+    if (true){
         using spare_item = uint64_t;
         using temp_hash = att_hTable<spare_item, 4>;
-        using Table = dict512<temp_hash, spare_item, itemType>;
-        // w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+        using Table = att_d512<temp_hash, spare_item, itemType>;
+        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     }
-    
+
+
+
 
     /* if (indicator & b) {
         using spare_item = uint64_t;
@@ -258,11 +275,13 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
        b <<= 1u;
     
        b <<= 1u;
-       if (indicator & b) {
-    //        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-           benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
-                                                                 &elements);
-       } */
+    */
+
+    /*if (indicator & b) {
+        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+        benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
+            &elements);
+    }*/
     return os;
 }
 

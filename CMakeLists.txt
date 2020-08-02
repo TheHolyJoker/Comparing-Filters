@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.10)
 project(Comparing_Filters_Simpler)
 
-set(CMAKE_CXX_STANDARD 17)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_CXX_STANDARD 14)
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512vbmi")
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=skylake-avx512")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
 
 include_directories(Bloom_Filter)
 include_directories(PD_Filter)
@@ -60,6 +60,13 @@ add_executable(
         TPD_Filter/pd512.cpp
         #        TPD_Filter/pd-test.cpp
         TPD_Filter/pd512_wrapper.hpp
-        TPD_Filter/basic_function_util.cpp TPD_Filter/basic_function_util.h)
+        TPD_Filter/basic_function_util.cpp TPD_Filter/basic_function_util.h 
+        Analyse/analyse.hpp Analyse/analyse.cpp
+        
+        d512/att_d512.hpp
+        Safe/safe512.hpp
+        Safe/cc_pd.hpp
+        # Safe/Constant_size_PD
+        )
 
 target_link_libraries(Filters OpenSSL::SSL)

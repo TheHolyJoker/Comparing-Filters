@@ -10,6 +10,7 @@
 
 
 
+
 template<typename T>
 static auto ceil_log2(T x) -> size_t {
     assert(x > 1);
