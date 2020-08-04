@@ -113,7 +113,7 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count / 2);
+        return Table(add_count);
     }
 
     static void Add(uint64_t key, Table *table)
@@ -635,12 +635,14 @@ struct FilterAPI<att_d512<TableType, spareItemType,itemType>>
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count, .9, .5);
+        return Table(add_count, .95, .5);
     }
 
     static void Add(itemType key, Table *table)
     {
+        assert(table->case_validate());
         table->insert(key);
+        assert(table->case_validate());
     }
 
     static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)

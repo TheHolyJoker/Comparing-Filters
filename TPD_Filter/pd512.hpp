@@ -13,7 +13,8 @@
 
 #include <iostream>
 
-#include "immintrin.h"
+// #include "immintrin.h"
+#include <immintrin.h>
 //#include "x86intrin.h"
 
 namespace pd512
@@ -50,16 +51,17 @@ namespace pd512
 
     auto conditional_remove(int64_t quot, char rem, __m512i *pd) -> bool;
 
-    void print512(__m512i var);
+    void print512(const __m512i *var);
 
-    auto is_full(const __m512i* x) -> bool;
+    auto validate_number_of_quotient(const __m512i *pd) -> bool;
 
-    auto get_capacity(const __m512i* x) -> size_t;
+    auto is_full(const __m512i *x) -> bool;
 
-    auto get_capacity_naive(const __m512i* x) -> size_t;
+    auto get_capacity(const __m512i *x) -> size_t;
+
+    auto get_capacity_naive(const __m512i *x) -> size_t;
 
     auto get_name() -> std::string;
-
 
     template <class T>
     bool is_aligned(const void *ptr) noexcept
@@ -67,5 +69,13 @@ namespace pd512
         auto iptr = reinterpret_cast<std::uintptr_t>(ptr);
         return !(iptr % alignof(T));
     }
+
+    ////New functions
+    int pd_popcount(const __m512i *pd);
+    bool pd_full(const __m512i *pd);
+
 } // namespace pd512
 #endif // FILTERS_PD512_HPP
+
+
+auto my_equal(__m512i x, __m512i y)->bool;

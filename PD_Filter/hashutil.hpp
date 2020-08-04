@@ -85,6 +85,13 @@ namespace s_pd_filter {
         return a + seed * b;
     }
 
+    inline uint64_t my_hash64(const uint64_t el, uint32_t seed) {
+        uint64_t a = 0, b = 0;
+        MurmurHash3_x86_32(&el, (int) (64), SEED_1, &a);
+        MurmurHash3_x86_32(&el, (int) (64), SEED_2, &b);
+        return a + seed * b;
+    }
+
     inline uint32_t my_hash(const uint64_t el, uint32_t seed) {
         uint32_t a = 0, b = 0;
         MurmurHash3_x86_32(&el, (int) (64), SEED_1, &a);

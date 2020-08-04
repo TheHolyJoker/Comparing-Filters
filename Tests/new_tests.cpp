@@ -77,7 +77,7 @@ int main(int argc, char** argv)
 
     //Default values
     size_t filter_indicator = 127;
-    ulong shift = 22u;
+    ulong shift = 24u;
     size_t shift_add_to_lookups = 1u;
     size_t bench_precision = 16;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
@@ -113,13 +113,18 @@ int main(int argc, char** argv)
     //     false,
     //     false);
 
-    att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-        bench_precision);
+    // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
+    //     bench_precision);
 
-    // for (size_t my_shift = 20; my_shift < 27; my_shift++) {
-    //     size_t reps = 1u << (my_shift), max_distinct_capacity = 1u << my_shift;
-    //     att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-    //         bench_precision);
-    // }
+    std::string line = std::string(128,'#');
+    size_t shift_start = 23;
+    for (size_t my_shift = shift_start; my_shift < 27; my_shift++) {
+        std::cout << line << std::endl;
+        std::cout << (my_shift - shift_start) << ")" <<  std::endl;
+        std::cout << "spare_element_size: "<< compute_spare_element_size(max_distinct_capacity, .9)  <<  std::endl;
+        size_t reps = 1u << (my_shift), max_distinct_capacity = 1u << my_shift;
+        att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
+            bench_precision);
+    }
     return 0;
 }

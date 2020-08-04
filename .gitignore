@@ -2,3 +2,6 @@
 .vscode/
 .history
 build/
+TPD_Filter/att_hTable.hpp
+d512/terminal
+heaptracks/

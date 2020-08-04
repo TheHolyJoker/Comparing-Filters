@@ -288,13 +288,13 @@ void print_single_round_false_positive_rates(size_t lookups_repetitions, size_t 
     std::cout << line << '\n' << sep << left;
 
     size_t counter = 0;
-    while (counter < var_num) {
-        cout << std::setw(name_width) << names[counter++] << sep;
-    }
-    cout << '\n' << line << '\n' + sep;
+    // while (counter < var_num) {
+    //     cout << std::setw(name_width) << names[counter++] << sep;
+    // }
+    // cout << '\n' << line << '\n' + sep;
 
 
-    counter = 0;
+    // counter = 0;
     while (counter < var_num - 2) {
         cout << std::setw(name_width) << values[counter++] << sep;
     }

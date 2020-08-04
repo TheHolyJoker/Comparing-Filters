@@ -156,6 +156,7 @@ public:
             }
         }
         assert(false);
+        return -1;
     }
     auto get_name() -> std::string
     {

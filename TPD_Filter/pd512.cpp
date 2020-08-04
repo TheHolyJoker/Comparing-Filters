@@ -146,6 +146,8 @@ namespace pd512
         /* TODO!!! */
         assert(popcount128(header) == 50);
         const unsigned fill = select128(header, 50 - 1) - (50 - 1);
+        assert((fill <= 14) || (fill == pd_popcount(pd)));
+        assert((fill == 51) == pd_full(pd));
         if (fill == 51)
             return false;
         // [begin,end) are the zeros in the header that correspond to the fingerprints with
@@ -158,6 +160,7 @@ namespace pd512
         new_header |= ((header >> end) << (end + 1));
         assert(popcount128(new_header) == 50);
         assert(select128(new_header, 50 - 1) - (50 - 1) == fill + 1);
+        /* Error is here OR in line 176! */
         memcpy(pd, &new_header, kBytes2copy);
         const uint64_t begin_fingerprint = begin - quot;
         const uint64_t end_fingerprint = end - quot;
@@ -170,9 +173,12 @@ namespace pd512
                 break;
         }
         assert((i == end_fingerprint) || (rem <= ((const char *)pd)[kBytes2copy + i]));
-        memmove(&((char *)pd)[kBytes2copy + i + 1], &((const char *)pd)[kBytes2copy + i],
-                sizeof(*pd) - (kBytes2copy + 1 + 1) + 1);
+        /* or here! */
+        memmove(&((char *)pd)[kBytes2copy + i + 1],
+                &((const char *)pd)[kBytes2copy + i],
+                sizeof(*pd) - (kBytes2copy + i + 1));
         ((char *)pd)[kBytes2copy + i] = rem;
+
         assert(pd_find_50(quot, rem, pd));
         return true;
         // //// jbapple: STOPPED HERE
@@ -182,6 +188,75 @@ namespace pd512
         // v = v >> ((51 + 50 + CHAR_BIT - 1) / CHAR_BIT);
         // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
     }
+
+    /* bool pd_add_50_v2(int64_t quot, uint8_t rem, __m512i *pd)
+    {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        // The header has size 50 + 51
+        unsigned __int128 header = 0;
+        // We need to copy (50+51) bits, but we copy slightly more and mask out the
+        // ones we don't care about.
+        //
+        // memcpy is the only defined punning operation
+        const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        assert(kBytes2copy < sizeof(header));
+        memcpy(&header, pd, kBytes2copy);
+        // Number of bits to keep. Requires little-endianness
+        // const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
+        const unsigned __int128 kLeftoverMask =
+            (((unsigned __int128)1) << (50 + 51)) - 1;
+        header = header & kLeftoverMask;
+        assert(50 == popcount128(header));
+        const unsigned fill = select128(header, 50 - 1) - (50 - 1);
+        assert((fill <= 14) || (fill == pd_popcount(pd)));
+        assert((fill == 51) == pd_full(pd));
+        if (fill == 51)
+            return false;
+        // [begin,end) are the zeros in the header that correspond to the fingerprints
+        // with quotient quot.
+        const uint64_t begin = quot ? (select128(header, quot - 1) + 1) : 0;
+        const uint64_t end = select128(header, quot);
+        assert(begin <= end);
+        assert(end <= 50 + 51);
+        unsigned __int128 new_header =
+            header & ((((unsigned __int128)1) << begin) - 1);
+        new_header |= ((header >> end) << (end + 1));
+        assert(popcount128(new_header) == 50);
+        assert(select128(new_header, 50 - 1) - (50 - 1) == fill + 1);
+        memcpy(pd, &new_header, kBytes2copy);
+        const uint64_t begin_fingerprint = begin - quot;
+        const uint64_t end_fingerprint = end - quot;
+        assert(begin_fingerprint <= end_fingerprint);
+        assert(end_fingerprint <= 51);
+        uint64_t i = begin_fingerprint;
+        for (; i < end_fingerprint; ++i)
+        {
+            if (rem <= ((const uint8_t *)pd)[kBytes2copy + i])
+                break;
+        }
+        assert((i == end_fingerprint) ||
+               (rem <= ((const uint8_t *)pd)[kBytes2copy + i]));
+        memmove(&((uint8_t *)pd)[kBytes2copy + i + 1],
+                &((const uint8_t *)pd)[kBytes2copy + i],
+                sizeof(*pd) - (kBytes2copy + i + 1));
+        ((uint8_t *)pd)[kBytes2copy + i] = rem;
+
+        assert(pd_find_50(quot, rem, pd) == pd_find_50_alt(quot, rem, pd));
+        assert(pd_find_50_alt2(quot, rem, pd) == pd_find_50_alt(quot, rem, pd));
+        assert(pd_find_50_alt3(quot, rem, pd) == pd_find_50_alt(quot, rem, pd));
+        assert(pd_find_50_alt4(quot, rem, pd) == pd_find_50_alt(quot, rem, pd));
+        assert(pd_find_50_alt5(quot, rem, pd) == pd_find_50_alt(quot, rem, pd));
+        assert(pd_find_50(quot, rem, pd));
+        assert(pd_find_50_alt(quot, rem, pd));
+        assert(pd_find_50_alt2(quot, rem, pd));
+        assert(pd_find_50_alt3(quot, rem, pd));
+        assert(pd_find_50_alt4(quot, rem, pd));
+        assert(pd_find_50_alt5(quot, rem, pd));
+        return true;
+    }
+ */
+
     auto remove(int64_t quot, char rem, __m512i *pd) -> bool
     {
         assert(false);
@@ -196,7 +271,7 @@ namespace pd512
         return false;
     }
 
-    void print512(__m512i var)
+    void print512(const __m512i *var)
     {
         long int val[8] = {0, 0, 0, 0, 0, 0, 0, 0};
         memcpy(val, &var, sizeof(val));
@@ -224,8 +299,37 @@ namespace pd512
         return get_capacity(x) == 51;
     }
 
+    auto validate_number_of_quotient(const __m512i *pd) -> bool
+    {
+        // std::cout << "h128: " << std::endl;
+
+        unsigned __int128 header = 0;
+        // We need to copy (50+51) bits, but we copy slightly more and mask out the ones we
+        // don't care about.
+        //
+        // memcpy is the only defined punning operation
+        const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        assert(kBytes2copy < sizeof(header));
+        memcpy(&header, pd, kBytes2copy);
+        auto my_temp = popcount128(header);
+
+        // std::cout << "my_temp: " << my_temp << std::endl;
+        // Number of bits to keep. Requires little-endianness
+        const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
+        const unsigned __int128 kLeftoverMask = (((unsigned __int128)1) << (50 + 51)) - 1;
+        header = header & kLeftoverMask;
+        size_t res = popcount128(header);
+        if (res != 50)
+        {
+            std::cout << "popcount128: " << res << std::endl;
+        }
+        return popcount128(header) == 50;
+        // return true;
+    }
+
     auto get_capacity(const __m512i *x) -> size_t
     {
+        validate_number_of_quotient(x);
         // return get_capacity_naive();
         uint64_t header[2];
         // We need to copy (50+51) bits, but we copy slightly more and mask out the ones we
@@ -234,7 +338,7 @@ namespace pd512
         // memcpy is the only defined punning operation
         memcpy(header, x, 13);
         auto old_header = header[1];
-        header[1] = header[1] & ((UINT64_C(1) << (50 + 51 - 64)) - 1);
+        // header[1] = header[1] & ((UINT64_C(1) << (50 + 51 - 64)) - 1);
 
         auto h0_one_count = _mm_popcnt_u64(header[0]);
         if (h0_one_count == 50)
@@ -252,6 +356,7 @@ namespace pd512
             // bool cond =
             assert(ones_left >= 0);
             auto index = pd512::select64(header[1], 49 - h0_one_count);
+            auto att_index = pd512::select64(header[1], 49 - h0_one_count - 1);
             if (index == 64)
             {
                 std::cout << header[0] << std::endl;
@@ -260,6 +365,7 @@ namespace pd512
                 std::cout << h0_one_count << std::endl;
                 std::cout << ones_left << std::endl;
                 std::cout << get_capacity_naive(x) << std::endl;
+                return -1;
                 assert(false);
             }
             assert(index < 64);
@@ -273,10 +379,12 @@ namespace pd512
                 std::cout << "h0_one_count " << h0_one_count << std::endl;
                 std::cout << res << std::endl;
                 std::cout << get_capacity_naive(x) << std::endl;
+                return -1;
                 assert(false);
             }
-            assert(res == get_capacity_naive(x));
-            return res;
+            return (res == get_capacity_naive(x)) ? res : -1;
+            // assert(res == get_capacity_naive(x));
+            // return res;
             return index - ones_left;
         }
     }
@@ -307,6 +415,7 @@ namespace pd512
         }
         std::cout << zero_count << std::endl;
         std::cout << one_count << std::endl;
+        return -1;
         assert(false);
     }
     auto get_name() -> std::string
@@ -314,4 +423,32 @@ namespace pd512
         return "pd512 ";
     }
 
+    ////New functions
+    int pd_popcount(const __m512i *pd)
+    {
+        uint64_t header_end;
+        memcpy(&header_end, reinterpret_cast<const uint64_t *>(pd) + 1,
+               sizeof(header_end));
+        constexpr uint64_t kLeftoverMask = (UINT64_C(1) << (50 + 51 - 64)) - 1;
+        header_end = header_end & kLeftoverMask;
+        const int result = 128 - 51 - _lzcnt_u64(header_end) + 1;
+        return result;
+    }
+
+    bool pd_full(const __m512i *pd)
+    {
+        uint64_t header_end;
+        memcpy(&header_end, reinterpret_cast<const uint64_t *>(pd) + 1,
+               sizeof(header_end));
+        return 1 & (header_end >> (50 + 51 - 64 - 1));
+    }
+
 } // namespace pd512
+
+auto my_equal(__m512i x, __m512i y) -> bool
+{
+    bool res = (_mm512_cmpeq_epi64_mask(x, y) == 255);
+    __mmask8 temp = _mm512_cmpeq_epi64_mask(x, y);
+    assert(res == (temp == 255));
+    return res;
+}

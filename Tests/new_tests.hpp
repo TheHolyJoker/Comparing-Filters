@@ -13,7 +13,7 @@
 typedef chrono::nanoseconds ns;
 
 template <typename itemType>
-auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType>*>* elements)
+auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements)
 {
     fill_vec(elements->at(0), max_filter_capacity);
     fill_vec(elements->at(1), lookup_reps);
@@ -22,7 +22,7 @@ auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <class Table, typename itemType>
-auto time_lookups(Table* wrap_filter, vector<itemType>* element_set, size_t start, size_t end) -> ulong
+auto time_lookups(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong
 {
     static volatile bool dummy;
     bool x = 0;
@@ -37,7 +37,7 @@ auto time_lookups(Table* wrap_filter, vector<itemType>* element_set, size_t star
 }
 
 template <class Table, typename itemType>
-auto time_insertions(Table* wrap_filter, vector<itemType>* element_set, size_t start, size_t end) -> ulong
+auto time_insertions(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong
 {
     auto t0 = chrono::high_resolution_clock::now();
     FilterAPI<Table>::AddAll(*element_set, start, end, wrap_filter);
@@ -46,7 +46,7 @@ auto time_insertions(Table* wrap_filter, vector<itemType>* element_set, size_t s
 }
 
 template <class Table, typename itemType>
-auto time_deletions(Table* wrap_filter, vector<itemType>* element_set, size_t start, size_t end) -> ulong
+auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong
 {
     auto t0 = chrono::high_resolution_clock::now();
     for (int i = start; i < end; ++i)
@@ -57,8 +57,8 @@ auto time_deletions(Table* wrap_filter, vector<itemType>* element_set, size_t st
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <class Table, typename itemType>
-auto benchmark_single_round(Table* wrap_filter, vector<vector<itemType>*>* elements, size_t round_counter,
-    size_t benchmark_precision, ostream& os) -> ostream&
+auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t round_counter,
+                            size_t benchmark_precision, ostream &os) -> ostream &
 {
 
     auto add_vec = elements->at(0);
@@ -69,27 +69,28 @@ auto benchmark_single_round(Table* wrap_filter, vector<vector<itemType>*>* eleme
     size_t find_step = find_vec->size() / benchmark_precision;
     size_t delete_step = delete_vec->size() / benchmark_precision;
     auto insertion_time = time_insertions(wrap_filter, add_vec, round_counter * add_step,
-        (round_counter + 1) * add_step);
+                                          (round_counter + 1) * add_step);
     auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step,
-        (round_counter + 1) * find_step);
+                                            (round_counter + 1) * find_step);
     auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, add_step);
 
     size_t removal_time = 0;
-    if (delete_vec->size()) {
+    if (delete_vec->size())
+    {
         removal_time = time_deletions(wrap_filter, delete_vec, round_counter * delete_step,
-            (round_counter + 1) * delete_step);
+                                      (round_counter + 1) * delete_step);
     }
 
-/*     if (FilterAPI<Table>::get_ID(wrap_filter) == d512) {
+    /*     if (FilterAPI<Table>::get_ID(wrap_filter) == d512) {
         FilterAPI<Table>::get_dynamic_info(wrap_filter);
     }
  */
     const size_t var_num = 6;
     //    string names[var_num] = {"Load", "insertion_time", "uniform_lookup_time", "true_lookup_time", "removal_time"};
-    size_t values[var_num] = { round_counter + 1, benchmark_precision, insertion_time, uniform_lookup_time,
-        true_lookup_time, removal_time };
+    size_t values[var_num] = {round_counter + 1, benchmark_precision, insertion_time, uniform_lookup_time,
+                              true_lookup_time, removal_time};
 
-    size_t divisors[var_num - 2] = { add_step, find_step, delete_step };
+    size_t divisors[var_num - 2] = {add_step, find_step, delete_step};
     print_single_round(var_num, values, divisors);
 
     //    if (FilterAPI<Table>::get_ID(wrap_filter) == tpd_id)
@@ -98,12 +99,13 @@ auto benchmark_single_round(Table* wrap_filter, vector<vector<itemType>*>* eleme
 }
 
 template <class Table, typename itemType>
-auto benchmark_generic_filter(Table* wrap_filter, vector<vector<itemType>*>* elements, size_t bench_precision,
-    ostream& os) -> ostream&
+auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t bench_precision,
+                              ostream &os) -> ostream &
 {
 
     print_round_header();
-    for (int round = 0; round < bench_precision; ++round) {
+    for (int round = 0; round < bench_precision; ++round)
+    {
         benchmark_single_round<Table, itemType>(wrap_filter, elements, round, bench_precision, os);
         /* if (FilterAPI<Table>::get_ID(wrap_filter) == d512){
 
@@ -115,8 +117,8 @@ auto benchmark_generic_filter(Table* wrap_filter, vector<vector<itemType>*>* ele
 
 template <class Table, typename itemType>
 auto benchmark_single_filter_wrapper(size_t filter_max_capacity,
-    size_t bench_precision, vector<vector<itemType>*>* elements,
-    ostream& os = cout) -> ostream&
+                                     size_t bench_precision, vector<vector<itemType> *> *elements,
+                                     ostream &os = cout) -> ostream &
 {
 
     auto start_run_time = chrono::high_resolution_clock::now();
@@ -134,7 +136,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity,
 
 template <typename itemType, template <typename> class hashTable>
 auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
-    vector<vector<itemType>*>* elements, ostream& os = cout) -> ostream&
+                                     vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream &
 {
     using Table = dict<PD, hashTable, itemType, uint64_t>;
 
@@ -154,7 +156,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
 //template<template <typename slot_type, size_t bits_per_item, size_t max_capacity> class temp_PD ,typename itemType, template<typename> class hashTable>
 template <typename itemType, template <typename> class hashTable>
 auto att_benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
-    vector<vector<itemType>*>* elements, ostream& os = cout) -> ostream&
+                                         vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream &
 {
     using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
     using Table = dict<temp_PD, hashTable, itemType, uint64_t>;
@@ -174,34 +176,39 @@ auto att_benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t erro
 
 template <typename itemType, size_t bits_per_element>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
-    bool BF = true, bool CF = true, bool MT = true, bool SIMD = true, bool call_PD = true,
-    ostream& os = cout) -> ostream&
+                   bool BF = true, bool CF = true, bool MT = true, bool SIMD = true, bool call_PD = true,
+                   ostream &os = cout) -> ostream &
 {
 
     assert(filter_max_capacity % bench_precision == 0);
     vector<itemType> v_add, v_find, v_delete;
-    vector<vector<itemType>*> elements { &v_add, &v_find, &v_delete };
+    vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
     init_elements(filter_max_capacity, lookup_reps, &elements);
 
-    if (BF) {
+    if (BF)
+    {
         using Table = bloomfilter::bloom<itemType, bits_per_element, false, hashing::TwoIndependentMultiplyShift>;
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
-            &elements, os);
+                                                         &elements, os);
     }
-    if (CF) {
+    if (CF)
+    {
         using Table = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>;
+        assert((w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5)));
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
-            &elements);
+                                                         &elements);
     }
-    if (SIMD) {
+    if (SIMD)
+    {
         using Table = SimdBlockFilter<>;
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
-            &elements);
+                                                         &elements);
     }
-    if (MT) {
+    if (MT)
+    {
         using Table = MortonFilter;
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
-            &elements);
+                                                         &elements);
     }
     //    using temp_PD2 = TPD_name::TPD<uint64_t, 8, 64>;
     //    using Table2 = dict<temp_PD2 , hash_table, itemType, uint64_t>;
@@ -217,10 +224,11 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
     //    att_benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
     //                                                              &elements);
 
-    if (call_PD) {
+    if (call_PD)
+    {
         //        using Table = dict<PD, hash_table, itemType, uint32_t>;
         benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
-            &elements);
+                                                              &elements);
     }
 
     return os;
@@ -228,11 +236,11 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
 
 template <typename itemType, size_t bits_per_element>
 auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
-    uint indicator = -1, ostream& os = cout) -> ostream&
+                     uint indicator = -1, ostream &os = cout) -> ostream &
 {
     assert(filter_max_capacity % bench_precision == 0);
     vector<itemType> v_add, v_find, v_delete;
-    vector<vector<itemType>*> elements { &v_add, &v_find, &v_delete };
+    vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
     init_elements(filter_max_capacity, lookup_reps, &elements);
 
     // uint b = 1u;
@@ -244,16 +252,11 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     //     benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     // }
 
-    if (true){
-        using spare_item = uint64_t;
-        using temp_hash = att_hTable<spare_item, 4>;
-        using Table = att_d512<temp_hash, spare_item, itemType>;
-        w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    }
-
-
-
+    using spare_item = uint64_t;
+    using temp_hash = att_hTable<spare_item, 4>;
+    using Table = att_d512<temp_hash, spare_item, itemType>;
+    assert((w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5)));
+    benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
 
     /* if (indicator & b) {
         using spare_item = uint64_t;
@@ -289,9 +292,9 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
 //template<typename itemType, template<typename> class hashTable>
 //template<template <typename slot_type, size_t bits_per_item, size_t max_capacity> class temp_PD ,typename itemType, template<typename> class hashTable>
 template <template <typename, size_t, size_t> class temp_PD, typename slot_type, size_t bits_per_item, size_t max_capacity, typename itemType,
-    template <typename> class hashTable>
+          template <typename> class hashTable>
 auto benchmark_single_TPD_filter(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
-    vector<vector<itemType>*>* elements, ostream& os = cout) -> ostream&
+                                 vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream &
 {
     //    using temp_TPD =
     using Table = dict<temp_PD<slot_type, bits_per_item, max_capacity>, hashTable, itemType, uint64_t>;
@@ -313,12 +316,12 @@ auto benchmark_single_TPD_filter(size_t filter_max_capacity, size_t error_power_
 //template<typename itemType, size_t bits_per_element, size_t max_capacity, template<typename> class hashTable>
 template <typename itemType, size_t bits_per_element, size_t max_capacity>
 auto bench_all_PD(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
-    ostream& os = cout) -> ostream&
+                  ostream &os = cout) -> ostream &
 {
     assert(filter_max_capacity % bench_precision == 0);
 
     vector<itemType> v_add, v_find, v_delete;
-    vector<vector<itemType>*> elements { &v_add, &v_find, &v_delete };
+    vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
     init_elements(filter_max_capacity, lookup_reps, &elements);
 
     using pd_32 = TPD_name::TPD<uint32_t, bits_per_element, max_capacity>;
@@ -330,7 +333,7 @@ auto bench_all_PD(size_t filter_max_capacity, size_t lookup_reps, size_t error_p
     benchmark_single_filter_wrapper<d_32, itemType>(filter_max_capacity, error_power_inv, bench_precision, &elements);
     benchmark_single_filter_wrapper<d_64, itemType>(filter_max_capacity, error_power_inv, bench_precision, &elements);
     benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
-        &elements);
+                                                          &elements);
 
     return os;
 }
@@ -344,8 +347,8 @@ auto example2(ulong shift, ulong filters_indicator = -1, size_t bench_precision 
     size_t lookup_reps = 1u << (shift + 2u);
     size_t error_power_inv = bits_per_item;
     b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
-        filters_indicator & 1, filters_indicator & 2, filters_indicator & 4,
-        filters_indicator & 8, filters_indicator & 16);
+                                                    filters_indicator & 1, filters_indicator & 2, filters_indicator & 4,
+                                                    filters_indicator & 8, filters_indicator & 16);
 }
 
 /**High load benchmarking*/
@@ -353,7 +356,7 @@ auto example2(ulong shift, ulong filters_indicator = -1, size_t bench_precision 
 
 template <class Table, typename itemType>
 auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bench_precision, size_t reps,
-    ostream& os = cout) -> ostream&
+                                       ostream &os = cout) -> ostream &
 {
 
     assert(filter_max_capacity % bench_precision == 0);
@@ -368,7 +371,8 @@ auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bench_
     v_insertions(&filter, &member_vec, 0, filter_max_capacity);
 
     bool cond = true;
-    for (int i = 0; i < reps; ++i) {
+    for (int i = 0; i < reps; ++i)
+    {
         size_t start = (i % (bench_precision + 1)) * step_size;
         cout << "delete (start, end): "
              << "( " << start << ", " << start + step_size << ")" << endl;
@@ -384,7 +388,7 @@ auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bench_
 
 template <typename itemType, template <typename> class hashTable>
 auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bits_per_element, size_t bench_precision,
-    size_t reps, ostream& os = cout) -> ostream&
+                                       size_t reps, ostream &os = cout) -> ostream &
 {
 
     assert(filter_max_capacity % bench_precision == 0);
@@ -400,7 +404,8 @@ auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bits_p
     v_insertions(&filter, &member_vec, 0, filter_max_capacity);
 
     bool cond = true;
-    for (int i = 0; i < reps; ++i) {
+    for (int i = 0; i < reps; ++i)
+    {
         cout << i << endl;
         size_t start = (i % (bench_precision + 1)) * step_size;
         cout << "delete (start, end): "
