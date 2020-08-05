@@ -21,6 +21,6 @@ auto compute_spare_element_size(size_t max_number_of_elements, float level1_load
     size_t number_of_pd = compute_number_of_PD(max_number_of_elements, pd_max_capacity, level1_load_factor);
     size_t pd_index_length = ceil_log2(number_of_pd);
     size_t quot_range_length = ceil_log2(quot_range);
-    return number_of_pd + pd_index_length + quot_range_length; 
+    return rem_length + pd_index_length + quot_range_length;
 
 }

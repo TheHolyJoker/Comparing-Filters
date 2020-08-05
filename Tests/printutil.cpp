@@ -95,7 +95,7 @@ void table_print(size_t var_num, string *var_names, size_t *values) {
 }
 
 
-void print_line() {
+void print_seperating_line() {
     const uint32_t name_width = 24;
     const int int_width = 7;
     const int dbl_width = 12;

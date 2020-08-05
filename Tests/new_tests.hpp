@@ -9,6 +9,7 @@
 #include "wrappers.hpp"
 #include <chrono>
 #include <set>
+#include <Validation/validate_hash_table.hpp>
 
 typedef chrono::nanoseconds ns;
 

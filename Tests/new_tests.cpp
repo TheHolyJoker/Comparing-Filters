@@ -4,19 +4,17 @@
 
 #include "new_tests.hpp"
 
-auto example1()
-{
+auto example1() {
     ulong shift = 16u;
     size_t filter_max_capacity = 1u << shift;
     size_t lookup_reps = 1u << (shift + 2u);
     size_t error_power_inv = BITS_PER_ELEMENT_MACRO;
     size_t bench_precision = 16;
     b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
-        1, 1, 1, 1, 1);
+                                                    1, 1, 1, 1, 1);
 }
 
-auto example3()
-{
+auto example3() {
     //    ulong shift = 1e6;
     //    size_t shift_add_to_lookups = 2u;
     size_t bench_precision = 100;
@@ -31,49 +29,46 @@ auto example3()
         //        cout  << std::string(48,'$') << endl;
         //        cout  << std::string(48,'$') << endl;
         benchmark_single_filter_high_load<uint64_t, hash_table>(max_distinct_capacity, remainder_length,
-            bench_precision, 200);
+                                                                bench_precision, 200);
     }
 }
 
-int main(int argc, char** argv)
-{
+void validate_HT_example() {
+    using simple_ht = hash_table<uint32_t>;
+    bool res = v_hash_table_rand<simple_ht, uint32_t>(1u << 15u, 1u << 14u, 18, 4, .5);
+    assert(res);
+    res = v_hash_table_rand_gen_load<simple_ht, uint32_t>(1u << 15u, 1u << 14u, 18, 4, .5, .5);
+    assert(res);
+    res = v_wrap_test<simple_ht, uint32_t>(1u << 15u, 1u << 14u, 18, .5, .5, 4);
+    assert(res);
+    //// other example using the wrapper: (different number of args.)
+    res = v_wrap_test<uint32_t>(1u << 15u, 1u << 14u, 18, .5, .5);
+    assert(res);
 
-    // using itemType = uint64_t;
-    // using temp_hash = att_hTable<uint64_t, 4>;
-    // using Table = dict512<temp_hash, uint64_t, itemType>;
-    // Table filter = FilterAPI<Table>::ConstructFromAddCount(1u<<20u);
-    // return 0;
-    // benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+    res = v_wrap_test<uint32_t>(1u << 15u, 1u << 14u, 18, .5, .5);
+    assert(res);
+    for (int i = 33; i < 64; ++i) {
+        std::cout << i << std::endl;
+        res = v_wrap_test<uint64_t>(1u << 15u, 1u << 14u, i, .5, .8);
+        assert(res);
+    }
 
-    /*
-//    auto tpd = TPD_name::TPD<uint32_t, 8, 64>(0,0,0);
-//    tpd.insert(0, 1);
-//    assert(tpd.lookup(0, 1));
+}
 
-//    auto d = dict<TPD_name::TPD<uint32_t, 8, 48>, />
-//    cout << << endl;
-//    dict<
+
+int main(int argc, char **argv) {
+    /*validate_HT_example();*/
+//    bool res;
+//    res = v_wrap_test<uint32_t>(1u << 15u, 1u << 14u, 18, .5,.8);
+//    assert(res);
+//    for (int i = 33; i < 64; ++i) {
+//        std::cout << i << std::endl;
+//        res = v_wrap_test<uint64_t>(1u << 15u, 1u << 14u, i, .5, .85);
+//        assert(res);
+//    }
 
 //    return 0;
-*/
-    /*
-//    validate_example2( 18,16);
-//    validate_example2( 20,16);
-//    validate_example2( 22,16);
-//    example3();
-//    return 0;
 
-    //    validate_example2(16, 16);
-//    example2<8>(26, -1);
-//    return 0;
-//    example2<4>(22, 16);
-//    return 0;
-
-//    example3();
-//    return 0;
-//    validate_example1();
-
-*/
 
     //Default values
     size_t filter_indicator = 127;
@@ -89,8 +84,8 @@ int main(int argc, char** argv)
     /**Parsing*/
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    char* end;
-    size_t values[4] { filter_indicator, shift, shift_add_to_lookups, bench_precision };
+    char *end;
+    size_t values[4]{filter_indicator, shift, shift_add_to_lookups, bench_precision};
     for (int i = 1; i < argc; ++i) {
         values[i - 1] = strtol(argv[i], &end, 10);
     }
@@ -116,15 +111,15 @@ int main(int argc, char** argv)
     // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
     //     bench_precision);
 
-    std::string line = std::string(128,'#');
+    std::string line = std::string(128, '#');
     size_t shift_start = 23;
     for (size_t my_shift = shift_start; my_shift < 27; my_shift++) {
         std::cout << line << std::endl;
-        std::cout << (my_shift - shift_start) << ")" <<  std::endl;
-        std::cout << "spare_element_size: "<< compute_spare_element_size(max_distinct_capacity, .9)  <<  std::endl;
+        std::cout << (my_shift - shift_start) << ")" << std::endl;
         size_t reps = 1u << (my_shift), max_distinct_capacity = 1u << my_shift;
+        std::cout << "spare_element_size: " << compute_spare_element_size(max_distinct_capacity, .9) << std::endl;
         att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-            bench_precision);
+                                                          bench_precision);
     }
     return 0;
 }

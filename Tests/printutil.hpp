@@ -30,7 +30,7 @@ void table_print(size_t var_num, string *var_names, size_t *values);
 
 void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t *divisors);
 
-void print_line();
+void print_seperating_line();
 
 void print_round_header();
 
@@ -137,4 +137,44 @@ auto str_format(T value) ->std::string
     }
     return numWithCommas;
 }
+
+template<typename T>
+void print_line(T* vals, size_t num, size_t width, bool is_last_line){
+    /*bool is_last_round = values[0] == values[1];
+    bool is_round_contain_two_digits = (values[0] > 9);
+    *//*size_t max_length = width;
+    for (int i = 0; i < var_num; ++i) {
+        max_length = max(var_names[i].length(), max_length);
+    }*//*
+
+// values for controlling format
+    const uint32_t name_width = width;
+    const std::string sep = " |";
+    const uint32_t total_width = (name_width + sep.size()) * (var_num - 1);
+    const std::string line = sep + std::string(total_width - 1, '-') + '|';
+//    std::cout << line << '\n' << sep << left;
+    std::cout << sep << left;
+
+    std::size_t first_arg_length = 2 + is_round_contain_two_digits;
+    //Round Number
+    std::cout << values[0] << "/" << std::setw(name_width - first_arg_length) << values[1];
+    double rate;
+    //Insertion rate (op/sec)
+    rate = divisors[0] / (values[2] / 1e9);
+    std::cout << sep << std::setw(name_width) << rate;
+    //uniform_lookup rate (op/sec)
+    rate = divisors[1] / (values[3] / 1e9);
+    std::cout << sep << std::setw(name_width) << rate;
+    //true_lookup rate (op/sec)
+    rate = divisors[0] / (values[4] / 1e9);
+    std::cout << sep << std::setw(name_width) << rate;
+    //deletion rate (op/sec)
+    rate = divisors[2] / (values[4] / 1e9);
+    std::cout << sep << std::setw(name_width) << rate << sep << std::endl;
+
+    if (is_last_round)
+        std::cout << line << '\n';
+*/
+}
+
 #endif //FILTERS_PRINTUTIL_HPP

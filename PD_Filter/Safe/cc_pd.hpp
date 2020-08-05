@@ -1,3 +1,4 @@
+/*
 #ifndef FILTERS_CCPD_HPP
 #define FILTERS_CCPD_HPP
 
@@ -70,12 +71,14 @@ public:
 
     void remove(CG_TYPE q, CG_TYPE r);
 
-    /**
+    */
+/**
      * Removes the element only if it is in the PD.
      * @param quotient
      * @param remainder
      * @return true if the element was removed, false otherwise.
-     */
+     *//*
+
     auto conditional_remove(CG_TYPE q, CG_TYPE r) -> bool;
 
     auto naive_conditional_remove(CG_TYPE q, CG_TYPE r) -> bool;
@@ -123,15 +126,19 @@ private:
 
     auto body_conditional_remove(CG_TYPE r, size_t unpacked_start_index, size_t unpacked_end_index) -> bool;
 
-    /**
+    */
+/**
      * I think! Moves all elements after the element that starts at "bit_index" to their predecessor position.
      * @param B_index
      * @param bit_index
-     */
+     *//*
+
     void body_pull(size_t B_index, size_t bit_index);
 
 public:
-    /*For testing*/
+    */
+/*For testing*//*
+
     auto get_a() const -> uint32_t *;
 
     auto get_fp_size() const -> const uint_fast16_t;
@@ -170,4 +177,4 @@ static auto should_deal_with_joined_slot(size_t m, size_t f, size_t l) -> bool
 uint32_t select_r(uint64_t slot, uint32_t rank);
 }
 
-#endif //FILTERS_CCPD_HPP
+#endif //FILTERS_CCPD_HPP*/

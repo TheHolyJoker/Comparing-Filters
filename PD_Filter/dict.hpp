@@ -4,7 +4,7 @@
 
 #include <cstring>
 #include "PD.h"
-#include "../TPD_Filter/TPD.hpp"
+#include "TPD_Filter/TPD.hpp"
 #include "hash_table.hpp"
 
 #define DICT_DB_MODE0 (false)

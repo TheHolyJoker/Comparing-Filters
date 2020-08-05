@@ -59,22 +59,35 @@ namespace s_pd_filter {
         return a;
     }
 
-    inline uint32_t hashint3( uint32_t a)
-    {
-        a = (a^0xdeadbeef) + (a<<4);
-        a = a ^ (a>>10);
-        a = a + (a<<7);
-        a = a ^ (a>>13);
+    inline uint32_t hashint3(uint32_t a) {
+        a = (a ^ 0xdeadbeef) + (a << 4);
+        a = a ^ (a >> 10);
+        a = a + (a << 7);
+        a = a ^ (a >> 13);
         return a;
     }
 
-    inline uint32_t hashint3( uint64_t a)
-    {
-        a = (a^0xdeadbeef) + (a<<4);
-        a = a ^ (a>>10);
-        a = a + (a<<7);
-        a = a ^ (a>>13);
+    inline uint32_t hashint3(uint64_t a) {
+        a = (a ^ 0xdeadbeef) + (a << 4);
+        a = a ^ (a >> 10);
+        a = a + (a << 7);
+        a = a ^ (a >> 13);
         return a;
+    }
+
+    inline uint64_t hashint64(uint64_t a) {
+        uint32_t x = hashint3(a);
+        uint32_t y = a & 4294967295ul;
+        x = hashint(x);
+        y = hashint(y);
+//        uint64_t res = (uint64_t) y | (((uint64_t) x) << 32ul);
+        return (uint64_t) y | (((uint64_t) x) << 32ul);
+//
+//        a = (a^0xdeadbeef) + (a<<4);
+//        a = a ^ (a>>10);
+//        a = a + (a<<7);
+//        a = a ^ (a>>13);
+//        return a;
     }
 
 

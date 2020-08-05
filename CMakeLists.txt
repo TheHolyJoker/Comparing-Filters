@@ -6,9 +6,9 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512vbmi")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=skylake-avx512")
@@ -55,20 +55,21 @@ add_executable(
         #        morton/test_util.h
         #        morton/util.h
         #        morton/vector_types.h
-        TPD_Filter/T_dict.hpp
-        TPD_Filter/att_hTable.hpp
-        TPD_Filter/TPD.hpp
-        TPD_Filter/dict512.hpp
-        TPD_Filter/pd512.hpp
-        TPD_Filter/pd512.cpp
+        PD_Filter/TPD_Filter/T_dict.hpp
+        PD_Filter/TPD_Filter/att_hTable.hpp
+        PD_Filter/TPD_Filter/TPD.hpp
+        PD_Filter/TPD_Filter/dict512.hpp
+        PD_Filter/TPD_Filter/pd512.hpp
+        PD_Filter/TPD_Filter/pd512.cpp
         #        TPD_Filter/pd-test.cpp
-        TPD_Filter/pd512_wrapper.hpp
-        TPD_Filter/basic_function_util.cpp TPD_Filter/basic_function_util.h 
-        Analyse/analyse.hpp Analyse/analyse.cpp
-        
-        d512/att_d512.hpp
-        Safe/safe512.hpp
-        Safe/cc_pd.hpp
+        PD_Filter/TPD_Filter/pd512_wrapper.hpp
+        PD_Filter/TPD_Filter/basic_function_util.cpp PD_Filter/TPD_Filter/basic_function_util.h
+        PD_Filter/Analyse/analyse.hpp PD_Filter/Analyse/analyse.cpp
+
+        PD_Filter/d512/att_d512.hpp
+        PD_Filter/Safe/safe512.hpp
+        PD_Filter/Safe/cc_pd.hpp
+        PD_Filter/Validation/validate_hash_table.hpp PD_Filter/Validation/validate_hash_table.cpp
         # Safe/Constant_size_PD
         )
 

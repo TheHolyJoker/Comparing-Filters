@@ -63,6 +63,7 @@ public:
 //            num_of_buckets(compute_max_capacity(max_capacity, max_load_factor))
             table_size(std::ceil(max_capacity / max_load_factor)), seed1(42), seed2(43),
             max_cuckoo_insert(0), cuckoo_insert_counter(0), max_capacity_reached(0) {
+        assert(bucket_size > 0);
         table = new slot_type[table_size];
         // The msb is indicator to whether the cell is free or not. (0 might be valid fingerprint)
         assert(element_length <= sizeof(slot_type) * CHAR_BIT);
@@ -497,9 +498,10 @@ public:
      * @return compares x,y first "element length" bits.
      */
     auto is_equal(slot_type with_counter, slot_type without_counter) const -> bool {
-        slot_type after_mask = without_counter & MASK(element_length);
+        return with_counter == without_counter;
+//        slot_type after_mask = without_counter & MASK(element_length);
 //        assert((without_counter & MASK(element_length)) == without_counter);
-        return (with_counter & MASK(element_length)) == without_counter;
+//        return (with_counter & MASK(element_length)) == without_counter;
     }
 
     auto is_deleted(size_t table_index) -> bool {

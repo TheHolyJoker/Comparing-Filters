@@ -25,25 +25,22 @@ static uint64_t x = 123456789, y = 362436069, z = 521288629;
  */
 unsigned long xorshf96();
 
-template <typename itemType>
-auto rand_item() -> itemType
-{
-    return (itemType)random();
+template<typename itemType>
+auto rand_item() -> itemType {
+    return (itemType) random();
     //    return (itemType) xorshf96();
 }
 
 auto rand_item() -> string;
 
-template <typename itemType>
-void set_init(size_t size, unordered_set<itemType> *mySet)
-{
+template<typename itemType>
+void set_init(size_t size, unordered_set<itemType> *mySet) {
     for (int i = 0; i < size; ++i)
         mySet->insert(rand_item<uint64_t>());
 }
 
-template <typename itemType>
-auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void
-{
+template<typename itemType>
+auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
     vec->resize(number_of_elements);
     for (int i = 0; i < number_of_elements; ++i)
         vec->at(i) = rand_item<uint64_t>();
@@ -64,18 +61,15 @@ auto fill_vec(std::vector<uint64_t> *vec, size_t number_of_elements, ulong unive
 /*Validation functions*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename itemType, size_t bits_per_item, bool brancless, typename HashFamily, template <typename, std::size_t, bool, typename> class Filter>
+template<typename itemType, size_t bits_per_item, bool brancless, typename HashFamily, template<typename, std::size_t, bool, typename> class Filter>
 auto v_insertion_plus_imm_lookups(Filter<itemType, bits_per_item, brancless, HashFamily> *filter,
-                                  unordered_set<itemType> *el_set) -> bool
-{
+                                  unordered_set<itemType> *el_set) -> bool {
     std::cout << "h1" << std::endl;
     size_t counter = 0;
-    for (auto el : *el_set)
-    {
+    for (auto el : *el_set) {
         bool already_in_filter = filter->Contain(el); //For debugging
         filter->Add(el);
-        if (!filter->Contain(el))
-        {
+        if (!filter->Contain(el)) {
             cout << "lookup failed." << endl;
             cout << "counter: " << counter << endl;
             cout << "element: " << el << endl;
@@ -89,19 +83,15 @@ auto v_insertion_plus_imm_lookups(Filter<itemType, bits_per_item, brancless, Has
     return true;
 }
 
-template <class Table, typename itemType, bool block_insertion = false>
-auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *el_set) -> bool
-{
+template<class Table, typename itemType, bool block_insertion = false>
+auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *el_set) -> bool {
     // std::cout << "h2" << std::endl;
     size_t counter = 0;
-    if (block_insertion)
-    {
+    if (block_insertion) {
         vector<itemType> vec(el_set->begin(), el_set->end());
         FilterAPI<Table>::AddAll(vec, wrap_filter);
-        for (auto el : vec)
-        {
-            if (!FilterAPI<Table>::Contain(el, wrap_filter))
-            {
+        for (auto el : vec) {
+            if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
                 cout << "lookup failed." << endl;
                 cout << "counter: " << counter << endl;
                 cout << "element: " << el << endl;
@@ -114,11 +104,9 @@ auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *e
         return true;
     }
 
-    for (auto el : *el_set)
-    {
+    for (auto el : *el_set) {
         FilterAPI<Table>::Add(el, wrap_filter);
-        if (!FilterAPI<Table>::Contain(el, wrap_filter))
-        {
+        if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
             cout << "lookup failed." << endl;
             cout << "counter: " << counter << endl;
             cout << "element: " << el << endl;
@@ -132,15 +120,12 @@ auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *e
     return true;
 }
 
-template <class Table, typename itemType>
-auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_set) -> bool
-{
+template<class Table, typename itemType>
+auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_set) -> bool {
     size_t counter = 0;
-    for (auto el : *el_set)
-    {
+    for (auto el : *el_set) {
         counter++;
-        if (!FilterAPI<Table>::Contain(el, wrap_filter))
-        {
+        if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
             cout << "False negative:" << endl;
 
             cout << "lookup failed." << endl;
@@ -153,50 +138,40 @@ auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_se
     return true;
 }
 
-template <class Table, typename itemType>
+template<class Table, typename itemType>
 auto v_deleting(Table *wrap_filter, unordered_set<itemType> *to_be_deleted_set,
-                unordered_set<itemType> *to_keep_elements_set) -> bool
-{
+                unordered_set<itemType> *to_keep_elements_set) -> bool {
     size_t counter = 0;
-    for (auto el : *to_be_deleted_set)
-    {
-        if (!FilterAPI<Table>::Contain(el, wrap_filter))
-        {
+    for (auto el : *to_be_deleted_set) {
+        if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
             return false;
         }
         bool c = to_be_deleted_set->find(el) != to_be_deleted_set->end();
         if (c)
             continue;
         counter++;
-        try
-        {
+        try {
             FilterAPI<Table>::Remove(el, wrap_filter);
         }
-        catch (std::runtime_error &msg)
-        {
+        catch (std::runtime_error &msg) {
             break;
         }
     }
     return true;
 }
 
-template <class Table, typename itemType>
-auto v_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t start, size_t end) -> bool
-{
-    try
-    {
+template<class Table, typename itemType>
+auto v_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t start, size_t end) -> bool {
+    try {
         FilterAPI<Table>::Remove(to_be_deleted_vec->at(start), wrap_filter);
     }
-    catch (std::runtime_error &msg)
-    {
+    catch (std::runtime_error &msg) {
         std::cout << FilterAPI<Table>::get_name(wrap_filter) << "Does not support deletions" << std::endl;
         return true;
     }
-    for (int i = start + 1; i < end; ++i)
-    {
+    for (int i = start + 1; i < end; ++i) {
         auto el = to_be_deleted_vec->at(i);
-        if (!FilterAPI<Table>::Contain(el, wrap_filter))
-        {
+        if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
             auto db_res = FilterAPI<Table>::Contain(el, wrap_filter);
             return false;
         }
@@ -205,17 +180,15 @@ auto v_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t 
     return true;
 }
 
-template <class Table, typename itemType>
-auto v_insertions(Table *wrap_filter, vector<itemType> *to_add_vec, size_t start, size_t end) -> void
-{
+template<class Table, typename itemType>
+auto v_insertions(Table *wrap_filter, vector<itemType> *to_add_vec, size_t start, size_t end) -> void {
     for (int i = start; i < end; ++i)
         FilterAPI<Table>::Add(to_add_vec->at(i), wrap_filter);
 }
 
-template <class Table, typename itemType, bool block_insertion = false>
+template<class Table, typename itemType, bool block_insertion = false>
 auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-                   double level1_load_factor, double level2_load_factor) -> bool
-{
+                   double level1_load_factor, double level2_load_factor) -> bool {
     //    Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     //    auto number_of_elements_in_the_filter = filter_max_capacity;
 
@@ -232,7 +205,9 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     assert(cond);
 
     /**Lookup*/
-    cond = v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
+    /*TODO SUPER IMPORTANT. UN COMMENT THE NEXT LINE*/
+//    cond = v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
+    std::cout << "should uncomment here, line 237" << std::endl;
     assert(cond);
     cond = v_true_positive_elements<Table, itemType>(wrap_filter, &to_be_deleted_set);
     assert(cond);
@@ -240,8 +215,7 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     /**Count False positive*/
     size_t fp_counter = 0;
     size_t tp_counter = 0;
-    for (auto iter : lookup_set)
-    {
+    for (auto iter : lookup_set) {
         /*For debugging:
          bool iter_not_in_filter = !FilterAPI<Table>::Contain(iter, &wrap_filter);
         if (iter_not_in_filter){
@@ -252,15 +226,12 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
         c1 = member_set.find(iter) != member_set.end();
         //Exact answer to: is "iter" in filter.
         c2 = to_be_deleted_set.find(iter) != to_be_deleted_set.end();
-        if (c1 || c2)
-        {
+        if (c1 || c2) {
             //Validating there is no false negative.
             tp_counter++;
             assert(FilterAPI<Table>::Contain(iter, wrap_filter));
             continue;
-        }
-        else if (FilterAPI<Table>::Contain(iter, wrap_filter))
-        {
+        } else if (FilterAPI<Table>::Contain(iter, wrap_filter)) {
             fp_counter++;
         }
     }
@@ -284,10 +255,9 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     return true;
 }
 
-template <class Table, typename itemType, bool block_insertion = false>
+template<class Table, typename itemType, bool block_insertion = false>
 auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-                       double level1_load_factor, double level2_load_factor) -> bool
-{
+                       double level1_load_factor, double level2_load_factor) -> bool {
 
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     size_t line_width = 160; // number of columns (6) * column's width (24)
@@ -298,10 +268,9 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
     return res;
 }
 
-template <typename itemType, template <typename> class hashTable>
+template<typename itemType, template<typename> class hashTable>
 auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-                       double level1_load_factor, double level2_load_factor) -> bool
-{
+                       double level1_load_factor, double level2_load_factor) -> bool {
     //    using HT = hashTable<hashTableType>;
     //    using Table = dict<PD, HT, itemType>;
     using Table = dict<PD, hashTable, itemType, uint32_t>;
@@ -321,22 +290,18 @@ void validate_example2(ulong shift, ulong filter_indicator = -1);
 /*Old function for sanity checks*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename Table>
-auto v_true_positive(size_t number_of_elements) -> bool
-{
+template<typename Table>
+auto v_true_positive(size_t number_of_elements) -> bool {
     std::vector<uint64_t> vec;
     fill_vec(&vec, number_of_elements);
     Table filter = FilterAPI<Table>::ConstructFromAddCount(number_of_elements);
 
-    for (auto item : vec)
-    {
+    for (auto item : vec) {
         FilterAPI<Table>::Add(item, &filter);
     }
     size_t counter = 0;
-    for (auto item : vec)
-    {
-        if (!FilterAPI<Table>::Contain(item, &filter))
-        {
+    for (auto item : vec) {
+        if (!FilterAPI<Table>::Contain(item, &filter)) {
             std::cout << counter << std::endl;
             return false;
         }
@@ -344,9 +309,8 @@ auto v_true_positive(size_t number_of_elements) -> bool
     return true;
 }
 
-template <typename itemType, size_t bits_per_item, bool brancless, typename HashFamily, template <typename, std::size_t, bool, typename> class Filter>
-auto v_true_positive_att(size_t number_of_elements) -> bool
-{
+template<typename itemType, size_t bits_per_item, bool brancless, typename HashFamily, template<typename, std::size_t, bool, typename> class Filter>
+auto v_true_positive_att(size_t number_of_elements) -> bool {
     //    std::vector<itemType> vec;
     //    fill_vec(&vec, number_of_elements);
     std::set<itemType> member_set;
@@ -354,16 +318,13 @@ auto v_true_positive_att(size_t number_of_elements) -> bool
     using Table = Filter<itemType, bits_per_item, brancless, HashFamily>;
     auto filter = FilterAPI<Table>::ConstructFromAddCount(number_of_elements);
 
-    for (auto item : member_set)
-    {
+    for (auto item : member_set) {
         FilterAPI<Table>::Add(item, &filter);
     }
 
     size_t counter = 0;
-    for (auto item : member_set)
-    {
-        if (!FilterAPI<Table>::Contain(item, &filter))
-        {
+    for (auto item : member_set) {
+        if (!FilterAPI<Table>::Contain(item, &filter)) {
             std::cout << counter << std::endl;
             return false;
         }
@@ -386,9 +347,8 @@ auto v_true_positive_att(size_t number_of_elements) -> bool
 */
 }
 
-template <typename Table>
-auto v_return_false_when_empty() -> bool
-{
+template<typename Table>
+auto v_return_false_when_empty() -> bool {
     Table filter = FilterAPI<Table>::ConstructFromAddCount(1u << 10u);
     return filter.Contain(42);
 }
@@ -396,9 +356,8 @@ auto v_return_false_when_empty() -> bool
 /*Benchmark functions*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <class Table, typename itemType>
-auto time_lookups(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong
-{
+template<class Table, typename itemType>
+auto time_lookups(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set)
         FilterAPI<Table>::Contain(iter, wrap_filter);
@@ -406,9 +365,8 @@ auto time_lookups(Table *wrap_filter, unordered_set<itemType> *element_set) -> u
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
 
-template <class Table, typename itemType>
-auto time_insertions(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong
-{
+template<class Table, typename itemType>
+auto time_insertions(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set)
         FilterAPI<Table>::Add(iter, wrap_filter);
@@ -416,9 +374,8 @@ auto time_insertions(Table *wrap_filter, unordered_set<itemType> *element_set) -
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
 
-template <class Table, typename itemType>
-auto time_deletions(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong
-{
+template<class Table, typename itemType>
+auto time_deletions(Table *wrap_filter, unordered_set<itemType> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set)
         FilterAPI<Table>::Remove(iter, wrap_filter);
@@ -426,17 +383,16 @@ auto time_deletions(Table *wrap_filter, unordered_set<itemType> *element_set) ->
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
 
-template <class Table, typename itemType>
-auto benchmark_single_round(Table *wrap_filter, unordered_set<itemType> *to_add_set, unordered_set<itemType> *to_lookup_set,
-                            unordered_set<itemType> *to_delete_set, size_t round_counter, size_t total_rounds_num,
-                            ostream &os) -> ostream &
-{
+template<class Table, typename itemType>
+auto
+benchmark_single_round(Table *wrap_filter, unordered_set<itemType> *to_add_set, unordered_set<itemType> *to_lookup_set,
+                       unordered_set<itemType> *to_delete_set, size_t round_counter, size_t total_rounds_num,
+                       ostream &os) -> ostream & {
 
     auto insertion_time = time_insertions(wrap_filter, to_add_set);
     auto lookup_time = time_lookups(wrap_filter, to_lookup_set);
     std::size_t removal_time = 0;
-    if (to_delete_set->size())
-    {
+    if (to_delete_set->size()) {
         removal_time = time_deletions(wrap_filter, to_delete_set);
     }
     const size_t var_num = 4;
@@ -483,10 +439,9 @@ auto benchmark_single_round(Table *wrap_filter, unordered_set<itemType> *to_add_
     //    table_print_false_positive_rates(exp_FP_count, FP_count_higher_load, FP_count_mid_load);
 }
 
-template <class Table, typename itemType>
+template<class Table, typename itemType>
 auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup_reps, ulong init_time,
-                    size_t error_power_inv, size_t bench_precision, ostream &os) -> ostream &
-{
+                    size_t error_power_inv, size_t bench_precision, ostream &os) -> ostream & {
     auto start_run_time = chrono::high_resolution_clock::now();
 
     /**Sets initializing*/
@@ -496,8 +451,7 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
 
     /**Member set init*/
     auto t0 = chrono::high_resolution_clock::now();
-    for (int i = 0; i < bench_precision; ++i)
-    {
+    for (int i = 0; i < bench_precision; ++i) {
         set_init(filter_max_capacity, &member_vec[i]);
         //        set_init(filter_max_capacity / (bench_precision << 1u), &to_be_deleted[i]);
         set_init(lookup_reps / bench_precision, &lookup_vec[i]);
@@ -508,14 +462,13 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
 
     unordered_set<itemType> empty_set;
     print_round_header();
-    for (int round = 0; round < bench_precision; ++round)
-    {
+    for (int round = 0; round < bench_precision; ++round) {
         //        benchmark_single_round<Table, itemType>(wrap_filter, member_vec[round], lookup_vec[round], to_be_deleted[round])
         benchmark_single_round<Table, itemType>(wrap_filter, &member_vec[round], &lookup_vec[round], &empty_set,
                                                 round + 1,
                                                 bench_precision, os);
     }
-    //    print_line();
+    //    print_seperating_line();
     return os;
 
     /*
@@ -573,10 +526,9 @@ auto benchmark_core(Table *wrap_filter, size_t filter_max_capacity, size_t looku
     return os;*/
 }
 
-template <class Table, typename itemType>
+template<class Table, typename itemType>
 auto benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
-                       ostream &os = cout) -> ostream &
-{
+                       ostream &os = cout) -> ostream & {
 
     auto start_run_time = chrono::high_resolution_clock::now();
     auto t0 = chrono::high_resolution_clock::now();
@@ -592,10 +544,9 @@ auto benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t er
     return os;
 }
 
-template <typename itemType, template <typename> class hashTable>
+template<typename itemType, template<typename> class hashTable>
 auto benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
-                       ostream &os = cout) -> ostream &
-{
+                       ostream &os = cout) -> ostream & {
     using Table = dict<PD, hashTable, itemType, uint32_t>;
 
     auto start_run_time = chrono::high_resolution_clock::now();
@@ -614,11 +565,11 @@ auto benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t er
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <class D>
-auto CF_rates_wrapper_old(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t l1_counter_size,
-                          size_t l2_counter_size, double level1_load_factor, double level2_load_factor,
-                          ostream &os) -> ostream &
-{
+template<class D>
+auto
+CF_rates_wrapper_old(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t l1_counter_size,
+                     size_t l2_counter_size, double level1_load_factor, double level2_load_factor,
+                     ostream &os) -> ostream & {
 
     auto start_run_time = chrono::high_resolution_clock::now();
     auto t0 = chrono::high_resolution_clock::now();
@@ -728,11 +679,10 @@ auto benchmark_wrapper(size_t filter_max_capacity, size_t lookup_reps,
                        size_t l2_counter_size, double level1_load_factor,
                        double level2_load_factor, ostream &os) -> ostream &;
 
-template <class D>
+template<class D>
 auto CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps, ulong init_time,
                        size_t error_power_inv,
-                       ostream &os) -> ostream &
-{
+                       ostream &os) -> ostream & {
     auto start_run_time = chrono::high_resolution_clock::now();
 
     /**Sets initializing*/
@@ -746,7 +696,7 @@ auto CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps
     set_init(filter_max_capacity / 2, &to_be_deleted_set);
 
     set_init(lookup_reps, &lookup_set);
-    double set_ratio = lookup_set.size() / (double)lookup_reps;
+    double set_ratio = lookup_set.size() / (double) lookup_reps;
 
     auto insertion_time = time_insertions(filter, &member_set);
     auto insertion_time_higher_load = time_insertions(filter, &to_be_deleted_set);
@@ -767,8 +717,7 @@ auto CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps
     ulong total_time = chrono::duration_cast<ns>(end_time - start_run_time).count();
     total_time += init_time;
 
-    if (set_ratio < 1)
-    {
+    if (set_ratio < 1) {
         cout << "set_ratio=" << set_ratio << endl;
     }
 
@@ -784,7 +733,7 @@ auto CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps
     name_compare::table_print_rates(var_num, names, values, divisors);
     */
 
-    size_t exp_FP_count = ceil(((double)lookup_reps / (1u << error_power_inv)));
+    size_t exp_FP_count = ceil(((double) lookup_reps / (1u << error_power_inv)));
     table_print_false_positive_rates(exp_FP_count, FP_count_higher_load, FP_count_mid_load);
 
     const size_t var_num = 6;
@@ -799,9 +748,8 @@ auto CF_rates_core_old(D *filter, size_t filter_max_capacity, size_t lookup_reps
     return os;
 }
 
-template <class D>
-auto time_lookups(D *filter, unordered_set<string> *element_set) -> ulong
-{
+template<class D>
+auto time_lookups(D *filter, unordered_set<string> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set)
         filter->lookup(&iter);
@@ -809,9 +757,8 @@ auto time_lookups(D *filter, unordered_set<string> *element_set) -> ulong
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
 
-template <class D>
-auto time_insertions(D *filter, unordered_set<string> *element_set) -> ulong
-{
+template<class D>
+auto time_insertions(D *filter, unordered_set<string> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set)
         filter->insert(&iter);
@@ -819,9 +766,8 @@ auto time_insertions(D *filter, unordered_set<string> *element_set) -> ulong
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
 
-template <class D>
-auto time_deletions(D *filter, unordered_set<string> *element_set) -> ulong
-{
+template<class D>
+auto time_deletions(D *filter, unordered_set<string> *element_set) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
     for (auto iter : *element_set)
         filter->remove(&iter);

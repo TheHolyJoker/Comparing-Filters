@@ -2,9 +2,9 @@
 #ifndef CLION_CODE_DICT512_HPP
 #define CLION_CODE_DICT512_HPP
 
-#include "../Analyse/analyse.hpp"
-#include "../PD_Filter/hash_table.hpp"
-#include "../Tests/printutil.hpp"
+#include "Analyse/analyse.hpp"
+#include "hash_table.hpp"
+#include "printutil.hpp"
 #include "att_hTable.hpp"
 #include "basic_function_util.h"
 #include "pd512_wrapper.hpp"
