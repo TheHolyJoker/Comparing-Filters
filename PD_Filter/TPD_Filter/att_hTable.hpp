@@ -591,8 +591,8 @@ public:
     inline void my_hash(bucket_type x, uint32_t *b1, uint32_t *b2) const {
         assert(x == (x & MASK(element_length)));
         size_t number_of_buckets_in_each_table = num_of_buckets / 2;
-        *b1 = (s_pd_filter::hashint(x)) % number_of_buckets_in_each_table;
-        *b2 = (s_pd_filter::hashint2(x) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
+        *b1 = (s_pd_filter::hashint64(x, 4242)) % number_of_buckets_in_each_table;
+        *b2 = (s_pd_filter::hashint64(x, 2424) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
     }
 
     auto get_name() -> std::string {
