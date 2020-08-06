@@ -14,11 +14,11 @@
 #define ATT_D512_DB1 (true)
 #define ATT_D512_DB2 (true & D512DB1)
 
-static size_t insert_counter = 0;
-static size_t lookup_counter = 0;
-static size_t remove_counter = 0;
-static bool hashing_test = false;
-static size_t case_validate_counter = 0;
+// static size_t insert_counter = 0;
+// static size_t lookup_counter = 0;
+// static size_t remove_counter = 0;
+// static bool hashing_test = false;
+// static size_t case_validate_counter = 0;
 //static size_t case_validate_counter = 0;
 
 //int case, size_t pd_index, uint64_t quot, uint64_t rem,size_t insert_counter
@@ -67,7 +67,7 @@ template<
             assert(sizeof(itemType) <= sizeof(spareItemType));
 
             size_t log2_size = ceil_log2(max_number_of_elements);
-            size_t temp = ceil(max_number_of_elements *1);
+            size_t temp = ceil(max_number_of_elements *.6);
             auto res = my_ceil(temp, log2_size);
 
             // std::cout << "max_number_of_elements is: " << max_number_of_elements << std::endl;
@@ -121,7 +121,8 @@ template<
 
             std::cout << line << std::endl;
             get_dynamic_info();
-            std::cout << "byte size is: " << str_format(get_byte_size()) << std::endl;
+            std::cout << "l1 byte size is: " << str_format(get_byte_size()) << std::endl;
+            std::cout << "total byte size is: " << str_format(get_byte_size_with_spare()) << std::endl;
             std::cout << line << std::endl;
 
 
@@ -135,13 +136,13 @@ template<
             //        }
             pd_capacity_vec.clear();
             //        assert(hashing_test);
-            hashing_test = false;
+            // hashing_test = false;
             delete spare;
         }
 
         auto lookup(const itemType s) const -> bool {
-            lookup_counter++;
-            /*bool db_cond = f(s);
+            /*lookup_counter++;
+            bool db_cond = f(s);
             if (db_cond)
                 std::cout << "lookup counter is: " << lookup_counter++ << std::endl;
             */
@@ -152,7 +153,7 @@ template<
 
             __m512i *temp_pd = &pd_array[pd_index];
             if (pd512::pd_find_50(quot, r, temp_pd)) {
-                assert(pd512::validate_number_of_quotient(temp_pd));
+                // assert(pd512::validate_number_of_quotient(temp_pd));
                 return true;
             }
             if (pd_capacity_vec[pd_index] & 1u) {
@@ -167,7 +168,7 @@ template<
         }
 
         void insert(const itemType s) {
-            insert_counter++;
+            // insert_counter++;
             //        bool printer = false;
             itemType hash_val = wrap_hash(s);
 
@@ -187,13 +188,11 @@ template<
             split(hash_val, &pd_index, &quot, &r);
             assert(pd_index < number_of_pd);
             // __m512i temp_pd = pd_array[pd_index];
-            assert(pd512::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
+            // assert(pd512::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
 
             if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
-                /*if (printer) {
-                    std::cout << "h6" << std::endl;
-                }*/
                 assert(pd512::is_full(&pd_array[pd_index]));
+
                 pd_capacity_vec[pd_index] |= 1u;
                 /**Todo! this is a mistake?*/
                 insert_to_spare_without_pop(hash_val);
@@ -201,9 +200,6 @@ template<
                 //            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
                 return;
             }
-            //        if (printer) {
-            //            std::cout << "h7" << std::endl;
-            //        }
 
             auto res = pd512::pd_add_50(quot, r, &pd_array[pd_index]);
             if (!res) {
@@ -214,18 +210,9 @@ template<
         }
 
         void remove(itemType x) {
-            std::cout << "remove counter is: " << remove_counter++ << std::endl;
+            // std::cout << "remove counter is: " << remove_counter++ << std::endl;
             return remove_helper(wrap_hash(x));
         }
-
-        /*auto lookup(const string *s) const -> bool {
-            return lookup_helper(wrap_hash(s));
-        }*/
-
-        //    void insert(const string *s) {
-        //        return insert_helper(wrap_hash(s));
-        //    }
-
         void insert_to_spare_without_pop(spareItemType hash_val) {
             spare->insert(hash_val & MASK(sparse_element_length));
         }
@@ -243,11 +230,11 @@ template<
 
         void get_dynamic_info() {
 
-            if (!hashing_test) {
+            /* if (!hashing_test) {
                 std::cout << std::string(120, '$') << std::endl;
                 std::cout << "Probably did not hit all PD's. (hashing_test is false)." << std::endl;
                 std::cout << std::string(120, '$') << std::endl;
-            }
+            } */
 
             size_t spare_capacity = spare->get_capacity();
             size_t count_overflowing_PD = count_overflowing_PDs();
@@ -401,17 +388,23 @@ template<
             res += 1;
             return res;
         }
+        auto get_byte_size_with_spare() {
+            auto l1_size = get_byte_size();
+            auto l2_size = spare->get_byte_size();
+            return l1_size + l2_size;
+        }
+
 
         auto analyse_pd_status(size_t p) -> double {
             return m512i_lp_average(pd_array, number_of_pd, p);
         }
 
         auto case_validate() -> bool {
-            case_validate_counter++;
+            // case_validate_counter++;
             bool res = pd512::validate_number_of_quotient(&pd_array[2279]);
-            if (!res) {
+            /* if (!res) {
                 std::cout << "case_validate_counter: " << case_validate_counter << std::endl;
-            }
+            } */
             return res;
         }
 
@@ -660,6 +653,7 @@ template<
         }
 
         inline auto wrap_hash(itemType x) const -> spareItemType {
+            return s_pd_filter::hashint64(x);
             /*if (insert_counter < 10){
                 spareItemType h1 = s_pd_filter::hashint(x);
                 spareItemType h2 = s_pd_filter::my_hash64(x, 42) & MASK(sparse_element_length);
@@ -673,7 +667,6 @@ template<
             //        return s_pd_filter::my_hash64(x, 42) & MASK(sparse_element_length);
             //        return s_pd_filter::hashint(x);
             //        return s_pd_filter::hashint(x) & MASK(sparse_element_length);;
-            return s_pd_filter::hashint64(x);
             //        return s_pd_filter::hashint64(x) & MASK(sparse_element_length);
 
                     /* Todo:
@@ -710,222 +703,198 @@ template<
             h >>= remainder_length;
             *q = h % (quotient_range);
             h >>= quotient_length;
-            if ((!hashing_test) and (h >= number_of_pd)) {
+            /* if ((!hashing_test) and (h >= number_of_pd)) {
                 std::cout << "h3!" << std::endl;
                 hashing_test = true;
-            }
+            } */
             *pd_index = h % number_of_pd;
         }
 
-        auto w_insert(const itemType s) -> db_key {
-            if (insert_counter == 0) {
-                std::cout << "number of pd:" << number_of_pd << std::endl;
-            }
-            using namespace pd512;
-            db_key w_res ={ 0, 0, 0, 0, 0 };
-            uint64_t __attribute__((aligned(64))) temp_arr[6][8];
-            std::get<4>(w_res) = insert_counter;
+    //     auto w_insert(const itemType s) -> db_key {
+    //         if (insert_counter == 0) {
+    //             std::cout << "number of pd:" << number_of_pd << std::endl;
+    //         }
+    //         using namespace pd512;
+    //         db_key w_res ={ 0, 0, 0, 0, 0 };
+    //         uint64_t __attribute__((aligned(64))) temp_arr[6][8];
+    //         std::get<4>(w_res) = insert_counter;
+    //         insert_counter++;
+    //         spareItemType hash_val = wrap_hash(s);
+    //         size_t pd_index = -1;
+    //         uint32_t quot = -1, r = -1;
+    //         split(hash_val, &pd_index, &quot, &r);
+    //         bool limits_cond = (pd_index == 0) or (pd_index + 1 == number_of_pd);
+    //         if (limits_cond) {
+    //             std::get<0>(w_res) = -1;
+    //             return w_res;
+    //         }
+    //         std::get<1>(w_res) = pd_index;
+    //         std::get<2>(w_res) = quot;
+    //         std::get<3>(w_res) = r;
+    //         int *v_res = &(std::get<0>(w_res));
+    //         int b = 1ul;
+    //         __m512i *ppd = &pd_array[pd_index];
+    //         bool BPC = (pd_index == 91379);
+    //         if (BPC) {
+    //             std::cout << "h2" << std::endl;
+    //         }
+    //         /* bool cond = (pd_index == 2278) or (pd_index == 9249);
+    //         if (cond)
+    //         {
+    //             std::cout << "HERE! " << std::endl;
+    //             ;
+    //             std::cout << "insert counter is: " << insert_counter << std::endl;
+    //             std::cout << "pd_index:\t" << pd_index << std::endl;
+    //             std::cout << "quot:\t" << quot << std::endl;
+    //             std::cout << "r:\t" << r << std::endl;
+    //         } */
+    //         assert(pd_index < number_of_pd);
+    //         // size_t cap_res = pd512::get_capacity(&pd_array[pd_index]);
+    //         // size_t cap_valid = pd_capacity_vec[pd_index] / 2;
+    //         assert(pd512::get_capacity(ppd) == pd_capacity_vec[pd_index] / 2);
+    //         if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
+    //             assert(pd512::is_full(ppd));
+    //             pd_capacity_vec[pd_index] |= 1u;
+    //             /**Todo!*/
+    //             insert_to_spare_without_pop(hash_val);
+    //             // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
+    //             return w_res;
+    //         }
+    //         //        auto res2 = pd_vec[pd_index]->insert(quot, r);
+    //         bool c1 = validate_number_of_quotient(ppd - 1);
+    //         bool c2 = validate_number_of_quotient(ppd);
+    //         bool c3 = validate_number_of_quotient(ppd + 1);
+    //         *v_res |= (!c1 * b);
+    //         b <<= 1u;
+    //         *v_res |= (!c2 * b);
+    //         b <<= 1u;
+    //         *v_res |= (!c3 * b);
+    //         b <<= 1u;
+    //         /* if (cond)
+    //         {
+    //             auto line = std::string(64, '*');
+    //             _mm512_store_si512(temp_arr[0], *(ppd - 1));
+    //             _mm512_store_si512(temp_arr[1], *(ppd));
+    //             _mm512_store_si512(temp_arr[2], *(ppd + 1));
+    //             std::cout << 0 << ")" << std::endl;
+    //             pd512::print512(ppd - 1);
+    //             print_8array(temp_arr[0]);
+    //             print_array(temp_arr[0], 8);
+    //             std::cout << line << std::endl;
+    // 
+    //             std::cout << 1 << ")" << std::endl;
+    //             pd512::print512(ppd);
+    //             print_8array(temp_arr[1]);
+    //             print_array(temp_arr[1], 8);
+    //             std::cout << line << std::endl;
+    //             std::cout << 2 << ")" << std::endl;
+    //             pd512::print512(ppd);
+    //             print_8array(temp_arr[2]);
+    //             print_array(temp_arr[2], 8);
+    //             std::cout << line << std::endl;
+    //         }
+    //  */
+    //  // auto res = pd512::pd_add_50(quot, r, ppd);
+    //         auto res = inlining_pd_add_50(quot, r, ppd, pd_index);
+    //         /* if (cond)
+    //         {
+    //             auto line = std::string(64, '*');
+    //             _mm512_store_si512(temp_arr[3], *(ppd - 1));
+    //             _mm512_store_si512(temp_arr[4], *ppd);
+    //             _mm512_store_si512(temp_arr[5], *(ppd + 1));
+    //             std::cout << 3 << ")" << std::endl;
+    //             pd512::print512(ppd - 1);
+    //             print_8array(temp_arr[3]);
+    //             print_array(temp_arr[3], 8);
+    //             std::cout << line << std::endl;
+    //             std::cout << 4 << ")" << std::endl;
+    //             pd512::print512(ppd);
+    //             print_8array(temp_arr[4]);
+    //             print_array(temp_arr[4], 8);
+    //             std::cout << line << std::endl;
+    //             std::cout << 5 << ")" << std::endl;
+    //             pd512::print512(ppd + 1);
+    //             print_8array(temp_arr[5]);
+    //             print_array(temp_arr[5], 8);
+    //             std::cout << line << std::endl;
+    //             std::cout << "0,3: " << (memcmp(temp_arr[0], temp_arr[3], 64)) << std::endl;
+    //             std::cout << "1,4: " << (memcmp(temp_arr[1], temp_arr[4], 64)) << std::endl;
+    //             std::cout << "2,5: " << (memcmp(temp_arr[2], temp_arr[5], 64)) << std::endl;
+    //         } */
+    //         c1 = validate_number_of_quotient(ppd - 1);
+    //         c2 = validate_number_of_quotient(ppd);
+    //         c3 = validate_number_of_quotient(ppd + 1);
+    //         *v_res |= (!c1 * b);
+    //         b <<= 1u;
+    //         *v_res |= (!c2 * b);
+    //         b <<= 1u;
+    //         *v_res |= (!c3 * b);
+    //         /* assert(pd512::validate_number_of_quotient(&pd_array[pd_index - 1]));
+    //         assert(pd512::validate_number_of_quotient(&pd_array[pd_index]));
+    //         bool temp_failed = pd512::validate_number_of_quotient(&pd_array[pd_index + 1]);
+    //         if (!temp_failed)
+    //         {
+    //             std::cout << "in Failed:" << std::endl;
+    //             std::cout << "pd_index:\t" << pd_index << std::endl;
+    //             std::cout << "cond:\t" << cond << std::endl;
+    //             // assert(false);
+    //         } */
+    //         // assert();
+    //         if (!res) {
+    //             cout << "insertion failed!!!" << std::endl;
+    //             assert(false);
+    //         }
+    //         (pd_capacity_vec[pd_index] += 2);
+    //         return w_res;
+    //     }
 
-            insert_counter++;
-            spareItemType hash_val = wrap_hash(s);
-
-            size_t pd_index = -1;
-            uint32_t quot = -1, r = -1;
-            split(hash_val, &pd_index, &quot, &r);
-
-            bool limits_cond = (pd_index == 0) or (pd_index + 1 == number_of_pd);
-            if (limits_cond) {
-                std::get<0>(w_res) = -1;
-                return w_res;
-            }
-            std::get<1>(w_res) = pd_index;
-            std::get<2>(w_res) = quot;
-            std::get<3>(w_res) = r;
-            int *v_res = &(std::get<0>(w_res));
-            int b = 1ul;
-            __m512i *ppd = &pd_array[pd_index];
-
-            bool BPC = (pd_index == 91379);
-            if (BPC) {
-                std::cout << "h2" << std::endl;
-            }
-
-            /* bool cond = (pd_index == 2278) or (pd_index == 9249);
-            if (cond)
-            {
-                std::cout << "HERE! " << std::endl;
-                ;
-                std::cout << "insert counter is: " << insert_counter << std::endl;
-                std::cout << "pd_index:\t" << pd_index << std::endl;
-                std::cout << "quot:\t" << quot << std::endl;
-                std::cout << "r:\t" << r << std::endl;
-            } */
-
-            assert(pd_index < number_of_pd);
-            // size_t cap_res = pd512::get_capacity(&pd_array[pd_index]);
-            // size_t cap_valid = pd_capacity_vec[pd_index] / 2;
-
-            assert(pd512::get_capacity(ppd) == pd_capacity_vec[pd_index] / 2);
-
-            if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
-                assert(pd512::is_full(ppd));
-                pd_capacity_vec[pd_index] |= 1u;
-                /**Todo!*/
-                insert_to_spare_without_pop(hash_val);
-                // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
-                return w_res;
-            }
-            //        auto res2 = pd_vec[pd_index]->insert(quot, r);
-
-            bool c1 = validate_number_of_quotient(ppd - 1);
-            bool c2 = validate_number_of_quotient(ppd);
-            bool c3 = validate_number_of_quotient(ppd + 1);
-            *v_res |= (!c1 * b);
-            b <<= 1u;
-            *v_res |= (!c2 * b);
-            b <<= 1u;
-            *v_res |= (!c3 * b);
-            b <<= 1u;
-
-            /* if (cond)
-            {
-                auto line = std::string(64, '*');
-
-                _mm512_store_si512(temp_arr[0], *(ppd - 1));
-                _mm512_store_si512(temp_arr[1], *(ppd));
-                _mm512_store_si512(temp_arr[2], *(ppd + 1));
-
-                std::cout << 0 << ")" << std::endl;
-                pd512::print512(ppd - 1);
-                print_8array(temp_arr[0]);
-                print_array(temp_arr[0], 8);
-                std::cout << line << std::endl;
-
-                std::cout << 1 << ")" << std::endl;
-                pd512::print512(ppd);
-                print_8array(temp_arr[1]);
-                print_array(temp_arr[1], 8);
-                std::cout << line << std::endl;
-
-                std::cout << 2 << ")" << std::endl;
-                pd512::print512(ppd);
-                print_8array(temp_arr[2]);
-                print_array(temp_arr[2], 8);
-                std::cout << line << std::endl;
-            }
-
-     */
-     // auto res = pd512::pd_add_50(quot, r, ppd);
-            auto res = inlining_pd_add_50(quot, r, ppd, pd_index);
-            /* if (cond)
-            {
-                auto line = std::string(64, '*');
-
-                _mm512_store_si512(temp_arr[3], *(ppd - 1));
-                _mm512_store_si512(temp_arr[4], *ppd);
-                _mm512_store_si512(temp_arr[5], *(ppd + 1));
-
-                std::cout << 3 << ")" << std::endl;
-                pd512::print512(ppd - 1);
-                print_8array(temp_arr[3]);
-                print_array(temp_arr[3], 8);
-                std::cout << line << std::endl;
-                std::cout << 4 << ")" << std::endl;
-                pd512::print512(ppd);
-                print_8array(temp_arr[4]);
-                print_array(temp_arr[4], 8);
-                std::cout << line << std::endl;
-                std::cout << 5 << ")" << std::endl;
-                pd512::print512(ppd + 1);
-                print_8array(temp_arr[5]);
-                print_array(temp_arr[5], 8);
-                std::cout << line << std::endl;
-
-                std::cout << "0,3: " << (memcmp(temp_arr[0], temp_arr[3], 64)) << std::endl;
-                std::cout << "1,4: " << (memcmp(temp_arr[1], temp_arr[4], 64)) << std::endl;
-                std::cout << "2,5: " << (memcmp(temp_arr[2], temp_arr[5], 64)) << std::endl;
-            } */
-
-            c1 = validate_number_of_quotient(ppd - 1);
-            c2 = validate_number_of_quotient(ppd);
-            c3 = validate_number_of_quotient(ppd + 1);
-            *v_res |= (!c1 * b);
-            b <<= 1u;
-            *v_res |= (!c2 * b);
-            b <<= 1u;
-            *v_res |= (!c3 * b);
-
-            /* assert(pd512::validate_number_of_quotient(&pd_array[pd_index - 1]));
-            assert(pd512::validate_number_of_quotient(&pd_array[pd_index]));
-            bool temp_failed = pd512::validate_number_of_quotient(&pd_array[pd_index + 1]);
-            if (!temp_failed)
-            {
-                std::cout << "in Failed:" << std::endl;
-                std::cout << "pd_index:\t" << pd_index << std::endl;
-                std::cout << "cond:\t" << cond << std::endl;
-                // assert(false);
-            } */
-            // assert();
-
-            if (!res) {
-                cout << "insertion failed!!!" << std::endl;
-                assert(false);
-            }
-            (pd_capacity_vec[pd_index] += 2);
-            return w_res;
-        }
-
-        void old_insert(const itemType s) {
-            using namespace std;
-            auto w_res = w_insert(s);
-
-            int ans = get<0>(w_res);
-            if (ans > 0) {
-                std::cout << "h1" << std::endl;
-                const size_t var_num = 5;
-                size_t vals[var_num] ={ get<0>(w_res), get<1>(w_res), get<2>(w_res), get<3>(w_res), get<4>(w_res) };
-                string names[var_num] ={ "indicator", "pd_index", "quot", "rem", "insert_count" };
-                size_t pd_index = get<1>(w_res);
-                table_print(var_num, names, vals);
-                bin_print(get<0>(w_res));
-                std::cout << "pd_capacity_vec[pd_index - 1]: " << pd_capacity_vec[pd_index - 1] << "(" << pd_index - 1
-                    << ")" << std::endl;
-                std::cout << "pd_capacity_vec[pd_index]: " << pd_capacity_vec[pd_index] << "(" << pd_index << ")"
-                    << std::endl;
-                std::cout << "pd_capacity_vec[pd_index + 1]: " << pd_capacity_vec[pd_index + 1] << "(" << pd_index + 1
-                    << ")" << std::endl;
-                assert(false);
-            }
-            if (ans == 0)
-                return;
-            if (ans == -1) {
-                spareItemType hash_val = wrap_hash(s);
-
-                size_t pd_index = -1;
-                uint32_t quot = -1, r = -1;
-                split(hash_val, &pd_index, &quot, &r);
-                assert(pd_index < number_of_pd);
-                // __m512i temp_pd = pd_array[pd_index];
-                assert(pd512::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
-
-                if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
-                    assert(pd512::is_full(&pd_array[pd_index]));
-                    pd_capacity_vec[pd_index] |= 1u;
-                    /**Todo!*/
-                    insert_to_spare_without_pop(hash_val);
-                    // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
-                    //            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
-                    return;
-                }
-
-                auto res = inlining_pd_add_50(quot, r, &pd_array[pd_index], pd_index);
-                if (!res) {
-                    cout << "insertion failed!!!" << std::endl;
-                    assert(false);
-                }
-                (pd_capacity_vec[pd_index] += 2);
-            }
-        }
+    //     void old_insert(const itemType s) {
+    //         using namespace std;
+    //         auto w_res = w_insert(s);
+    //         int ans = get<0>(w_res);
+    //         if (ans > 0) {
+    //             std::cout << "h1" << std::endl;
+    //             const size_t var_num = 5;
+    //             size_t vals[var_num] ={ get<0>(w_res), get<1>(w_res), get<2>(w_res), get<3>(w_res), get<4>(w_res) };
+    //             string names[var_num] ={ "indicator", "pd_index", "quot", "rem", "insert_count" };
+    //             size_t pd_index = get<1>(w_res);
+    //             table_print(var_num, names, vals);
+    //             bin_print(get<0>(w_res));
+    //             std::cout << "pd_capacity_vec[pd_index - 1]: " << pd_capacity_vec[pd_index - 1] << "(" << pd_index - 1
+    //                 << ")" << std::endl;
+    //             std::cout << "pd_capacity_vec[pd_index]: " << pd_capacity_vec[pd_index] << "(" << pd_index << ")"
+    //                 << std::endl;
+    //             std::cout << "pd_capacity_vec[pd_index + 1]: " << pd_capacity_vec[pd_index + 1] << "(" << pd_index + 1
+    //                 << ")" << std::endl;
+    //             assert(false);
+    //         }
+    //         if (ans == 0)
+    //             return;
+    //         if (ans == -1) {
+    //             spareItemType hash_val = wrap_hash(s);
+    //             size_t pd_index = -1;
+    //             uint32_t quot = -1, r = -1;
+    //             split(hash_val, &pd_index, &quot, &r);
+    //             assert(pd_index < number_of_pd);
+    //             // __m512i temp_pd = pd_array[pd_index];
+    //             assert(pd512::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
+    //             if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
+    //                 assert(pd512::is_full(&pd_array[pd_index]));
+    //                 pd_capacity_vec[pd_index] |= 1u;
+    //                 /**Todo!*/
+    //                 insert_to_spare_without_pop(hash_val);
+    //                 // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
+    //                 //            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
+    //                 return;
+    //             }
+    //             auto res = inlining_pd_add_50(quot, r, &pd_array[pd_index], pd_index);
+    //             if (!res) {
+    //                 cout << "insertion failed!!!" << std::endl;
+    //                 assert(false);
+    //             }
+    //             (pd_capacity_vec[pd_index] += 2);
+    //         }
+    //     }
 };
 
 #endif //CLION_CODE_ATT_D512_HP

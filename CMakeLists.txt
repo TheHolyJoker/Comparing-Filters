@@ -12,7 +12,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512vbmi")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=skylake-avx512")
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
 
 include_directories(Bloom_Filter)
 include_directories(PD_Filter)

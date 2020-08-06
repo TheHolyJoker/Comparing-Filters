@@ -41,11 +41,12 @@ class att_hTable {
 
 public:
     att_hTable(size_t max_capacity, size_t element_length, double max_load_factor)
-            : max_capacity(max_capacity), element_length(element_length), max_load_factor(max_load_factor),
+            : max_capacity(std::ceil(max_capacity / (max_load_factor))), element_length(element_length), max_load_factor(max_load_factor),
               num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))) {
         assert(num_of_buckets <= MASK32);
 
-        int ok = posix_memalign((void **) &Table, sizeof(Bucket) * CHAR_BIT, sizeof(Bucket) * num_of_buckets);
+        /* Todo: test changes to second argument */
+        int ok = posix_memalign((void **) &Table, sizeof(Bucket), sizeof(Bucket) * num_of_buckets);
 
         if (ok != 0) {
             cout << "Failed!!!" << endl;
@@ -441,6 +442,9 @@ public:
         std::cout << "get_max_capacity_reached " << get_max_capacity_reached() << std::endl;
     }
 */
+    auto get_byte_size() {
+        return sizeof(bucket_type) * bucket_size * num_of_buckets;
+    }
 
     auto get_table_size() const -> const size_t {
         return num_of_buckets;

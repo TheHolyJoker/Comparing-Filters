@@ -133,6 +133,7 @@ auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_se
             cout << "element: " << el << endl;
 
             assert(FilterAPI<Table>::Contain(el, wrap_filter));
+            return false;
         }
     }
     return true;
@@ -203,20 +204,18 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     if (!cond)
         return false;
     assert(cond);
-    cond = v_insertion_plus_imm_lookups<Table, itemType, block_insertion>(wrap_filter, &to_be_deleted_set);
+    cond &= v_insertion_plus_imm_lookups<Table, itemType, block_insertion>(wrap_filter, &to_be_deleted_set);
     assert(cond);
-    if (!cond)
-        return false;
+    // if (!cond)
+    //     return false;
     /**Lookup*/
-    /*TODO SUPER IMPORTANT. UN COMMENT THE NEXT LINE*/
-    cond = v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
-    if (!cond)
-        return false;
-    // std::cout << "should uncomment here, line 237" << std::endl;
+    cond &= v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
+    // if (!cond)
+    //     return false;
     assert(cond);
-    cond = v_true_positive_elements<Table, itemType>(wrap_filter, &to_be_deleted_set);
-    if (!cond)
-        return false;
+    cond &= v_true_positive_elements<Table, itemType>(wrap_filter, &to_be_deleted_set);
+    // if (!cond)
+    //     return false;
     assert(cond);
 
     /**Count False positive*/
@@ -236,10 +235,10 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
         if (c1 || c2) {
             //Validating there is no false negative.
             tp_counter++;
-            cond = FilterAPI<Table>::Contain(iter, wrap_filter);
             assert(FilterAPI<Table>::Contain(iter, wrap_filter));
-            if (!cond)
-                return false;
+            cond &= FilterAPI<Table>::Contain(iter, wrap_filter);
+            // if (!cond)
+            //     return false;
             // continue;
         }
         else if (FilterAPI<Table>::Contain(iter, wrap_filter)) {
@@ -256,7 +255,7 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     //    cout << "Expected FP count: " << (lookup_set.size() >> error_power_inv) << endl;
 
     counter = 0;
-    cond = v_deleting<Table, itemType>(wrap_filter, &to_be_deleted_set, &member_set);
+    cond &= v_deleting<Table, itemType>(wrap_filter, &to_be_deleted_set, &member_set);
     if (!cond)
         return false;
     
@@ -264,12 +263,15 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     /**Deletions*/
 
     /**Verifying no unwanted element was deleted (prone to error as deleting from filter is not well defined)*/
-    cond = v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
-    if (!cond)
-        return false;
+    cond &= v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
+    // if (!cond)
+    //     return false;
     
     assert(cond);
-    return true;
+    if (FilterAPI<Table>::get_ID(wrap_filter) == CF){
+        FilterAPI<Table>::get_dynamic_info(wrap_filter);
+    }
+    return cond;
 }
 
 template<class Table, typename itemType, bool block_insertion = false>

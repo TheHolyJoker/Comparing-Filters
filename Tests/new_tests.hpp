@@ -130,8 +130,13 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity,
     auto t1 = chrono::high_resolution_clock::now();
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
+
+
     print_name(FilterAPI<Table>::get_name(&filter), 134);
     benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
+    if (FilterAPI<Table>::get_ID(&filter) == CF) {
+        FilterAPI<Table>::get_dynamic_info(&filter);
+    }
     return os;
 }
 
@@ -151,6 +156,7 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t error_po
 
     print_name(FilterAPI<Table>::get_name(&filter), 134);
     benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
+
     return os;
 }
 
@@ -195,14 +201,14 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
     if (CF)
     {
         using Table = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>;
-        bool valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+        /* bool valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         if (!valid)
         {
             std::cout << "CF is not valid!" << std::endl;
         }
-        else
-            benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
-                &elements);
+        else */
+        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
+            &elements);
     }
     if (SIMD)
     {
@@ -261,14 +267,13 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     using spare_item = uint64_t;
     using temp_hash = att_hTable<spare_item, 4>;
     using Table = att_d512<temp_hash, spare_item, itemType>;
-    bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5));
+    /* bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5));
     if (!valid) {
         std::cout << "PD512 is not valid!" << std::endl;
     }
-    else
-    {
+    else */
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    }
+
 
     /* if (indicator & b) {
         using spare_item = uint64_t;

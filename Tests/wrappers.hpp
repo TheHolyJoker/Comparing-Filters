@@ -18,8 +18,8 @@
 #include "../Bloom_Filter/bloom.hpp"
 #include "../PD_Filter/dict.hpp"
 #include "TPD_Filter/T_dict.hpp"
-//#include "../TPD_Filter/pd512_wrapper.hpp"
-//#include "dict512.hpp"
+ //#include "../TPD_Filter/pd512_wrapper.hpp"
+ //#include "dict512.hpp"
 #include "TPD_Filter/dict512.hpp"
 #include "d512/att_d512.hpp"
 #include "../cuckoo/cuckoofilter.h"
@@ -63,7 +63,9 @@ struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFam
 {
     using Table = bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFamily>;
 
-    static Table ConstructFromAddCount(size_t add_count) { return Table(add_count); }
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count);
+    }
 
     static void Add(uint64_t key, Table *table)
     {
@@ -118,8 +120,9 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
 
     static void Add(uint64_t key, Table *table)
     {
-        if (0 != table->Add(key))
+        if (table->Add(key) != cuckoofilter::Ok )
         {
+            std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
             throw logic_error("The filter is too small to hold all of the elements");
         }
     }
@@ -136,7 +139,10 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     {
         for (int i = 0; i < keys.size(); ++i)
         {
-            table->Add(keys[i]);
+            if (table->Add(keys[i]) != cuckoofilter::Ok) {
+                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
+                throw logic_error("The filter is too small to hold all of the elements");
+            }
         }
         //        table->AddAll(keys, 0, keys.size());
     }
@@ -156,9 +162,10 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
         return "Cuckoo";
     }
 
-    static void get_dynamic_info(Table *table)
+    static void get_dynamic_info(const Table *table)
     {
-        assert(false);
+        std::string state =  table->Info();
+        std::cout << state << std::endl;
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -502,11 +509,11 @@ template <
     typename slot_type, size_t bits_per_item, size_t max_capacity,
     typename itemType,
     class TableType, typename spareItemType>
-struct FilterAPI<
+    struct FilterAPI<
     T_dict<temp_PD,
-           slot_type, bits_per_item, max_capacity,
-           TableType, spareItemType,
-           itemType>>
+    slot_type, bits_per_item, max_capacity,
+    TableType, spareItemType,
+    itemType>>
 {
     //    using Table = T_dict<TPD_name::TPD<slot_type,bits_per_item, max_capacity>, slot_type, bits_per_item, max_capacity, TableType, spareItemType, itemType>;
     using Table = T_dict<temp_PD, slot_type, bits_per_item, max_capacity, TableType, spareItemType, itemType>;
@@ -566,9 +573,9 @@ struct FilterAPI<
 template <
     class TableType, typename spareItemType,
     typename itemType>
-struct FilterAPI<
+    struct FilterAPI<
     dict512<TableType, spareItemType,
-            itemType>>
+    itemType>>
 {
     using Table = dict512<TableType, spareItemType, itemType, 8, 51, 50>;
     //    using Table = dict512<TableType, spareItemType, itemType>;
@@ -628,7 +635,7 @@ struct FilterAPI<
 template <
     class TableType, typename spareItemType,
     typename itemType>
-struct FilterAPI<att_d512<TableType, spareItemType,itemType>>
+    struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
 {
     using Table = att_d512<TableType, spareItemType, itemType, 8, 51, 50>;
     //    using Table = dict512<TableType, spareItemType, itemType>;

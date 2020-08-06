@@ -73,9 +73,9 @@ public:
         {
             auto index = pd512::select64(header[0], 49);
             assert(index < 64);
+            return index - 49;
             auto res = index - 49;
             assert(res == get_capacity_naive());
-            return res;
         }
         else
         {
@@ -87,6 +87,7 @@ public:
             assert(index < 64);
             assert(index <= 37);
             assert(index >= ones_left);
+            return index - ones_left + h0_zero_count;
             auto res = index - ones_left + h0_zero_count;
             bool cond = res == get_capacity_naive();
             if (!cond)
@@ -97,9 +98,8 @@ public:
                 std::cout << get_capacity_naive() << std::endl;
                 assert(false);
             }
-            assert(res == get_capacity_naive());
+            // assert(res == get_capacity_naive());
             return res;
-            return index - ones_left;
         }
     }
 
