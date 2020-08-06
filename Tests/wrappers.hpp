@@ -635,7 +635,7 @@ struct FilterAPI<att_d512<TableType, spareItemType,itemType>>
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count, .95, .5);
+        return Table(add_count, .92, .5);
     }
 
     static void Add(itemType key, Table *table)

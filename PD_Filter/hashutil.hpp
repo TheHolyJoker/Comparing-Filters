@@ -89,7 +89,13 @@ namespace s_pd_filter {
 //        a = a ^ (a>>13);
 //        return a;
     }
-
+    inline uint64_t hashint64_2(uint64_t a) {
+        uint32_t x = hashint3(a);
+        uint32_t y = a & 4294967295ul;
+        x = hashint2(x);
+        y = hashint2(y);
+        return (uint64_t) y | (((uint64_t) x) << 32ul);
+    }
 
     inline uint32_t my_hash(const uint32_t el, uint32_t seed) {
         uint32_t a = 0, b = 0;

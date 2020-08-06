@@ -42,6 +42,7 @@ auto v_HT_insert(slot_type x, HashTable *ht, unordered_set<slot_type> *my_set) -
     ht->insert(x);
     my_set->insert(x);
     assert(v_HT_find(x, ht, my_set));
+    return true;
 }
 
 template<class HashTable, typename slot_type>
@@ -56,6 +57,7 @@ auto v_HT_remove(slot_type x, HashTable *ht, unordered_set<slot_type> *my_set) -
     }
     assert(!ht->find(x));
     assert(v_HT_find(x, ht, my_set));
+    return true;
 }
 
 template<class HashTable, typename slot_type>
@@ -363,6 +365,7 @@ auto v_HT_insert(T x, hash_table<T> *ht, unordered_set<T> *my_set) -> bool {
     ht->insert(x);
     my_set->insert(x);
     assert(v_HT_find(x, ht, my_set));
+    return true;
 }
 
 template<typename T>
@@ -377,6 +380,7 @@ auto v_HT_remove(T x, hash_table<T> *ht, unordered_set<T> *my_set) -> bool {
     }
     assert(!ht->find(x));
     assert(v_HT_find(x, ht, my_set));
+    return true;
 }
 
 template<typename T>
