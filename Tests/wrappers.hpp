@@ -115,12 +115,12 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count);
+        return Table(add_count / 2);
     }
 
     static void Add(uint64_t key, Table *table)
     {
-        if (table->Add(key) != cuckoofilter::Ok )
+        if (table->Add(key) != cuckoofilter::Ok)
         {
             std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
             throw logic_error("The filter is too small to hold all of the elements");
@@ -131,7 +131,11 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     {
         for (int i = start; i < end; ++i)
         {
-            table->Add(keys[i]);
+            if (table->Add(keys[i]) != cuckoofilter::Ok)
+            {
+                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
+                throw logic_error("The filter is too small to hold all of the elements");
+            }
         }
     }
 
@@ -582,7 +586,7 @@ template <
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count, .9, .5);
+        return Table(add_count, 1, .5);
     }
 
     static void Add(itemType key, Table *table)
@@ -647,9 +651,9 @@ template <
 
     static void Add(itemType key, Table *table)
     {
-        assert(table->case_validate());
+        // assert(table->case_validate());
         table->insert(key);
-        assert(table->case_validate());
+        // assert(table->case_validate());
     }
 
     static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)

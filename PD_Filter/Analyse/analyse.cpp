@@ -12,6 +12,10 @@ auto lp_average(pd512_wrapper *pd_arr, size_t size, size_t p)  ->double{
         sum += (p)? pow(temp_cap, p) : bool(temp_cap);
         // sum += pow(temp_cap, p);
     }
+    if (p){
+        double inv = 1/ ((double) p);
+        return pow(sum, inv) / (double) size;
+    }
     return sum / (double) size;
 }
 
@@ -28,7 +32,11 @@ auto m512i_lp_average(__m512i* pd_arr, size_t size, size_t p)  ->double{
         // }
         sum += (p)? pow(temp_cap, p) : bool(temp_cap);
     }
-    return (p) ? sum / (double) size : sum;
+    if (p){
+        double inv = 1/ ((double) p);
+        return pow(sum, inv);
+    }
+    return sum;
     // return sum / (double) size;
 }
 

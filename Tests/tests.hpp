@@ -129,7 +129,7 @@ auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_se
             cout << "False negative:" << endl;
 
             cout << "lookup failed." << endl;
-            cout << "counter: " << counter << endl;
+            cout << "counter: " << counter << "/" << el_set->size() <<endl;
             cout << "element: " << el << endl;
 
             assert(FilterAPI<Table>::Contain(el, wrap_filter));
@@ -258,7 +258,7 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     cond &= v_deleting<Table, itemType>(wrap_filter, &to_be_deleted_set, &member_set);
     if (!cond)
         return false;
-    
+
     assert(cond);
     /**Deletions*/
 
@@ -266,9 +266,9 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     cond &= v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
     // if (!cond)
     //     return false;
-    
+
     assert(cond);
-    if (FilterAPI<Table>::get_ID(wrap_filter) == CF){
+    if (FilterAPI<Table>::get_ID(wrap_filter) == CF) {
         FilterAPI<Table>::get_dynamic_info(wrap_filter);
     }
     return cond;

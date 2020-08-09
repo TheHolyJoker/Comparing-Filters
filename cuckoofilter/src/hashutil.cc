@@ -2,26 +2,45 @@
 #include "hashutil.h"
 
 #define rot(x, k) (((x) << (k)) | ((x) >> (32 - (k))))
-#define mix(a,b,c)                              \
-    {                                           \
-        a -= c;  a ^= rot(c, 4);  c += b;       \
-        b -= a;  b ^= rot(a, 6);  a += c;       \
-        c -= b;  c ^= rot(b, 8);  b += a;       \
-        a -= c;  a ^= rot(c,16);  c += b;       \
-        b -= a;  b ^= rot(a,19);  a += c;       \
-        c -= b;  c ^= rot(b, 4);  b += a;       \
-    }
+#define mix(a, b, c) \
+  {                  \
+    a -= c;          \
+    a ^= rot(c, 4);  \
+    c += b;          \
+    b -= a;          \
+    b ^= rot(a, 6);  \
+    a += c;          \
+    c -= b;          \
+    c ^= rot(b, 8);  \
+    b += a;          \
+    a -= c;          \
+    a ^= rot(c, 16); \
+    c += b;          \
+    b -= a;          \
+    b ^= rot(a, 19); \
+    a += c;          \
+    c -= b;          \
+    c ^= rot(b, 4);  \
+    b += a;          \
+  }
 
-#define final(a,b,c)                            \
-    {                                           \
-        c ^= b; c -= rot(b,14);                 \
-        a ^= c; a -= rot(c,11);                 \
-        b ^= a; b -= rot(a,25);                 \
-        c ^= b; c -= rot(b,16);                 \
-        a ^= c; a -= rot(c,4);                  \
-        b ^= a; b -= rot(a,14);                 \
-        c ^= b; c -= rot(b,24);                 \
-    }
+#define final(a, b, c) \
+  {                    \
+    c ^= b;            \
+    c -= rot(b, 14);   \
+    a ^= c;            \
+    a -= rot(c, 11);   \
+    b ^= a;            \
+    b -= rot(a, 25);   \
+    c ^= b;            \
+    c -= rot(b, 16);   \
+    a ^= c;            \
+    a -= rot(c, 4);    \
+    b ^= a;            \
+    b -= rot(a, 14);   \
+    c ^= b;            \
+    c -= rot(b, 24);   \
+  }
 // Assuming little endian
 #define HASH_LITTLE_ENDIAN 1
 
@@ -711,28 +730,25 @@ uint32_t HashUtil::NullHash(const void *buf, size_t length,
 
 /*
  * Compatibility layer for OpenSSL < 1.1.0.
- * Implemented as proposed by https://wiki.openssl.org/index.php/OpenSSL_1.1.0_Changes
+ * Implemented as proposed by
+ * https://wiki.openssl.org/index.php/OpenSSL_1.1.0_Changes
  */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 #include <string.h>
-static void *OPENSSL_zalloc(size_t num)
-{
+static void *OPENSSL_zalloc(size_t num) {
   void *ret = OPENSSL_malloc(num);
 
-  if (ret != NULL)
-      memset(ret, 0, num);
+  if (ret != NULL) memset(ret, 0, num);
   return ret;
 }
 
-EVP_MD_CTX *EVP_MD_CTX_new(void)
-{
-   return (EVP_MD_CTX *)OPENSSL_zalloc(sizeof(EVP_MD_CTX));
+EVP_MD_CTX *EVP_MD_CTX_new(void) {
+  return (EVP_MD_CTX *)OPENSSL_zalloc(sizeof(EVP_MD_CTX));
 }
 
-void EVP_MD_CTX_free(EVP_MD_CTX *ctx)
-{
-   EVP_MD_CTX_cleanup(ctx);
-   OPENSSL_free(ctx);
+void EVP_MD_CTX_free(EVP_MD_CTX *ctx) {
+  EVP_MD_CTX_cleanup(ctx);
+  OPENSSL_free(ctx);
 }
 #endif
 

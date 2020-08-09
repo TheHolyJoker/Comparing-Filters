@@ -260,6 +260,7 @@ namespace pd512
     auto remove(int64_t quot, char rem, __m512i *pd) -> bool
     {
         assert(false);
+        return false;
     }
     auto conditional_remove(int64_t quot, char rem, __m512i *pd) -> bool
     {

@@ -57,6 +57,12 @@ void validate_HT_example() {
 
 
 int main(int argc, char **argv) {
+    uint32_t x = -1;
+    std::string s = "tomer";
+    auto y = cuckoofilter::HashUtil::BobHash(&s, 64, 0);
+
+    std::cout << "y is: " << y << std::endl;
+    return 0;
     /*validate_HT_example();*/
 //    bool res;
 //    res = v_wrap_test<uint32_t>(1u << 15u, 1u << 14u, 18, .5,.8);
@@ -98,27 +104,36 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     reps = 1u << (shift), max_distinct_capacity = 1u << shift;
+    max_distinct_capacity = std::ceil(max_distinct_capacity * .94);
     using itemType = uint64_t;
 
-        b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
-            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
-            false,
-            filter_indicator & 2,
-            false,
-            false,
-            false);
+    /*         b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
+                max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
+                false,
+                filter_indicator & 2,
+                false,
+                false,
+                false);
+     */
+     // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(1<<18, 1<<18, BITS_PER_ELEMENT_MACRO,
+     //         bench_precision);
+     // for (size_t i = 1; i < 16; i++)
+     // {
+         // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(10000 * i, 20000 * i, BITS_PER_ELEMENT_MACRO,
+             // bench_precision);
+     // }
 
-        att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-            bench_precision);
+    // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, max_distinct_capacity, BITS_PER_ELEMENT_MACRO,
+    //     bench_precision);
     std::string line = std::string(128, '#');
-    /* size_t shift_start = 20;
+    size_t shift_start = 20;
     for (size_t my_shift = shift_start; my_shift < 27; my_shift++) {
         std::cout << line << std::endl;
         std::cout << (my_shift - shift_start) << ")" << std::endl;
-        size_t reps = 1u << (my_shift), max_distinct_capacity = 1u << my_shift;
-        std::cout << "spare_element_size: " << compute_spare_element_size(max_distinct_capacity, .9) << std::endl;
+        size_t reps = 1u << (my_shift), max_distinct_capacity = std::ceil((1u << my_shift) * 0.94);
+        std::cout << "spare_element_size: " << compute_spare_element_size(max_distinct_capacity, .96) << std::endl;
         att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
                                                           bench_precision);
-    } */
+    }
     return 0;
 }

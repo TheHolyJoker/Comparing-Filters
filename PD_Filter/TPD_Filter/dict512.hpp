@@ -10,8 +10,8 @@
 #include "pd512_wrapper.hpp"
 #include <cstring>
 
-#define ATT_D512_DB1 (true)
-#define ATT_D512_DB2 (true & D512DB1)
+#define D512_DB1 (true)
+#define D512_DB2 (true & D512_DB1)
 
 template <
     class TableType, typename spareItemType,
@@ -328,7 +328,7 @@ private:
 
     inline void remove_helper(spareItemType hash_val)
     {
-        if (ATT_D512_DB1)
+        if (D512_DB1)
             assert(lookup_helper(hash_val));
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
@@ -420,7 +420,7 @@ private:
             cout << "element with hash_val: (" << element << ") was pop." << endl;
             return true;
         }
-        if (ATT_D512_DB1) {
+        if (D512_DB1) {
             assert(pd_array[pd_index].is_full());
 
             /*             auto cap = pd_array[pd_index].get_capacity();

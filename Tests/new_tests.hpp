@@ -187,7 +187,7 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
     ostream &os = cout) -> ostream &
 {
 
-    assert(filter_max_capacity % bench_precision == 0);
+    // assert(filter_max_capacity % bench_precision == 0);
     vector<itemType> v_add, v_find, v_delete;
     vector<vector<itemType> *> elements{ &v_add, &v_find, &v_delete };
     init_elements(filter_max_capacity, lookup_reps, &elements);
@@ -201,12 +201,14 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
     if (CF)
     {
         using Table = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>;
-        /* bool valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+        // size_t new_num_of_elements = std::ceil(filter_max_capacity * .94);
+        // size_t new_max_capacity = std::ceil(filter_max_capacity / .6);
+        bool valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
         if (!valid)
         {
             std::cout << "CF is not valid!" << std::endl;
         }
-        else */
+        else
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
             &elements);
     }
@@ -250,7 +252,7 @@ template <typename itemType, size_t bits_per_element>
 auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision,
     uint indicator = -1, ostream &os = cout) -> ostream &
 {
-    assert(filter_max_capacity % bench_precision == 0);
+    // assert(filter_max_capacity % bench_precision == 0);
     vector<itemType> v_add, v_find, v_delete;
     vector<vector<itemType> *> elements{ &v_add, &v_find, &v_delete };
     init_elements(filter_max_capacity, lookup_reps, &elements);
@@ -267,11 +269,11 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     using spare_item = uint64_t;
     using temp_hash = att_hTable<spare_item, 4>;
     using Table = att_d512<temp_hash, spare_item, itemType>;
-    /* bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5));
+    bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5));
     if (!valid) {
         std::cout << "PD512 is not valid!" << std::endl;
     }
-    else */
+    else
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
 
 
