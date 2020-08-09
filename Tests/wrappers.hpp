@@ -646,7 +646,7 @@ template <
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count, .92, .5);
+        return Table(add_count, .96, .5);
     }
 
     static void Add(itemType key, Table *table)

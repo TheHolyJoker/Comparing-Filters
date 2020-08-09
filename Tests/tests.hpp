@@ -23,7 +23,7 @@ static uint64_t x = 123456789, y = 362436069, z = 521288629;
  * https://stackoverflow.com/a/1227137/5381404
  * @return
  */
-unsigned long xorshf96();
+auto xorshf96() ->uint64_t;
 
 template<typename itemType>
 auto rand_item() -> itemType {
@@ -41,6 +41,7 @@ void set_init(size_t size, unordered_set<itemType> *mySet) {
 
 template<typename itemType>
 auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
+    // std::cout << "G3" << std::endl;
     vec->resize(number_of_elements);
     for (int i = 0; i < number_of_elements; ++i)
         vec->at(i) = rand_item<uint64_t>();

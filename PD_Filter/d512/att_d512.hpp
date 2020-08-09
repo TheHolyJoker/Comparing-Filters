@@ -20,6 +20,7 @@
 // static bool hashing_test = false;
 // static size_t case_validate_counter = 0;
 //static size_t case_validate_counter = 0;
+static bool flip = false;
 
 //int case, size_t pd_index, uint64_t quot, uint64_t rem,size_t insert_counter
 typedef std::tuple<int, size_t, uint64_t, uint64_t, size_t> db_key;
@@ -54,6 +55,7 @@ template<
     //    bool hashing_test;
     __m512i *pd_array;
 
+    size_t insert_existing_counter = 0;
     public:
         att_d512(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
             : filter_max_capacity(max_number_of_elements),
@@ -67,8 +69,9 @@ template<
             assert(sparse_element_length < (sizeof(spareItemType) * CHAR_BIT));
             assert(sizeof(itemType) <= sizeof(spareItemType));
 
+            /* Problems here. log2size is not used! fake news! */
             size_t log2_size = ceil_log2(max_number_of_elements);
-            size_t temp = ceil(max_number_of_elements *2);
+            size_t temp = ceil(max_number_of_elements/(double)1.5);
             auto res = my_ceil(temp, log2_size);
 
             // std::cout << "max_number_of_elements is: " << max_number_of_elements << std::endl;
@@ -120,6 +123,13 @@ template<
             // std::cout << "spare capacity is: " << str_format(spare->get_capacity()) << std::endl;
             // std::cout << "spare load factor is: " << spare->get_load_factor() << std::endl;
 
+            if (insert_existing_counter) {
+                std::cout << "insert_existing_counter: "<< insert_existing_counter << std::endl;
+                double ratio = insert_existing_counter/ (double)filter_max_capacity;
+                assert(ratio > 0);
+                std::cout << "ratio to max capacity: "<< ratio << std::endl;
+
+            }
             std::cout << line << std::endl;
             get_dynamic_info();
             std::cout << "l1 byte size is: " << str_format(get_byte_size()) << std::endl;
@@ -166,7 +176,8 @@ template<
             }
             // std::cout << "G1" << std::endl;
             if (pd_capacity_vec[pd_index] & 1u) {
-                return spare->find(hash_val);
+                return spare->find(hash_val & MASK(sparse_element_length));
+                // return spare->find(hash_val & MASK(sparse_element_length));
                 /* bool r2 = spare->find(hash_val & MASK(sparse_element_length));
                 assert(r1 == r2);
                 return spare->find(hash_val & MASK(sparse_element_length)); */
@@ -175,8 +186,11 @@ template<
         }
 
         void insert(const itemType s) {
+            if (lookup(s)) {
+                insert_existing_counter++;
+            }
             // insert_counter++;
-            bool printer = f(s);
+            // bool printer = f(s);
 
 
             itemType hash_val = wrap_hash(s);
@@ -195,36 +209,29 @@ template<
             size_t pd_index = -1;
             uint32_t quot = -1, r = -1;
             split(hash_val, &pd_index, &quot, &r);
-            if (printer)
-            {
-                std::cout << "***insert***\ns data:" << std::endl;
-                std::cout << "s data:" << std::endl;
-                std::cout << "hash_val is: " << hash_val << std::endl;
-                std::cout << "pd_index is: " << pd_index << std::endl;
-                std::cout << "quot is: " << quot << std::endl;
-                std::cout << "r is: " << r << std::endl;
-                std::cout << std::endl;
-
-
-            }
+            // if (printer)
+            // {
+            //     std::cout << "***insert***\ns data:" << std::endl;
+            //     std::cout << "s data:" << std::endl;
+            //     std::cout << "hash_val is: " << hash_val << std::endl;
+            //     std::cout << "pd_index is: " << pd_index << std::endl;
+            //     std::cout << "quot is: " << quot << std::endl;
+            //     std::cout << "r is: " << r << std::endl;
+            //     std::cout << std::endl;
+            // }
             assert(pd_index < number_of_pd);
-
-
-
-            // __m512i temp_pd = pd_array[pd_index];
-            // assert(pd512::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
-
-            if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
-                if (printer) {
-                    std::cout << "was insereted to spare as hash_val." << std::endl;
-                }
+            assert(validate_capacity_functions(pd_index));
+            if ((pd_capacity_vec[pd_index] >>1u) == (single_pd_capacity)) {
                 assert(pd512::is_full(&pd_array[pd_index]));
+                // if (printer) {
+                //     std::cout << "was insereted to spare as hash_val." << std::endl;
+                // }
 
                 pd_capacity_vec[pd_index] |= 1u;
                 /**Todo! this is a mistake?*/
-                insert_to_spare_without_pop(hash_val);
+                insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
                 if (ATT_D512_DB2) {
-                    assert(spare->find(hash_val));
+                    assert(spare->find(hash_val & MASK(sparse_element_length)));
                 }
                 // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
                 //            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
@@ -237,6 +244,7 @@ template<
                 assert(false);
             }
             (pd_capacity_vec[pd_index] += 2);
+            assert(validate_capacity_functions(pd_index));
         }
 
         void remove(itemType x) {
@@ -244,9 +252,17 @@ template<
             return remove_helper(wrap_hash(x));
         }
         void insert_to_spare_without_pop(spareItemType hash_val) {
+            size_t pd_index = -1;
+            uint32_t quot = -1, r = -1;
+            split(hash_val, &pd_index, &quot, &r);
+            auto spare_val = hash_val & MASK(sparse_element_length);
             spare->insert(hash_val & MASK(sparse_element_length));
         }
 
+        auto validate_capacity_functions(size_t pd_index) ->bool {
+            bool c = (pd512::get_capacity(&pd_array[pd_index]) == (pd512::get_capacity_naive(&pd_array[pd_index])));
+            return c & pd512::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
+        }
         void get_static_info() {
             const size_t num = 8;
             size_t val[num] ={ number_of_pd, capacity, quotient_range, single_pd_capacity, remainder_length,
@@ -316,9 +332,9 @@ template<
         auto get_capacity() -> size_t {
             size_t res = 0;
             size_t validate_res = 0;
-            __m512i *ppd = &(pd_array[0]);
+            // __m512i *ppd = &(pd_array[0]);
             for (int i = 0; i < number_of_pd; ++i) {
-                res += pd512::get_capacity(ppd++);
+                res += pd512::get_capacity(&pd_array[i]);
             }
             for (int i = 0; i < number_of_pd; ++i) {
                 validate_res += (pd_capacity_vec[i] >> 1u);
@@ -629,6 +645,7 @@ template<
                 (pd_capacity_vec[pd_index]) -= 2;
                 return;
             }
+            assert(false);
             spare->remove(hash_val);
             //        pop_attempt_by_hash_val(hash_val);
         }
@@ -705,8 +722,11 @@ template<
         }
 
         inline auto wrap_hash(itemType x) const -> spareItemType {
-            // return cuckoofilter::HashUtil::BobHash((const void *) &x,8) & MASK(sparse_element_length);
-            return s_pd_filter::hashint64(x) & MASK(sparse_element_length);
+            using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+            return (Hash_ns::BobHash(&x, 8, 42));
+            // return (Hash_ns::BobHash(&x, 8, 42)) & MASK(sparse_element_length);
+            // return s_pd_filter::hashint64(x) & MASK(sparse_element_length);
+
             /*if (insert_counter < 10){
                 spareItemType h1 = s_pd_filter::hashint(x);
                 spareItemType h2 = s_pd_filter::my_hash64(x, 42) & MASK(sparse_element_length);
@@ -751,7 +771,8 @@ template<
             }
         */
 
-        void split(ulong h, size_t *pd_index, D_TYPE *q, D_TYPE *r) const {
+        void split(itemType h, size_t *pd_index, uint32_t *q, uint32_t *r) const {
+            *pd_index = h % number_of_pd;
             *r = h & MASK(remainder_length);
             h >>= remainder_length;
             *q = h % (quotient_range);
@@ -760,7 +781,35 @@ template<
                 std::cout << "h3!" << std::endl;
                 hashing_test = true;
             } */
-            *pd_index = h % number_of_pd;
+            // *pd_index = h % number_of_pd;
+        }
+
+        auto unSplit(uint32_t r, uint32_t quot, size_t pd_index) const ->spareItemType {
+            assert(false);
+            assert(quot_range == 50);
+            spareItemType res = pd_index;
+            res = (res << quotient_length) | quot;
+            res = (res << remainder_length) | r;
+            if (!flip) {
+                flip = true;
+                assert(check_unSplit(res));
+                flip = false;
+            }
+            return res;
+        }
+
+        auto check_unSplit(itemType hash_val)const ->bool {
+            size_t pd_index = -1;
+            uint32_t quot = -1, r = -1;
+            split(hash_val, &pd_index, &quot, &r);
+            auto temp = hash_val & MASK(sparse_element_length);
+            bool res = temp == (hash_val & sparse_element_length);
+            if (!res) {
+                std::cout << "temp: " << temp << std::endl;
+                std::cout << "hash_val & sparse_element_length: " << (hash_val & sparse_element_length) << std::endl;
+                std::cout << "hash_val " << (hash_val) << std::endl;
+            }
+            return (temp == (hash_val & sparse_element_length));
         }
 
         //     auto w_insert(const itemType s) -> db_key {

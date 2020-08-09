@@ -32,6 +32,15 @@ auto rand_item() -> string {
 }
 
 
+
+auto fill_vec(std::vector<uint64_t> *vec, size_t number_of_elements) -> void {
+    vec->resize(number_of_elements);
+    for (int i = 0; i < number_of_elements; ++i)
+        vec->at(i) = random();
+
+}
+
+
 void set_init(size_t size, set<string> *mySet) {
     int minLength = 8, charsNum = 32;
     for (int i = 0; i < size; ++i) mySet->insert(rand_item());
@@ -47,17 +56,17 @@ void validate_example1() {
 
     using simple_bloom = bloomfilter::bloom<uint64_t, BITS_PER_ELEMENT_MACRO, false, hashing::TwoIndependentMultiplyShift>;
     bool cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
-                                                          l2_LF);
+        l2_LF);
     assert(cond);
     cond = w_validate_filter<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+        max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
     assert(cond);
 
     cond = w_validate_filter<SimdBlockFilter<>, uint64_t>(
-            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+        max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
     assert(cond);
     cond = w_validate_filter<MortonFilter, uint64_t, false>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
-                                                            l2_LF);
+        l2_LF);
     assert(cond);
     cond = w_validate_filter<uint64_t, hash_table>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
     assert(cond);
@@ -76,31 +85,31 @@ void validate_example2(ulong shift, ulong filter_indicator) {
     if (power & filter_indicator) {
         using simple_bloom = bloomfilter::bloom<uint64_t, BITS_PER_ELEMENT_MACRO, false, hashing::TwoIndependentMultiplyShift>;
         cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
-                                                         l2_LF);
+            l2_LF);
         assert(cond);
     }
     power <<= 1u;
     if (power & filter_indicator) {
         cond = w_validate_filter<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-                max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
         assert(cond);
     }
     power <<= 1u;
     if (power & filter_indicator) {
         cond = w_validate_filter<SimdBlockFilter<>, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-                                                              l1_LF, l2_LF);
+            l1_LF, l2_LF);
         assert(cond);
     }
     power <<= 1u;
     if (power & filter_indicator) {
         cond = w_validate_filter<MortonFilter, uint64_t, false>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO,
-                                                                l1_LF, l2_LF);
+            l1_LF, l2_LF);
         assert(cond);
     }
     power <<= 1u;
     if (power & filter_indicator) {
         cond = w_validate_filter<uint64_t, hash_table>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
-                                                       l2_LF);
+            l2_LF);
         assert(cond);
     }
 }
@@ -146,13 +155,13 @@ int old_main(int argc, char **argv) {
 
     using simple_bloom = bloomfilter::bloom<uint64_t, BITS_PER_ELEMENT_MACRO, false, hashing::TwoIndependentMultiplyShift>;
     bool cond = w_validate_filter<simple_bloom, uint64_t>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
-                                                          l2_LF);
+        l2_LF);
     assert(cond);
     cond = w_validate_filter<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
+        max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
     assert(cond);
     cond = w_validate_filter<MortonFilter, uint64_t, false>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF,
-                                                            l2_LF);
+        l2_LF);
     assert(cond);
     cond = w_validate_filter<uint64_t, hash_table>(max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, l1_LF, l2_LF);
     assert(cond);
@@ -161,7 +170,7 @@ int old_main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     char *end;
-    size_t values[4]{filter_indicator, shift, shift_add_to_lookups, bench_precision};
+    size_t values[4]{ filter_indicator, shift, shift_add_to_lookups, bench_precision };
     for (int i = 1; i < argc; ++i) {
         values[i - 1] = strtol(argv[i], &end, 10);
     }
@@ -176,24 +185,24 @@ int old_main(int argc, char **argv) {
 
     reps = 1u << (shift + shift_add_to_lookups), max_distinct_capacity = 1u << shift;
     switch (filter_indicator) {
-        case 0:
-            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-                    max_distinct_capacity, reps, remainder_length, bench_precision);
-            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
-            break;
-        case 1:
-            benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-        case 2:
-            benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
-                    max_distinct_capacity, reps, remainder_length, bench_precision);
-        case 3:
-            benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
-        case 4:
-            benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
-        default:
-            break;
+    case 0:
+        benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+            max_distinct_capacity, reps, remainder_length, bench_precision);
+        benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+        break;
+    case 1:
+        benchmark_wrapper<simple_bloom, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+    case 2:
+        benchmark_wrapper<cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO>, uint64_t>(
+            max_distinct_capacity, reps, remainder_length, bench_precision);
+    case 3:
+        benchmark_wrapper<MortonFilter, uint64_t>(max_distinct_capacity, reps, remainder_length, bench_precision);
+    case 4:
+        benchmark_wrapper<uint64_t, hash_table>(max_distinct_capacity, reps, remainder_length, bench_precision);
+    default:
+        break;
     }
 
     return 0;

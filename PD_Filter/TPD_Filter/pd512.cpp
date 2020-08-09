@@ -297,6 +297,7 @@ namespace pd512
     }
     auto is_full(const __m512i *x) -> bool
     {
+        assert(get_capacity_naive(x) == get_capacity(x));
         return get_capacity(x) == 51;
     }
 

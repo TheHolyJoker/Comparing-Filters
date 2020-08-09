@@ -269,11 +269,11 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     using spare_item = uint64_t;
     using temp_hash = att_hTable<spare_item, 4>;
     using Table = att_d512<temp_hash, spare_item, itemType>;
-    bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5));
-    if (!valid) {
-        std::cout << "PD512 is not valid!" << std::endl;
-    }
-    else
+    // // bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5));
+    // // if (!valid) {
+    // //     std::cout << "PD512 is not valid!" << std::endl;
+    // // }
+    // else
         benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
 
 

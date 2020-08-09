@@ -27,7 +27,7 @@ auto compute_spare_element_size(size_t max_number_of_elements, float level1_load
 
 auto pd_filter_total_byte_size(size_t max_number_of_elements, size_t max_capacity, double l1_load, double l2_load) ->size_t {
     size_t number_of_pd = compute_number_of_PD(max_number_of_elements, max_capacity, l1_load);
-    size_t l1_size = number_of_pd * (64 + 2);
+    size_t l1_size = number_of_pd * (51 + 2);
     // size_t pd_index_length = ceil_log2(number_of_pd);
     // size_t spare_element_length = (6 + 6) + pd_index_length; 
     size_t log2_size = ceil_log2(max_number_of_elements);

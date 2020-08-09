@@ -16,6 +16,8 @@
 #include <zconf.h>
 #include "macros.h"
 #include "hashutil.hpp"
+#include "printutil.hpp"
+
 
 static bool found_something = false;
 static bool el3002_was_inserted = false;
@@ -39,7 +41,9 @@ template<typename bucket_type,
     size_t capacity{ 0 };
     const double max_load_factor;
     const bucket_type empty_slot{ (bucket_type)-1 };
+    const uint32_t seed1{ 123123 }, seed2{ 456456 };
 
+    size_t insert_existing_counter = 0;
     public:
         att_hTable(size_t max_capacity, size_t element_length, double max_load_factor)
             : max_capacity(std::ceil(max_capacity / (max_load_factor))), element_length(element_length), max_load_factor(max_load_factor),
@@ -149,6 +153,9 @@ template<typename bucket_type,
 
 
         void insert(bucket_type x) {
+            if (find(x)) {
+                insert_existing_counter++;
+            }
             assert((x & MASK(element_length)) == x);
             bool printer = f(x);
 
@@ -215,6 +222,7 @@ template<typename bucket_type,
                     assert(false);
                 }
             }
+            get_info();
             assert(false);
         }
 
@@ -583,11 +591,18 @@ template<typename bucket_type,
             std::cout << "Byte size is: " << str_format(get_byte_size()) << std::endl;
             std::cout << "Spare load factor is: " << get_load_factor() << std::endl;
 
+            if (insert_existing_counter) {
+                std::cout << "insert_existing_counter: "<< insert_existing_counter << std::endl;
+                double ratio = insert_existing_counter/ (double)max_capacity;
+                std::cout << "ratio to max capacity: "<< ratio << std::endl;
+            }
             double waste_ratio = (sizeof(bucket_size) * CHAR_BIT) /((double)element_length);
             std::cout << "Waste ratio (by not packing): " << waste_ratio << std::endl;
+            std::cout << "element bit size: " << element_length << std::endl;
 
             size_t empty_buckets = count_empty_buckets();
-            std::cout << "Number of empty buckets " << empty_buckets << "/" << num_of_buckets << std::endl;
+            std::cout << "Number of empty buckets " << empty_buckets << "/" << num_of_buckets << "\t";
+            std::cout << "ratio is: " << (empty_buckets /(double)num_of_buckets) << std::endl;
 
             auto tp = find_empty_bucket_interval();
             size_t start = std::get<0>(tp), end = std::get<1>(tp);
@@ -733,10 +748,16 @@ template<typename bucket_type,
         }
 
         inline void my_hash(bucket_type x, uint32_t *b1, uint32_t *b2) const {
+            *b1 = seed1;
+            *b2 = seed2;
+            using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
             assert(x == (x & MASK(element_length)));
-            size_t number_of_buckets_in_each_table = num_of_buckets / 2;
-            *b1 = (s_pd_filter::hashint64(x)) % number_of_buckets_in_each_table;
-            *b2 = (s_pd_filter::hashint64_2(x) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
+            Hash_ns::BobHash(&x, sizeof(x), b1, b2);
+            *b1 %= num_of_buckets;
+            *b2 %= num_of_buckets;
+            // size_t number_of_buckets_in_each_table = num_of_buckets / 2;
+            // *b1 = (*b1)% number_of_buckets_in_each_table;
+            // *b2 = ((*b2) % number_of_buckets_in_each_table) + number_of_buckets_in_each_table;
         }
 
         auto get_name() -> std::string {
