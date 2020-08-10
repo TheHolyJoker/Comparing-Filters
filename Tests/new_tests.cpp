@@ -11,7 +11,7 @@ auto example1() {
     size_t error_power_inv = BITS_PER_ELEMENT_MACRO;
     size_t bench_precision = 16;
     b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
-        1, 1, 1, 1, 1);
+                                                    1, 1, 1, 1, 1);
 }
 
 auto example3() {
@@ -29,7 +29,7 @@ auto example3() {
         //        cout  << std::string(48,'$') << endl;
         //        cout  << std::string(48,'$') << endl;
         benchmark_single_filter_high_load<uint64_t, hash_table>(max_distinct_capacity, remainder_length,
-            bench_precision, 200);
+                                                                bench_precision, 200);
     }
 }
 
@@ -52,7 +52,6 @@ void validate_HT_example() {
         res = v_wrap_test<uint64_t>(1u << 15u, 1u << 14u, i, .5, .8);
         assert(res);
     }
-
 }
 
 
@@ -65,23 +64,23 @@ int main(int argc, char **argv) {
     std::cout << "y is: " << y << std::endl;
     return 0; */
     /*validate_HT_example();*/
-//    bool res;
-//    res = v_wrap_test<uint32_t>(1u << 15u, 1u << 14u, 18, .5,.8);
-//    assert(res);
-//    for (int i = 33; i < 64; ++i) {
-//        std::cout << i << std::endl;
-//        res = v_wrap_test<uint64_t>(1u << 15u, 1u << 14u, i, .5, .85);
-//        assert(res);
-//    }
+    //    bool res;
+    //    res = v_wrap_test<uint32_t>(1u << 15u, 1u << 14u, 18, .5,.8);
+    //    assert(res);
+    //    for (int i = 33; i < 64; ++i) {
+    //        std::cout << i << std::endl;
+    //        res = v_wrap_test<uint64_t>(1u << 15u, 1u << 14u, i, .5, .85);
+    //        assert(res);
+    //    }
 
-//    return 0;
+    //    return 0;
 
 
     //Default values
     size_t filter_indicator = 127;
-    ulong shift = 24u;
+    ulong shift = 25u;
     size_t shift_add_to_lookups = 1u;
-    size_t bench_precision = 16;
+    size_t bench_precision = 8;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
 
     size_t reps = 1u << (shift), max_distinct_capacity = 1u << shift;
@@ -92,7 +91,7 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     char *end;
-    size_t values[4]{ filter_indicator, shift, shift_add_to_lookups, bench_precision };
+    size_t values[4]{filter_indicator, shift, shift_add_to_lookups, bench_precision};
     for (int i = 1; i < argc; ++i) {
         values[i - 1] = strtol(argv[i], &end, 10);
     }
@@ -105,27 +104,40 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     reps = 1u << (shift), max_distinct_capacity = 1u << shift;
-    max_distinct_capacity = std::ceil(max_distinct_capacity * .92);
+    max_distinct_capacity = std::ceil(max_distinct_capacity * .51);
     using itemType = uint64_t;
 
-    /*         b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
-                max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
-                false,
-                filter_indicator & 2,
-                false,
-                false,
-                false);
-     */
-     // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(1<<18, 1<<18, BITS_PER_ELEMENT_MACRO,
-     //         bench_precision);
-     // for (size_t i = 1; i < 16; i++)
-     // {
-         // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(10000 * i, 20000 * i, BITS_PER_ELEMENT_MACRO,
-             // bench_precision);
-     // }
-
-    att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, max_distinct_capacity, BITS_PER_ELEMENT_MACRO,
-        bench_precision);
+    size_t temp_cap =(1<<21ul) * 0.88;
+    fp_rates_all_wrapper<itemType, 8>(1<<20, 
+    1<<22ul, 
+    BITS_PER_ELEMENT_MACRO,
+    false);
+    
+    // size_t temp_cap =(1<<20ul) * 0.88;
+    // fp_rates_all_wrapper<itemType, 12>(temp_cap, 
+    // 1<<20ul, 
+    // 12,
+    // false);
+    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
+            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
+            false,
+            false,
+            true,
+            true,
+            true,
+            true,
+            false,
+            true);
+    // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(1 << 18, 1 << 18, BITS_PER_ELEMENT_MACRO,
+                                                    //   bench_precision);
+    // for (size_t i = 1; i < 16; i++)
+    // {
+    // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(10000 * i, 20000 * i, BITS_PER_ELEMENT_MACRO,
+    // bench_precision);
+    // }
+// 
+    // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, max_distinct_capacity, BITS_PER_ELEMENT_MACRO,
+    //                                                   bench_precision);
     /* std::string line = std::string(128, '#');
     size_t shift_start = 20;
     for (size_t my_shift = shift_start; my_shift < 27; my_shift++) {

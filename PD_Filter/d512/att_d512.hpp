@@ -11,7 +11,7 @@
 // #include "pd512_wrapper.hpp"
 #include <cstring>
 
-#define ATT_D512_DB1 (true)
+#define ATT_D512_DB1 (false)
 #define ATT_D512_DB2 (true & ATT_D512_DB1)
 
 // static size_t insert_counter = 0;
@@ -120,8 +120,11 @@ template<
             std::cout << "filter max capacity is: " << str_format(filter_max_capacity) << std::endl;
             std::cout << "l1_capacity is: " << str_format(temp_capacity) << std::endl;
             std::cout << "total capacity is: " << str_format(temp_capacity + spare->get_capacity()) << std::endl;
-            // std::cout << "spare capacity is: " << str_format(spare->get_capacity()) << std::endl;
-            // std::cout << "spare load factor is: " << spare->get_load_factor() << std::endl;
+            std::cout << "spare capacity is: " << str_format(spare->get_capacity()) << std::endl;
+            std::cout << "spare load factor is: " << spare->get_load_factor() << std::endl;
+            double ratio = spare->get_capacity() /(double)temp_capacity;
+            std::cout << "l2/l1 capacity ratio is: " << ratio << std::endl;
+
 
             if (insert_existing_counter) {
                 std::cout << "insert_existing_counter: "<< insert_existing_counter << std::endl;
@@ -141,8 +144,6 @@ template<
 
             free(pd_array);
             pd_capacity_vec.clear();
-            //        assert(hashing_test);
-            // hashing_test = false;
             delete spare;
         }
 
@@ -348,11 +349,12 @@ template<
         }
 
         auto get_name() -> std::string {
-            string a = "dict512:\t";
+            return "Dict512";
+            /* string a = "dict512:\t";
             string b = pd512::get_name() + "\t";
             //        string b = pd_vec[0]->get_name() + "\t";
             string c = spare->get_name();
-            return a + b + c;
+            return a + b + c; */
         }
 
         auto count_overflowing_PDs() -> size_t {

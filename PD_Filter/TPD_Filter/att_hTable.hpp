@@ -386,7 +386,7 @@ template<typename bucket_type,
             uint32_t temp_b1 = -1, temp_b2 = -1;
             my_hash(*hold, &temp_b1, &temp_b2);
             assert(does_bucket_contain_valid_elements(*bucket_index));
-            assert(temp_b2 != temp_b1);
+            // assert(temp_b2 != temp_b1);
 
             if (temp_b1 == *bucket_index)
                 *bucket_index = temp_b2;

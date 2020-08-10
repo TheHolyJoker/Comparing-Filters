@@ -45,6 +45,7 @@ enum filter_id
 {
     BF,
     CF,
+    CF_ss,
     MF,
     SIMD,
     pd_id,
@@ -57,6 +58,158 @@ template <typename Table>
 struct FilterAPI
 {
 };
+
+
+template <typename ItemType, size_t bits_per_item, template <size_t> class TableType, typename HashFamily>
+struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>>
+{
+    using Table = cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count)
+    {
+        return Table(add_count);
+    }
+
+    static void Add(uint64_t key, Table *table)
+    {
+        if (table->Add(key) != cuckoofilter::Ok)
+        {
+            std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
+            get_dynamic_info(table);
+
+            throw logic_error("The filter is too small to hold all of the elements");
+        }
+    }
+
+    static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table *table)
+    {
+        for (int i = start; i < end; ++i)
+        {
+            if (table->Add(keys[i]) != cuckoofilter::Ok)
+            {
+                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
+                get_dynamic_info(table);
+
+                throw logic_error("The filter is too small to hold all of the elements");
+            }
+        }
+    }
+
+    static void AddAll(const std::vector<ItemType> keys, Table *table)
+    {
+        for (int i = 0; i < keys.size(); ++i)
+        {
+            if (table->Add(keys[i]) != cuckoofilter::Ok) {
+                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
+                // std::cerr << "Load before insertion is: " << ;
+                get_dynamic_info(table);
+                
+                throw logic_error("The filter is too small to hold all of the elements");
+
+            }
+        }
+        //        table->AddAll(keys, 0, keys.size());
+    }
+
+    static void Remove(uint64_t key, Table *table)
+    {
+        table->Delete(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table)
+    {
+        return (0 == table->Contain(key));
+    }
+
+    static string get_name(Table *table)
+    {
+        auto ss = table->Info();
+        std::string temp = "PackedHashtable";
+        if (ss.find(temp)!= std::string::npos){
+            return "CF-ss";
+        }
+        return "Cuckoo";
+    }
+
+    static void get_dynamic_info(const Table *table)
+    {
+        std::string state =  table->Info();
+        std::cout << state << std::endl;
+    }
+
+    static auto get_ID(Table *table) -> filter_id
+    {
+        return CF;
+    }
+};
+
+template <
+        class TableType, typename spareItemType,
+        typename itemType>
+struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
+{
+    using Table = att_d512<TableType, spareItemType, itemType, 8, 51, 50>;
+    //    using Table = dict512<TableType, spareItemType, itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count)
+    {
+        return Table(add_count, .96, .5);
+    }
+
+    static void Add(itemType key, Table *table)
+    {
+        // assert(table->case_validate());
+        table->insert(key);
+        // assert(table->case_validate());
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
+    {
+        for (int i = start; i < end; ++i)
+        {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table)
+    {
+        for (int i = 0; i < keys.size(); ++i)
+        {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table)
+    {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
+    {
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table)
+    {
+        return table->get_name();
+    }
+
+    static void get_dynamic_info(Table *table)
+    {
+        table->get_dynamic_info();
+    }
+
+    static auto get_ID(Table *table) -> filter_id
+    {
+        return att_d512_id;
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 template <typename ItemType, size_t bits_per_item, bool branchless, typename HashFamily>
 struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFamily>>
@@ -108,75 +261,7 @@ struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFam
     }
 };
 
-template <typename ItemType, size_t bits_per_item, template <size_t> class TableType, typename HashFamily>
-struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>>
-{
-    using Table = cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
-        return Table(add_count / 2);
-    }
-
-    static void Add(uint64_t key, Table *table)
-    {
-        if (table->Add(key) != cuckoofilter::Ok)
-        {
-            std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
-            throw logic_error("The filter is too small to hold all of the elements");
-        }
-    }
-
-    static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
-            if (table->Add(keys[i]) != cuckoofilter::Ok)
-            {
-                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
-                throw logic_error("The filter is too small to hold all of the elements");
-            }
-        }
-    }
-
-    static void AddAll(const std::vector<ItemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
-            if (table->Add(keys[i]) != cuckoofilter::Ok) {
-                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
-                throw logic_error("The filter is too small to hold all of the elements");
-            }
-        }
-        //        table->AddAll(keys, 0, keys.size());
-    }
-
-    static void Remove(uint64_t key, Table *table)
-    {
-        table->Delete(key);
-    }
-
-    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table)
-    {
-        return (0 == table->Contain(key));
-    }
-
-    static string get_name(Table *table)
-    {
-        return "Cuckoo";
-    }
-
-    static void get_dynamic_info(const Table *table)
-    {
-        std::string state =  table->Info();
-        std::cout << state << std::endl;
-    }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
-        return CF;
-    }
-};
 
 template <>
 struct FilterAPI<SimdBlockFilter<>>
@@ -636,67 +721,6 @@ template <
     }
 };
 
-template <
-    class TableType, typename spareItemType,
-    typename itemType>
-    struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
-{
-    using Table = att_d512<TableType, spareItemType, itemType, 8, 51, 50>;
-    //    using Table = dict512<TableType, spareItemType, itemType>;
-
-    static Table ConstructFromAddCount(size_t add_count)
-    {
-        return Table(add_count, .96, .5);
-    }
-
-    static void Add(itemType key, Table *table)
-    {
-        // assert(table->case_validate());
-        table->insert(key);
-        // assert(table->case_validate());
-    }
-
-    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
-            table->insert(keys[i]);
-        }
-    }
-
-    static void AddAll(const std::vector<itemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
-            table->insert(keys[i]);
-        }
-    }
-
-    static void Remove(itemType key, Table *table)
-    {
-        table->remove(key);
-    }
-
-    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
-    {
-        return table->lookup(key);
-    }
-
-    static string get_name(Table *table)
-    {
-        return table->get_name();
-    }
-
-    static void get_dynamic_info(Table *table)
-    {
-        table->get_dynamic_info();
-    }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
-        return att_d512_id;
-    }
-};
 
 /**Before changing first argument in T_dict template argument*/
 /*
