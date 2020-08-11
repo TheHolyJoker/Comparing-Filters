@@ -18,7 +18,7 @@ Currently benchmarking:
  ## Usage
  
  ### Dependencies
- Since CF uses `openssl` library, the project won't compile unless it is installed. (See CF [git](https://github.com/efficient/cuckoofilter))
+ Since CF uses `openssl` library, the project won't compile unless it is installed. (See CF [repository](https://github.com/efficient/cuckoofilter))
 
 
  ### To build
@@ -55,10 +55,15 @@ Currently benchmarking:
  Large parts of the code and its structure are taken from https://github.com/FastFilter/fastfilter_cpp.
  
  Cuckoo filter is from https://github.com/efficient/cuckoofilter by Bin Fan et al. <br />
+ 
  SIMD blocked Bloom filter is from https://github.com/apache/impala. <br />
+ 
  Morton filter is from https://github.com/AMDComputeLibraries/morton_filter.<br />
+ 
  Counting Quotient Filter (CQF) is from https://github.com/splatlab/cqf. (Currently not in use). <br />
+ 
  Pocket Dictionary is work in progress see https://github.com/TomerEven/Pocket_Dictionary.
+ The Pocket Dictionary class that uses advanced SIMD instructions, is taken from [here](https://github.com/jbapple/cuckoofilter/tree/crates/src) by Jim Apple ([@Jbapple](https://github.com/jbapple)).
  
  ### Papers
  **Bloom filter** https://en.wikipedia.org/wiki/Bloom_filter
@@ -71,6 +76,8 @@ Currently benchmarking:
 
 **Morton filter** [Morton Filters: Faster, Space-Efficient Cuckoo Filters via
 Biasing, Compression, and Decoupled Logical Sparsity](https://www.vldb.org/pvldb/vol11/p1041-breslow.pdf), 
+
+**Quotient Filter** [A General-Purpose Counting Filter: Counting Quotient Filter (CQF)](https://www3.cs.stonybrook.edu/~ppandey/files/p775-pandey.pdf)
 
 **Pocket Dictionary** [Fully-Dynamic Space-Efficient Dictionaries and Filters with
 Constant Number of Memory Accesses](https://arxiv.org/pdf/1911.05060.pdf)
