@@ -6,7 +6,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
- SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512")
@@ -67,6 +67,7 @@ add_executable(
         PD_Filter/Analyse/analyse.hpp PD_Filter/Analyse/analyse.cpp
 
         PD_Filter/d512/att_d512.hpp
+        PD_Filter/d512/twoChoicer.hpp
         PD_Filter/Safe/safe512.hpp
         PD_Filter/Safe/cc_pd.hpp
         PD_Filter/Validation/validate_hash_table.hpp PD_Filter/Validation/validate_hash_table.cpp

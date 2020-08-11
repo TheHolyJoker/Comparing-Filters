@@ -139,6 +139,21 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
         if ((!validate_before_benchmarking) or (valid))
             benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     }
+    if (true) {
+        using Table = twoChoicer<itemType>;
+        Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+        string filter_name = FilterAPI<Table>::get_name(&filter);
+
+        bool valid = true;
+        if (validate_before_benchmarking) {
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            if (!valid)
+                std::cout << "CF is not valid!" << std::endl;
+        }
+        if ((!validate_before_benchmarking) or (valid))
+            benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+    }
+
 
     return os;
 }
@@ -227,15 +242,14 @@ auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 // }
 
 
-
 template<typename itemType, size_t bits_per_element>
 auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, bool validate_before_benchmarking,
                           bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512,
                           double load, ostream &os) -> ostream & {
     unordered_set<itemType> v_add, v_find, v_delete;
     size_t add_size = std::floor(filter_max_capacity * load);
-    set_init(add_size,&v_add);
-    set_init(lookup_reps,&v_find);
+    set_init(add_size, &v_add);
+    set_init(lookup_reps, &v_find);
     vector<unordered_set<itemType> *> elements{&v_add, &v_find, &v_delete};
     // wierd_name2(filter_max_capacity, lookup_reps, &elements);
     print_false_positive_rates_header();
@@ -303,6 +317,22 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
         using spare_item = uint64_t;
         using temp_hash = att_hTable<spare_item, 4>;
         using Table = att_d512<temp_hash, spare_item, itemType>;
+        Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+        string filter_name = FilterAPI<Table>::get_name(&filter);
+
+        bool valid = true;
+        if (validate_before_benchmarking) {
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            if (!valid)
+                std::cout << "CF is not valid!" << std::endl;
+        }
+        if ((!validate_before_benchmarking) or (valid)) {
+            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
+            print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+        }
+    }
+    if (true) {
+        using Table = twoChoicer<itemType>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
 

@@ -308,6 +308,8 @@ void print_single_round_false_positive_rates(std::string filter_name, size_t loo
       */
     const size_t var_num = 6;
     string names[var_num] = {"#reps", "#expected FP", "#FP", "#TP", "expected FP ratio", "actual FP ratio"};
+    size_t bits_per_item = expected_false_positive;
+    expected_false_positive = lookups_repetitions >> bits_per_item;  
     size_t values[var_num - 2] = {lookups_repetitions, expected_false_positive, false_positive_counter,
                                   true_positive_counter};
     // size_t max_length = 24;
@@ -328,16 +330,16 @@ void print_single_round_false_positive_rates(std::string filter_name, size_t loo
     cout << std::setw(16) << filter_name << sep;
     size_t counter = 0;
     while (counter < var_num - 2) {
-        if (counter == 1) {
-            cout << std::setw(width) << lookups_repetitions / ((double) (1ULL << expected_false_positive)) << sep;
-            counter++;
-            continue;
-        }
+        // if (counter == 1) {
+        //     cout << std::setw(width) << lookups_repetitions / ((double) (1ULL << expected_false_positive)) << sep;
+        //     counter++;
+        //     continue;
+        // }
 
         cout << std::setw(width) << values[counter++] << sep;
     }
     //    std::cout << values[0] << "/" << std::setw(name_width - is_round_contain_two_digits) << values[1];
-    cout << std::setw(width) << values[1] / ((double) values[0]) << sep;
+    cout << std::setw(width) << 1ULL / ((double) (1ULL<<bits_per_item)) << sep;
     cout << std::setw(width) << values[2] / ((double) values[0]) << sep << std::endl;
 
     if (filter_name == "Dict512") {

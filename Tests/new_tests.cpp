@@ -56,7 +56,7 @@ void validate_HT_example() {
 
 
 int main(int argc, char **argv) {
-    srand(42);
+    srand(44);
     /* uint32_t x = -1;
     std::string s = "tomer";
     auto y = s_pd_filter::cuckoofilter::HashUtil::BobHash(&s, 64, 0);
@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
     using itemType = uint64_t;
 
     size_t temp_cap =(1<<21ul) * 0.88;
-    fp_rates_all_wrapper<itemType, 8>(1<<20, 
+    fp_rates_all_wrapper<itemType, 8>(1<<21, 
     1<<22ul, 
     BITS_PER_ELEMENT_MACRO,
     false);

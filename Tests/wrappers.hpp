@@ -22,6 +22,7 @@
  //#include "dict512.hpp"
 #include "TPD_Filter/dict512.hpp"
 #include "d512/att_d512.hpp"
+#include "d512/twoChoicer.hpp"
 #include "../cuckoo/cuckoofilter.h"
 // #include "../cuckoofilter/src/cuckoofilter.h"
 //#include "../morton/compressed_cuckoo_filter.h"
@@ -51,7 +52,8 @@ enum filter_id
     pd_id,
     tpd_id,
     d512,
-    att_d512_id
+    att_d512_id,
+    twoChoicer_id
 };
 
 template <typename Table>
@@ -153,7 +155,7 @@ struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count, .96, .5);
+        return Table(add_count, .955, .5);
     }
 
     static void Add(itemType key, Table *table)
@@ -202,6 +204,67 @@ struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
     static auto get_ID(Table *table) -> filter_id
     {
         return att_d512_id;
+    }
+};
+
+
+template <typename itemType>
+struct FilterAPI<twoChoicer<itemType>>
+{
+    using Table = twoChoicer<itemType, 8, 51, 50>;
+    //    using Table = dict512<TableType, spareItemType, itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count)
+    {
+        return Table(add_count, .9, .5);
+    }
+
+    static void Add(itemType key, Table *table)
+    {
+        // assert(table->case_validate());
+        table->insert(key);
+        // assert(table->case_validate());
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
+    {
+        for (int i = start; i < end; ++i)
+        {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table)
+    {
+        for (int i = 0; i < keys.size(); ++i)
+        {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table)
+    {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
+    {
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table)
+    {
+        return table->get_name();
+    }
+
+    static void get_dynamic_info(Table *table)
+    {
+        table->get_dynamic_info();
+    }
+
+    static auto get_ID(Table *table) -> filter_id
+    {
+        return twoChoicer_id;
     }
 };
 
