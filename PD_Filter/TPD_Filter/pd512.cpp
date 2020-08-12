@@ -126,7 +126,7 @@ namespace pd512 {
         const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
         assert(kBytes2copy < sizeof(header));
         memcpy(&header, pd, kBytes2copy);
-        auto my_temp = popcount128(header);
+        // auto my_temp = popcount128(header);
 
         // std::cout << "my_temp: " << my_temp << std::endl;
         // Number of bits to keep. Requires little-endianness
@@ -168,7 +168,7 @@ namespace pd512 {
                 sizeof(*pd) - (kBytes2copy + i + 1));
         ((char *) pd)[kBytes2copy + i] = rem;
 
-        assert(pd_find_50(quot, rem, pd));
+        // assert(pd_find_50(quot, rem, pd));
         return true;
         // //// jbapple: STOPPED HERE
         // const __m512i target = _mm512_set1_epi8(rem);
@@ -310,7 +310,7 @@ namespace pd512 {
         // return true;
     }
 
-    auto get_capacity(const __m512i *x) -> size_t {
+    auto get_capacity_old(const __m512i *x) -> size_t {
         validate_number_of_quotient(x);
         // return get_capacity_naive();
         uint64_t header[2];

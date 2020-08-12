@@ -107,35 +107,57 @@ int main(int argc, char **argv) {
     max_distinct_capacity = std::ceil(max_distinct_capacity * .51);
     using itemType = uint64_t;
 
-    size_t temp_cap =(1<<21ul) * 0.88;
-    fp_rates_all_wrapper<itemType, 8>(1<<21, 
-    1<<22ul, 
-    BITS_PER_ELEMENT_MACRO,
-    false);
-    
+    size_t temp_cap = (1 << 21ul) * 0.88;
+
+    fp_rates_all_wrapper<itemType, 8>(
+            max_distinct_capacity >> 4,
+            reps >> 4,
+            BITS_PER_ELEMENT_MACRO,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            true,
+            false 
+            );
+
     // size_t temp_cap =(1<<20ul) * 0.88;
-    // fp_rates_all_wrapper<itemType, 12>(temp_cap, 
-    // 1<<20ul, 
+    // fp_rates_all_wrapper<itemType, 12>(temp_cap,
+    // 1<<20ul,
     // 12,
     // false);
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
             max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
             false,
             false,
-            true,
-            true,
-            true,
-            true,
             false,
-            true);
+            false,
+            false,
+            false,
+            false,
+            true,
+            false);
+
+    // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
+    //         max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
+    //         false,
+    //         false,
+    //         true,
+    //         true,
+    //         true,
+    //         true,
+    //         false,
+    //         true);
     // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(1 << 18, 1 << 18, BITS_PER_ELEMENT_MACRO,
-                                                    //   bench_precision);
+    //   bench_precision);
     // for (size_t i = 1; i < 16; i++)
     // {
     // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(10000 * i, 20000 * i, BITS_PER_ELEMENT_MACRO,
     // bench_precision);
     // }
-// 
+    //
     // att_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(max_distinct_capacity, max_distinct_capacity, BITS_PER_ELEMENT_MACRO,
     //                                                   bench_precision);
     /* std::string line = std::string(128, '#');

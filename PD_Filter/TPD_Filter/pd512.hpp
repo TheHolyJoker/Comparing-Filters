@@ -89,7 +89,24 @@ namespace pd512 {
 
     auto is_full(const __m512i *x) -> bool;
 
-    auto get_capacity(const __m512i *x) -> size_t;
+    inline auto pd_popcount_att_helper_start(const __m512i *pd) -> int
+    {
+        uint64_t header;
+        memcpy(&header, reinterpret_cast<const uint64_t *>(pd), 8);
+        return 14ul - _lzcnt_u64(header);
+    }
+
+    inline auto get_capacity(const __m512i *pd) -> int
+    {
+        uint64_t header_end;
+        memcpy(&header_end, reinterpret_cast<const uint64_t *>(pd) + 1, 5);
+        constexpr uint64_t mask = (1ULL << 37u) - 1u;
+        header_end &= mask;
+        return (header_end == 0) ? pd_popcount_att_helper_start(pd) : (128 - 51 - _lzcnt_u64(header_end) + 1);
+    }
+
+
+    auto get_capacity_old(const __m512i *x) -> size_t;
 
     auto get_capacity_naive(const __m512i *x) -> size_t;
 

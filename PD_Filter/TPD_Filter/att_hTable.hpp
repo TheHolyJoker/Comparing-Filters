@@ -153,11 +153,11 @@ template<typename bucket_type,
 
 
         void insert(bucket_type x) {
-            if (find(x)) {
-                insert_existing_counter++;
-            }
+            // if (find(x)) {
+            //     insert_existing_counter++;
+            // }
             assert((x & MASK(element_length)) == x);
-            bool printer = f(x);
+            // bool printer = f(x);
 
             if (capacity >= max_capacity) {
                 std::cout << "Trying to insert into fully loaded hash table" << std::endl;
@@ -169,7 +169,7 @@ template<typename bucket_type,
             uint32_t b1 = -1, b2 = -1;
 
             my_hash(x, &b1, &b2);
-            if (printer) {
+            /* if (printer) {
                 std::cout << "***spare insert***\nb1: " << b1 << std::endl;
                 std::cout << "b2: " << b2 << std::endl;
                 bool find1 = (find_helper(x, b1));
@@ -178,25 +178,25 @@ template<typename bucket_type,
                 std::cout << "find2: " << find2 << std::endl;
                 std::cout << std::endl;
 
-            }
+            } */
             assert(does_bucket_contain_valid_elements(b1));
             assert(does_bucket_contain_valid_elements(b2));
 
             if (insert_if_bucket_not_full(x, b2)) {
-                if (printer) {
+                /* if (printer) {
                     std::cout << "was inserted into b1" << std::endl;
-                }
+                } */
                 return;
             }
 
             auto hold = x;
             size_t bucket_index = b1;
             for (int i = 0; i < MAX_CUCKOO_LOOP; ++i) {
-                assert(does_bucket_contain_valid_elements(bucket_index));
+                // assert(does_bucket_contain_valid_elements(bucket_index));
 
                 if (insert_if_bucket_not_full(hold, bucket_index)) {
 
-                    assert(does_bucket_contain_valid_elements(bucket_index));
+                    // assert(does_bucket_contain_valid_elements(bucket_index));
                     // std::cout << "/* message */" << std::endl;
                     return;
                 }
@@ -205,22 +205,22 @@ template<typename bucket_type,
                 uint32_t old_bucket_index = bucket_index;
 
                 cuckoo_swap(&hold, &bucket_index);
-                line_counter++;
-                assert(find_helper(old_hold, old_bucket_index));
-                assert(does_bucket_contain_valid_elements(bucket_index));
+                // line_counter++;
+                // assert(find_helper(old_hold, old_bucket_index));
+                // assert(does_bucket_contain_valid_elements(bucket_index));
 
-                if (printer) {
-                    uint32_t j1, j2;
-                    my_hash(hold, &j1, &j2);
-                    std::cout << "was swapped to " << hold << std::endl;
-                    std::cout << "b1: " << j1 << std::endl;
-                    std::cout << "b2: " << j2 << std::endl;
-                    std::cout << "i is: " << i << std::endl;
-                }
-                if (old_hold == hold) {
-                    std::cout << "swap counter" << swap_counter << std::endl;
-                    assert(false);
-                }
+                // if (printer) {
+                //     uint32_t j1, j2;
+                //     my_hash(hold, &j1, &j2);
+                //     std::cout << "was swapped to " << hold << std::endl;
+                //     std::cout << "b1: " << j1 << std::endl;
+                //     std::cout << "b2: " << j2 << std::endl;
+                //     std::cout << "i is: " << i << std::endl;
+                // }
+                // if (old_hold == hold) {
+                //     std::cout << "swap counter" << swap_counter << std::endl;
+                //     assert(false);
+                // }
             }
             get_info();
             assert(false);
