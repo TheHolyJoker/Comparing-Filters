@@ -56,7 +56,7 @@ void validate_HT_example() {
 
 
 int main(int argc, char **argv) {
-    srand(44);
+    srand(45);
     /* uint32_t x = -1;
     std::string s = "tomer";
     auto y = s_pd_filter::cuckoofilter::HashUtil::BobHash(&s, 64, 0);
@@ -104,41 +104,48 @@ int main(int argc, char **argv) {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     reps = 1u << (shift), max_distinct_capacity = 1u << shift;
-    max_distinct_capacity = std::ceil(max_distinct_capacity * .51);
+    // max_distinct_capacity = std::ceil(max_distinct_capacity * .51);
     using itemType = uint64_t;
 
     size_t temp_cap = (1 << 21ul) * 0.88;
 
-    fp_rates_all_wrapper<itemType, 8>(
-            max_distinct_capacity >> 4,
-            reps >> 4,
-            BITS_PER_ELEMENT_MACRO,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            true,
-            false 
-            );
-
+    std::stringstream ss;
+    // size_t c = 1 << 22u;
+    // size_t r = 1 << 23u;
+    // fp_rates_all_wrapper<itemType, 8>(
+    //         c,
+    //         r,
+    //         BITS_PER_ELEMENT_MACRO,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         true,
+    //         false);
+    
     // size_t temp_cap =(1<<20ul) * 0.88;
     // fp_rates_all_wrapper<itemType, 12>(temp_cap,
     // 1<<20ul,
     // 12,
     // false);
+    
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
-            max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
+            5000000, 10000000,
+            BITS_PER_ELEMENT_MACRO,
+            bench_precision,
             false,
             true,
-            false);
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+            );
 
     // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
     //         max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,

@@ -37,30 +37,29 @@ auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t st
 
 ///////Benchmarking and wrappers:
 template<class Table, typename itemType>
-auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t round_counter, size_t benchmark_precision, ostream &os) -> ostream &;
+void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t round_counter, size_t benchmark_precision, std::stringstream *ss);
 
 template<class Table, typename itemType>
-auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t bench_precision, ostream &os) -> ostream &;
+auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t bench_precision) -> std::stringstream;
 
 template<class Table, typename itemType>
-auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t bench_precision, vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream &;
+auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t bench_precision, vector<vector<itemType> *> *elements) -> std::stringstream;
 
 template<typename itemType, template<typename> class hashTable>
-auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
-                    vector<vector<itemType> *> *elements, ostream &os = cout) -> ostream &;
+auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision, vector<vector<itemType> *> *elements, ostream &os) -> std::stringstream;
 
 
 template<typename itemType, size_t bits_per_element>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision, bool validate_before_benchmarking,
-                   bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool TC = true, ostream &os = cout) -> ostream &;
+                   bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool TC = true, ostream &os = cout) -> std::stringstream;
 ///// Compute false positive rate.
 
 template<typename itemType, size_t bits_per_element>
-auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, bool validate_before_benchmarking, bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool TC = true, double load = 1, ostream &os = cout) -> ostream &;
+auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, bool validate_before_benchmarking, bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool TC = true, double load = 1, ostream &os = cout) -> std::stringstream;
 
 
 template<class Table, typename itemType>
-auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *> *elements, ostream &os = cout) -> std::tuple<size_t, size_t>;
+auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *> *elements) -> std::tuple<size_t, size_t>;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,77 +69,98 @@ auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *
 
 template<typename itemType, size_t bits_per_element>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision, bool validate_before_benchmarking,
-                   bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512, bool TC, ostream &os) -> ostream & {
+                   bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512, bool TC, ostream &os) -> std::stringstream {
 
+    std::stringstream debug_info;
     // assert(filter_max_capacity % bench_precision == 0);
     vector<itemType> v_add, v_find, v_delete;
     vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
     init_elements(filter_max_capacity, lookup_reps, &elements);
     if (BF) {
         using Table = bloomfilter::bloom<itemType, bits_per_element, false, hashing::TwoIndependentMultiplyShift>;
-        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
-                                                         &elements, os);
+        auto temp = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+        debug_info << temp.str();
+        // benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements, os);
+        // os << ss.str();
+        // debug_info << ss.str();
     }
     if (CF) {
 
         // while (true) {
-
+        std::stringstream v_info;
         using Table = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO, cuckoofilter::SingleTable>;
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            debug_info << v_info.str();
             if (!valid)
                 std::cout << "CF is not valid!" << std::endl;
         }
-        if ((!validate_before_benchmarking) or (valid))
-            benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-        // }
+        if ((!validate_before_benchmarking) or (valid)) {
+            std::stringstream ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            debug_info << ss.str();
+        }
     }
     if (CF_ss) {
+        std::stringstream v_info;
         using Table = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO, cuckoofilter::PackedTable>;
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            debug_info << v_info.str();
             if (!valid)
                 std::cout << "CF-ss is not valid!" << std::endl;
         }
-        if ((!validate_before_benchmarking) or (valid))
-            benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+        if ((!validate_before_benchmarking) or (valid)) {
+            std::stringstream ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            debug_info << ss.str();
+        }
     }
     if (SIMD) {
+        std::stringstream v_info;
         using Table = SimdBlockFilter<>;
-        benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision,
-                                                         &elements);
+        std::stringstream ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+        debug_info << ss.str();
     }
     if (MT) {
+        std::stringstream v_info;
         using Table = MortonFilter;
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            debug_info << v_info.str();
             if (!valid)
                 std::cout << "MT is not valid!" << std::endl;
         }
-        if ((!validate_before_benchmarking) or (valid))
-            benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+        if ((!validate_before_benchmarking) or (valid)) {
+            std::stringstream ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            debug_info << ss.str();
+        }
     }
     if (call_PD) {
         //        using Table = dict<PD, hash_table, itemType, uint32_t>;
-        benchmark_dict<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
-                                             &elements);
+        auto ss = benchmark_dict<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,&elements, os);
+        debug_info << ss.str();
     }
     if (pd512) {
         // while (true) {
-            using spare_item = uint64_t;
-            using temp_hash = att_hTable<spare_item, 4>;
-            using Table = att_d512<temp_hash, spare_item, itemType>;
-            bool valid = true;
-            if (validate_before_benchmarking) {
-                valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-                if (!valid)
-                    std::cout << "pd512 is not valid!" << std::endl;
-            }
-            if ((!validate_before_benchmarking) or (valid))
-                benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+        using spare_item = uint64_t;
+        using temp_hash = att_hTable<spare_item, 4>;
+        std::stringstream v_info;
+
+        using Table = att_d512<temp_hash, spare_item, itemType>;
+        bool valid = true;
+        if (validate_before_benchmarking) {
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            debug_info << v_info.str();
+            if (!valid)
+                std::cout << "pd512 is not valid!" << std::endl;
+        }
+        if ((!validate_before_benchmarking) or (valid)) {
+            std::stringstream ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            debug_info << ss.str();
+        }
+
         // }
     }
     if (TC) {
@@ -148,27 +168,28 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
         using Table = twoChoicer<itemType>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
+        std::stringstream v_info;
+
 
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            debug_info << v_info.str();
             if (!valid)
                 std::cout << "twoChoicer is not valid!" << std::endl;
         }
-        if ((!validate_before_benchmarking) or (valid))
-            benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-        // }
+        if ((!validate_before_benchmarking) or (valid)) {
+            std::stringstream ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            debug_info << ss.str();
+        }
     }
-
-
-    return os;
+    // return os;
+    return debug_info;
 }
 
 
 template<class Table, typename itemType>
-auto benchmark_single_filter_wrapper(size_t filter_max_capacity,
-                                     size_t bench_precision, vector<vector<itemType> *> *elements,
-                                     ostream &os) -> ostream & {
+auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t bench_precision, vector<vector<itemType> *> *elements) -> std::stringstream {
 
     auto start_run_time = chrono::high_resolution_clock::now();
     auto t0 = chrono::high_resolution_clock::now();
@@ -179,29 +200,37 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity,
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
 
-    print_name(FilterAPI<Table>::get_name(&filter), 134);
-    benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
+    std::stringstream ss = print_name(FilterAPI<Table>::get_name(&filter), 134);
+    std::cout << ss.str();
+    auto ss2 = benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision);
+    ss << ss2.str();
+    return ss;
     // if (FilterAPI<Table>::get_ID(&filter) == CF) {
-    //     FilterAPI<Table>::get_dynamic_info(&filter);
+    //     FilterAPI<Table>::get_info(&filter);
     // }
-    return os;
+    // return os;
 }
 
 template<class Table, typename itemType>
-auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t bench_precision,
-                              ostream &os) -> ostream & {
+auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t bench_precision) -> std::stringstream {
 
-    print_round_header();
+    std::stringstream ss = print_round_header();
+    std::cout << ss.str();
+
+    // *ss << temp_ss.rdbuf();
     for (int round = 0; round < bench_precision; ++round) {
-        benchmark_single_round<Table, itemType>(wrap_filter, elements, round, bench_precision, os);
+        std::stringstream flusher;
+        benchmark_single_round<Table, itemType>(wrap_filter, elements, round, bench_precision, &flusher);
+        std::cout << flusher.str();
+        ss << flusher.str();
     }
-
-    return os;
+    return ss;
+    // *ss << flusher.str();
 }
 
 template<class Table, typename itemType>
-auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t round_counter,
-                            size_t benchmark_precision, ostream &os) -> ostream & {
+void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t round_counter,
+                            size_t benchmark_precision, std::stringstream *ss) {
 
     auto add_vec = elements->at(0);
     auto find_vec = elements->at(1);
@@ -228,11 +257,12 @@ auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
                               true_lookup_time, removal_time};
 
     size_t divisors[var_num - 2] = {add_step, find_step, delete_step};
-    print_single_round(var_num, values, divisors);
+    auto temp = print_single_round(var_num, values, divisors);
+    *ss << temp.str();
 
     //    if (FilterAPI<Table>::get_ID(wrap_filter) == tpd_id)
-    //        FilterAPI<Table>::get_dynamic_info(wrap_filter);
-    return os;
+    //        FilterAPI<Table>::get_info(wrap_filter);
+    // return os;
 }
 
 //////////////////////////////////////////////////////////////
@@ -251,116 +281,158 @@ auto benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 template<typename itemType, size_t bits_per_element>
 auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, bool validate_before_benchmarking,
                           bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512, bool TC,
-                          double load, ostream &os) -> ostream & {
+                          double load, ostream &os) -> std::stringstream {
     unordered_set<itemType> v_add, v_find, v_delete;
     size_t add_size = std::floor(filter_max_capacity * load);
     set_init(add_size, &v_add);
     set_init(lookup_reps, &v_find);
     vector<unordered_set<itemType> *> elements{&v_add, &v_find, &v_delete};
 
-    print_false_positive_rates_header();
+    std::stringstream header = print_false_positive_rates_header();
+
     if (BF) {
+        std::stringstream ss;
         using Table = bloomfilter::bloom<itemType, bits_per_element, false, hashing::TwoIndependentMultiplyShift>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
-        auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
-        print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+
+        std::stringstream end;
+        auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+        end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+        header << end.str();
+        os << ss.str();
     }
     if (CF) {
+        std::stringstream ss;
         using Table = cuckoofilter::CuckooFilter<uint64_t, bits_per_element, cuckoofilter::SingleTable>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5, &ss);
             if (!valid)
                 std::cout << filter_name << " is not valid!" << std::endl;
         }
         if ((!validate_before_benchmarking) or (valid)) {
-            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
-            print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            std::stringstream end;
+            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+            end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            header << end.str();
         }
+        os << ss.str();
     }
     if (CF_ss) {
+        std::stringstream ss;
         using Table = cuckoofilter::CuckooFilter<uint64_t, bits_per_element, cuckoofilter::PackedTable>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5, &ss);
             if (!valid)
                 std::cout << filter_name << " is not valid!" << std::endl;
         }
         if ((!validate_before_benchmarking) or (valid)) {
-            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
-            print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            std::stringstream end;
+            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+            end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            header << end.str();
         }
+        os << ss.str();
     }
     if (SIMD) {
+        std::stringstream ss;
         using Table = SimdBlockFilter<>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
-        auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
-        print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+        std::stringstream end;
+        auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+        end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+        header << end.str();
+        os << ss.str();
     }
     if (MT) {
+        std::stringstream ss;
         using Table = MortonFilter;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            Table validation_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity >> 2u);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &ss);
             if (!valid)
                 std::cout << filter_name << " is not valid!" << std::endl;
         }
         if ((!validate_before_benchmarking) or (valid)) {
-            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
-            print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            std::stringstream end;
+            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+            end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            header << end.str();
         }
+        os << ss.str();
     }
 
     if (pd512) {
-        // while (true) {
-            using spare_item = uint64_t;
-            using temp_hash = att_hTable<spare_item, 4>;
-            using Table = att_d512<temp_hash, spare_item, itemType>;
-            Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
-            string filter_name = FilterAPI<Table>::get_name(&filter);
+        int x = 1;
 
-            bool valid = true;
-            if (validate_before_benchmarking) {
-                valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
-                if (!valid)
-                    std::cout << filter_name << " is not valid!" << std::endl;
-            }
-            if ((!validate_before_benchmarking) or (valid)) {
-                auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
-                print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
-            }
+        // while (true) {
+        std::stringstream ss;
+        using spare_item = uint64_t;
+        using temp_hash = att_hTable<spare_item, 4>;
+        using Table = att_d512<temp_hash, spare_item, itemType>;
+        Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+        string filter_name = FilterAPI<Table>::get_name(&filter);
+
+        bool valid = true;
+        if (validate_before_benchmarking) {
+            std::stringstream v_info;
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            if (!valid)
+                std::cout << filter_name << " is not valid!" << std::endl;
+            // auto info = FilterAPI<Table>::get_info(&validation_filter);
+            std::cout << v_info.str() << "\n\n\n";
+            // std::cout << info.str() << std::endl;
+        }
+        if ((!validate_before_benchmarking) or (valid)) {
+            std::stringstream end;
+            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+            end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            header << end.str();
+        }
+        os << ss.str();
+
+
+        // cout << header.str();
+        // auto info = FilterAPI<Table>::get_info(&filter);
+        // std::cout << "\n\n\n" << info.str();
         // }
     }
     if (TC) {
+        std::stringstream ss;
         using Table = twoChoicer<itemType>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
 
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5, &ss);
             if (!valid)
                 std::cout << filter_name << " is not valid!" << std::endl;
         }
         if ((!validate_before_benchmarking) or (valid)) {
-            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements, os);
-            print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            std::stringstream end;
+            auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+            end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            header << end.str();
         }
+        os << ss.str();
     }
-
-    return os;
+    os << header.str();
+    return header;
 }
 
 template<class Table, typename itemType>
-auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *> *elements, ostream &os) -> std::tuple<size_t, size_t> {
+auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *> *elements) -> std::tuple<size_t, size_t> {
 
     size_t counter = 0;
     /**Insertion*/
@@ -401,7 +473,7 @@ auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *
 
     assert(cond);
     if (FilterAPI<Table>::get_ID(wrap_filter) == CF) {
-        FilterAPI<Table>::get_dynamic_info(wrap_filter);
+        FilterAPI<Table>::get_info(wrap_filter);
     }
     return cond; 
     */
@@ -456,8 +528,8 @@ auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t st
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename itemType, template<typename> class hashTable>
-auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision,
-                    vector<vector<itemType> *> *elements, ostream &os) -> ostream & {
+auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision, vector<vector<itemType> *> *elements, ostream &os) -> std::stringstream {
+    std::stringstream ss;
     using Table = dict<PD, hashTable, itemType, uint64_t>;
 
     auto start_run_time = chrono::high_resolution_clock::now();
@@ -468,10 +540,13 @@ auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t b
     auto t1 = chrono::high_resolution_clock::now();
     auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
 
-    print_name(FilterAPI<Table>::get_name(&filter), 134);
-    benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision, os);
-
-    return os;
+    auto name = print_name(FilterAPI<Table>::get_name(&filter), 134);
+    std::cout << name.str();
+    ss << name.str();
+    auto temp_ss = benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision);
+    // std::cout << temp_ss.str();
+    ss << temp_ss.str();
+    return ss;
 }
 
 //template<template <typename slot_type, size_t bits_per_item, size_t max_capacity> class temp_PD ,typename itemType, template<typename> class hashTable>
@@ -507,7 +582,7 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     //     using spare_item = uint64_t;
     //     using temp_hash = att_hTable<spare_item, 4>;
     //     using Table = dict512<temp_hash, spare_item, itemType>;
-    //     w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+    //     w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5,os);
     //     benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     // }
 
@@ -515,7 +590,7 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     using temp_hash = att_hTable<spare_item, 4>;
     using Table = att_d512<temp_hash, spare_item, itemType>;
     benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-    // // bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5));
+    // // bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5,os));
     // // if (!valid) {
     // //     std::cout << "PD512 is not valid!" << std::endl;
     // // }
@@ -536,7 +611,7 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
            using temp_PD = TPD_name::TPD<uint32_t, 8, 64>;
            using temp_hash = att_hTable<spare_item, 4>;
            using Table = T_dict<temp_PD, uint64_t, 8, 64, temp_hash, spare_item, itemType>;
-        //    w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+        //    w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5,os);
            benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
        }
        b <<= 1u;
@@ -545,7 +620,7 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
     */
 
     /*if (indicator & b) {
-        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5);
+        w_validate_filter<itemType, hash_table>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5,os);
         benchmark_single_filter_wrapper<uint64_t, hash_table>(filter_max_capacity, error_power_inv, bench_precision,
             &elements);
     }*/

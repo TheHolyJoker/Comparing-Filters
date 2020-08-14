@@ -191,7 +191,7 @@ auto v_insertions(Table *wrap_filter, vector<itemType> *to_add_vec, size_t start
 
 template<class Table, typename itemType, bool block_insertion = false>
 auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-    double level1_load_factor, double level2_load_factor) -> bool {
+    double level1_load_factor, double level2_load_factor, std::stringstream *ss) -> bool {
     //    Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     //    auto number_of_elements_in_the_filter = filter_max_capacity;
 
@@ -248,10 +248,11 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
         }
     }
 
-    att_print_single_round_false_positive_rates(lookup_set.size(), error_power_inv, fp_counter, tp_counter);
+    auto temp = att_print_single_round_false_positive_rates(lookup_set.size(), error_power_inv, fp_counter, tp_counter);
+    *ss << temp.str();
 
-    print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter,
-        fp_counter);
+    auto temp2 =print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter, fp_counter);
+    *ss << temp2.str();
     //    cout << "filter_max_capacity: " << filter_max_capacity << endl;
     //    cout << "\nnumber of false-positive is out of total number of lookups: " << fp_counter << "/ " << lookup_reps << endl;
     //    cout << "Expected FP count: " << (lookup_set.size() >> error_power_inv) << endl;
@@ -270,21 +271,20 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     //     return false;
 
     assert(cond);
-    if (FilterAPI<Table>::get_ID(wrap_filter) == CF) {
-        FilterAPI<Table>::get_dynamic_info(wrap_filter);
-    }
+    // if (FilterAPI<Table>::get_ID(wrap_filter) == CF) {
+    //     FilterAPI<Table>::get_dynamic_info(wrap_filter);
+    // }
     return cond;
 }
 
 template<class Table, typename itemType, bool block_insertion = false>
 auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-    double level1_load_factor, double level2_load_factor) -> bool {
-
+    double level1_load_factor, double level2_load_factor, std::stringstream *ss) -> bool {
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     size_t line_width = 160; // number of columns (6) * column's width (24)
     print_name(FilterAPI<Table>::get_name(&wrap_filter));
     bool res = v_filter_core<Table, itemType, block_insertion>(&wrap_filter, filter_max_capacity, lookup_reps,
-        error_power_inv, level1_load_factor, level2_load_factor);
+        error_power_inv, level1_load_factor, level2_load_factor, ss);
     assert(res);
     return res;
 }
@@ -298,8 +298,9 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
 
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity, error_power_inv);
     print_name(FilterAPI<Table>::get_name(&wrap_filter));
+    std::stringstream ss;
     bool res = v_filter_core<Table, itemType, false>(&wrap_filter, filter_max_capacity, lookup_reps,
-        error_power_inv, level1_load_factor, level2_load_factor);
+        error_power_inv, level1_load_factor, level2_load_factor, &ss);
     assert(res);
     return res;
 }
@@ -421,7 +422,10 @@ benchmark_single_round(Table *wrap_filter, unordered_set<itemType> *to_add_set, 
     size_t values[var_num + 1] ={ round_counter, total_rounds_num, insertion_time, lookup_time, removal_time };
 
     size_t divisors[var_num - 1] ={ to_add_set->size(), to_lookup_set->size(), to_delete_set->size() };
-    print_single_round(var_num, values, divisors);
+    
+    std::stringstream ss;
+    print_single_round(var_num, values, divisors, &ss);
+    os << ss.str();
     return os;
     /*
     vector<set<string> *> member_sets_vector;

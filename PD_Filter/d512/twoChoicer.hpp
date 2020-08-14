@@ -187,6 +187,11 @@ public:
         // table_print(num, names, val);
     }
 
+    auto get_extended_info()->std::stringstream{
+        std::stringstream empty;
+        empty << "Empty Data!\n";
+        return empty;
+    }
     void get_dynamic_info() {
 
         //     /* if (!hashing_test) {

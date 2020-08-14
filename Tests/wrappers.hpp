@@ -77,7 +77,7 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
         if (table->Add(key) != cuckoofilter::Ok)
         {
             std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
-            get_dynamic_info(table);
+            get_info(table);
 
             throw logic_error("The filter is too small to hold all of the elements");
         }
@@ -90,7 +90,7 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
             if (table->Add(keys[i]) != cuckoofilter::Ok)
             {
                 std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
-                get_dynamic_info(table);
+                get_info(table);
 
                 throw logic_error("The filter is too small to hold all of the elements");
             }
@@ -104,7 +104,7 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
             if (table->Add(keys[i]) != cuckoofilter::Ok) {
                 std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
                 // std::cerr << "Load before insertion is: " << ;
-                get_dynamic_info(table);
+                get_info(table);
                 
                 throw logic_error("The filter is too small to hold all of the elements");
 
@@ -133,10 +133,13 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
         return "Cuckoo";
     }
 
-    static void get_dynamic_info(const Table *table)
+    static auto get_info(const Table *table) ->std::stringstream
     {
         std::string state =  table->Info();
-        std::cout << state << std::endl;
+        std::stringstream ss;
+        ss << state;
+        return ss;
+        // std::cout << state << std::endl;
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -196,9 +199,9 @@ struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
         return table->get_name();
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
-        table->get_dynamic_info();
+        return table->get_extended_info();
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -257,9 +260,9 @@ struct FilterAPI<twoChoicer<itemType>>
         return table->get_name();
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
-        table->get_dynamic_info();
+        return table->get_extended_info();
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -308,9 +311,11 @@ struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFam
         return "Bloom";
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
         assert(false);
+        std::stringstream ss;
+        return ss;
     }
 
     CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table)
@@ -373,9 +378,12 @@ struct FilterAPI<SimdBlockFilter<>>
         return "SimdBlockFilter";
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
         assert(false);
+        std::stringstream ss;
+        return ss;
+
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -492,9 +500,12 @@ struct FilterAPI<MortonFilter>
         return "Morton";
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
         assert(false);
+        std::stringstream ss;
+        return ss;
+
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -557,9 +568,12 @@ struct FilterAPI<dict<PD, TableType, itemType, spareItemType>>
         return "PD";
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
         assert(false);
+        std::stringstream ss;
+        return ss;
+
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -711,9 +725,11 @@ template <
         return table->get_name();
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
         table->get_dynamic_info();
+        std::stringstream ss;
+        return ss;
     }
 
     static auto get_ID(Table *table) -> filter_id
@@ -773,9 +789,11 @@ template <
         return table->get_name();
     }
 
-    static void get_dynamic_info(Table *table)
+    static auto get_info(Table *table) ->std::stringstream
     {
         table->get_dynamic_info();
+        std::stringstream ss;
+        return ss;
     }
 
     static auto get_ID(Table *table) -> filter_id
