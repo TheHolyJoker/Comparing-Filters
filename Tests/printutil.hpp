@@ -52,7 +52,7 @@ auto print_single_round_false_positive_rates(size_t lookups_repetitions, size_t 
                                              size_t true_positive_counter, size_t false_positive_counter) ->std::stringstream ;
 
 auto print_single_round_false_positive_rates(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
-                                             size_t true_positive_counter, size_t false_positive_counter)-> std::stringstream;
+                                             size_t true_positive_counter, size_t false_positive_counter, bool is_last_line = false)-> std::stringstream;
 
 // template<typename val_type>
 // void table_print(size_t var_num, string *var_names, val_type *values) {

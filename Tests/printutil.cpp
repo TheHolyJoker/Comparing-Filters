@@ -304,7 +304,7 @@ auto print_false_positive_rates_header(size_t width) -> std::stringstream {
 
 
 auto print_single_round_false_positive_rates(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
-                                             size_t true_positive_counter, size_t false_positive_counter) -> std::stringstream {
+                                             size_t true_positive_counter, size_t false_positive_counter, bool is_last_line) -> std::stringstream {
     /**every lookup result is one of the following:
      * FP - False Positive
      * TP - True Positive
@@ -335,7 +335,7 @@ auto print_single_round_false_positive_rates(std::string filter_name, size_t loo
     ss << std::setw(width) << 1ULL / ((double) (1ULL << bits_per_item)) << sep;
     ss << std::setw(width) << values[2] / ((double) values[0]) << sep << std::endl;
 
-    if (filter_name == "Dict512") {
+    if (is_last_line) {
         string closing_line = sep + std::string(137, '-') + '|';
         ss << closing_line << std::endl;
     }

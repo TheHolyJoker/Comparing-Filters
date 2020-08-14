@@ -11,6 +11,7 @@
 #include <set>
 
 #define BITS_PER_ELEMENT_MACRO (8)
+#define BITS_PER_ELEMENT_MACRO_12 (12)
 #define CUCKOO_BITS_PER_ITEM_MACRO (12)
 
 typedef chrono::nanoseconds ns;

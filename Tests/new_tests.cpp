@@ -110,28 +110,23 @@ int main(int argc, char **argv) {
     size_t temp_cap = (1 << 21ul) * 0.88;
 
     std::stringstream ss;
-    // size_t c = 1 << 22u;
-    // size_t r = 1 << 23u;
-    // fp_rates_all_wrapper<itemType, 8>(
-    //         c,
-    //         r,
-    //         BITS_PER_ELEMENT_MACRO,
-    //         false,
-    //         false,
-    //         false,
-    //         false,
-    //         false,
-    //         false,
-    //         false,
-    //         true,
-    //         false);
-    
-    // size_t temp_cap =(1<<20ul) * 0.88;
-    // fp_rates_all_wrapper<itemType, 12>(temp_cap,
-    // 1<<20ul,
-    // 12,
-    // false);
-    
+    size_t c = std::ceil((1 << 22u) * 0.88);
+    size_t r = 1 << 23u;
+    fp_rates_all_wrapper<itemType, 8>(
+            c,
+            r,
+            BITS_PER_ELEMENT_MACRO,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true);
+
+
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
             5000000, 10000000,
             BITS_PER_ELEMENT_MACRO,
@@ -144,8 +139,36 @@ int main(int argc, char **argv) {
             true,
             true,
             true,
-            true
-            );
+            true);
+
+    fp_rates_all_wrapper<itemType, 12>(
+            c,
+            r,
+            BITS_PER_ELEMENT_MACRO_12,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true);
+
+
+    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO_12>(
+            5000000, 10000000,
+            BITS_PER_ELEMENT_MACRO_12,
+            bench_precision,
+            false,
+            true,
+            true,
+            false,
+            false,
+            true,
+            false,
+            true,
+            true);
 
     // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
     //         max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
