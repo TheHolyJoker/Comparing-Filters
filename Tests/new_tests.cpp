@@ -10,8 +10,8 @@ auto example1() {
     size_t lookup_reps = 1u << (shift + 2u);
     size_t error_power_inv = BITS_PER_ELEMENT_MACRO;
     size_t bench_precision = 16;
-    b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
-                                                    1, 1, 1, 1, 1);
+    // b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
+    //                                                 1, 1, 1, 1, 1);
 }
 
 auto example3() {
@@ -55,8 +55,50 @@ void validate_HT_example() {
 }
 
 
+void testing_cf_ss() {
+
+    using Table5 = cuckoofilter::CuckooFilter<uint64_t, 5, cuckoofilter::PackedTable>;
+    using Table6 = cuckoofilter::CuckooFilter<uint64_t, 6, cuckoofilter::PackedTable>;
+    using Table7 = cuckoofilter::CuckooFilter<uint64_t, 7, cuckoofilter::PackedTable>;
+    using Table8 = cuckoofilter::CuckooFilter<uint64_t, 8, cuckoofilter::PackedTable>;
+    using Table9 = cuckoofilter::CuckooFilter<uint64_t, 9, cuckoofilter::PackedTable>;
+    using Table13 = cuckoofilter::CuckooFilter<uint64_t, 13, cuckoofilter::PackedTable>;
+    using Table17 = cuckoofilter::CuckooFilter<uint64_t, 17, cuckoofilter::PackedTable>;
+    Table5 filter5 = FilterAPI<Table5>::ConstructFromAddCount(5000);
+    Table6 filter6 = FilterAPI<Table6>::ConstructFromAddCount(5000);
+    Table7 filter7 = FilterAPI<Table7>::ConstructFromAddCount(5000);
+    Table8 filter8 = FilterAPI<Table8>::ConstructFromAddCount(5000);
+    Table9 filter9 = FilterAPI<Table9>::ConstructFromAddCount(5000);
+    Table13 filter13 = FilterAPI<Table13>::ConstructFromAddCount(5000);
+    Table17 filter17 = FilterAPI<Table17>::ConstructFromAddCount(5000);
+    uint64_t key = 42;
+    FilterAPI<Table5>::Add(x, &filter5);
+    FilterAPI<Table6>::Add(x, &filter6);
+    FilterAPI<Table7>::Add(x, &filter7);
+    FilterAPI<Table8>::Add(x, &filter8);
+    FilterAPI<Table9>::Add(x, &filter9);
+    FilterAPI<Table13>::Add(x, &filter13);
+    FilterAPI<Table17>::Add(x, &filter17);
+
+    bool arr[7] = {
+            FilterAPI<Table5>::Contain(x, &filter5),
+            FilterAPI<Table6>::Contain(x, &filter6),
+            FilterAPI<Table7>::Contain(x, &filter7),
+            FilterAPI<Table8>::Contain(x, &filter8),
+            FilterAPI<Table9>::Contain(x, &filter9),
+            FilterAPI<Table13>::Contain(x, &filter13),
+            FilterAPI<Table17>::Contain(x, &filter17)};
+    for (size_t i = 0; i < 7; i++) {
+        std::cout << "arr[i]: " << arr[i] << std::endl;
+    }
+
+    // assert(FilterAPI<Table>::Contain(x, &filter));
+}
+
 int main(int argc, char **argv) {
-    srand(45);
+    // testing_cf_ss();
+    // return 0;
+    // srand(45);
     /* uint32_t x = -1;
     std::string s = "tomer";
     auto y = s_pd_filter::cuckoofilter::HashUtil::BobHash(&s, 64, 0);
@@ -103,16 +145,32 @@ int main(int argc, char **argv) {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
     reps = 1u << (shift), max_distinct_capacity = 1u << shift;
     // max_distinct_capacity = std::ceil(max_distinct_capacity * .51);
     using itemType = uint64_t;
+
+    // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
+    //         31205621, 31205621 * 2,
+    //         BITS_PER_ELEMENT_MACRO,
+    //         bench_precision,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         true,
+    //         false);
+    // return 0;
 
     size_t temp_cap = (1 << 21ul) * 0.88;
 
     std::stringstream ss;
     size_t c = std::ceil((1 << 22u) * 0.88);
     size_t r = 1 << 23u;
-    fp_rates_all_wrapper<itemType, 8>(
+    fp_rates_all_wrapper<itemType, 8, 13>(
             c,
             r,
             BITS_PER_ELEMENT_MACRO,
@@ -122,13 +180,13 @@ int main(int argc, char **argv) {
             true,
             true,
             true,
-            true,
+            false,
             true,
             true);
 
 
-    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
-            5000000, 10000000,
+    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
+            31205621, 31205621 * 2,
             BITS_PER_ELEMENT_MACRO,
             bench_precision,
             false,
@@ -137,11 +195,11 @@ int main(int argc, char **argv) {
             true,
             true,
             true,
-            true,
+            false,
             true,
             true);
 
-    fp_rates_all_wrapper<itemType, 12>(
+    fp_rates_all_wrapper<itemType, 12, 13>(
             c,
             r,
             BITS_PER_ELEMENT_MACRO_12,
@@ -151,12 +209,12 @@ int main(int argc, char **argv) {
             true,
             true,
             true,
-            true,
+            false,
             true,
             true);
 
 
-    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO_12>(
+    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO_12, 13>(
             5000000, 10000000,
             BITS_PER_ELEMENT_MACRO_12,
             bench_precision,

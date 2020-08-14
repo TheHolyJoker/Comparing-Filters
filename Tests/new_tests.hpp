@@ -49,12 +49,12 @@ template<typename itemType, template<typename> class hashTable>
 auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision, vector<vector<itemType> *> *elements, ostream &os) -> std::stringstream;
 
 
-template<typename itemType, size_t bits_per_element>
+template<typename itemType, size_t bits_per_element, size_t CF_ss_bits>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision, bool validate_before_benchmarking,
                    bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool TC = true, ostream &os = cout) -> std::stringstream;
 ///// Compute false positive rate.
 
-template<typename itemType, size_t bits_per_element>
+template<typename itemType, size_t bits_per_element, size_t CF_ss_bits>
 auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, bool validate_before_benchmarking, bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool TC = true, double load = 1, ostream &os = cout) -> std::stringstream;
 
 
@@ -66,8 +66,7 @@ auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-template<typename itemType, size_t bits_per_element>
+template<typename itemType, size_t bits_per_element, size_t CF_ss_bits>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision, bool validate_before_benchmarking,
                    bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512, bool TC, ostream &os) -> std::stringstream {
 
@@ -103,10 +102,10 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
     }
     if (CF_ss) {
         std::stringstream v_info;
-        using Table = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO, cuckoofilter::PackedTable>;
+        using Table = cuckoofilter::CuckooFilter<uint64_t, CF_ss_bits, cuckoofilter::PackedTable>;
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, CF_ss_bits, 1, .5, &v_info);
             debug_info << v_info.str();
             if (!valid)
                 std::cout << "CF-ss is not valid!" << std::endl;
@@ -278,7 +277,7 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 // }
 
 
-template<typename itemType, size_t bits_per_element>
+template<typename itemType, size_t bits_per_element, size_t CF_ss_bits>
 auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, bool validate_before_benchmarking,
                           bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512, bool TC,
                           double load, ostream &os) -> std::stringstream {
@@ -287,7 +286,7 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
     set_init(add_size, &v_add);
     set_init(lookup_reps, &v_find);
     vector<unordered_set<itemType> *> elements{&v_add, &v_find, &v_delete};
-    
+
     std::stringstream debug_info;
     std::stringstream min_output = print_false_positive_rates_header();
     std::cout << min_output.str();
@@ -325,21 +324,22 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
     }
     if (CF_ss) {
         std::stringstream ss;
-        using Table = cuckoofilter::CuckooFilter<uint64_t, bits_per_element, cuckoofilter::PackedTable>;
+
+        using Table = cuckoofilter::CuckooFilter<uint64_t, CF_ss_bits, cuckoofilter::PackedTable>;
+
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
         bool valid = true;
         if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5, &ss);
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, CF_ss_bits, 1, .5, &ss);
             if (!valid)
                 std::cout << filter_name << " is not valid!" << std::endl;
             debug_info << ss.str();
-            
         }
         if ((!validate_before_benchmarking) or (valid)) {
             std::stringstream end;
             auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
-            end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp));
+            end = print_single_round_false_positive_rates(filter_name, lookup_reps, CF_ss_bits, std::get<1>(tp), std::get<0>(tp));
             min_output << end.str();
             std::cout << end.str();
         }
@@ -370,7 +370,6 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
             if (!valid)
                 std::cout << filter_name << " is not valid!" << std::endl;
             debug_info << ss.str();
-            
         }
         if ((!validate_before_benchmarking) or (valid)) {
             std::stringstream end;
@@ -408,7 +407,6 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
             min_output << end.str();
             std::cout << end.str();
         }
-
     }
     if (TC) {
         std::stringstream ss;
@@ -686,9 +684,9 @@ auto example2(ulong shift, ulong filters_indicator = -1, size_t bench_precision 
     size_t filter_max_capacity = 1u << shift;
     size_t lookup_reps = 1u << (shift + 2u);
     size_t error_power_inv = bits_per_item;
-    b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
-                                                    filters_indicator & 1, filters_indicator & 2, filters_indicator & 4,
-                                                    filters_indicator & 8, filters_indicator & 16);
+    b_all_wrapper<uint64_t, BITS_PER_ELEMENT_MACRO, BITS_PER_ELEMENT_MACRO>(filter_max_capacity, lookup_reps, error_power_inv, bench_precision,
+                                                                            filters_indicator & 1, filters_indicator & 2, filters_indicator & 4,
+                                                                            filters_indicator & 8, filters_indicator & 16);
 }
 
 /**High load benchmarking*/

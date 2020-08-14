@@ -42,7 +42,7 @@ class twoChoicer {
     const uint32_t seed{12345};
 
     const size_t pd_index_length, number_of_pd;
-    // const size_t sparse_element_length;
+    // const size_t spare_element_length;
     //    bool hashing_test;
     __m512i *pd_array;
 
@@ -168,8 +168,8 @@ public:
     //     size_t pd_index = -1;
     //     uint32_t quot = -1, r = -1;
     //     split(hash_val, &pd_index, &quot, &r);
-    //     // auto spare_val = hash_val & MASK(sparse_element_length);
-    //     // spare->insert(hash_val & MASK(sparse_element_length));
+    //     // auto spare_val = hash_val & MASK(spare_element_length);
+    //     // spare->insert(hash_val & MASK(spare_element_length));
     // }
 
     auto validate_capacity_functions(size_t pd_index) -> bool {
@@ -180,7 +180,7 @@ public:
         // const size_t num = 8;
         // size_t val[num] = {number_of_pd, capacity, quotient_range, single_pd_capacity, remainder_length,
         //                    pd_index_length,
-        //                    quotient_length, sparse_element_length};
+        //                    quotient_length, spare_element_length};
 
         // string names[num] = {"number_of_pd", "capacity", "quotient_range", "single_pd_capacity", "remainder_length",
         //                      "pd_index_length", "quotient_length", "spare_element_length"};
@@ -404,7 +404,7 @@ public:
     //     //        assert(c1 == c2);
     //     //        if (c2) return true;
 
-    //     // return spare->find(hash_val & MASK(sparse_element_length));
+    //     // return spare->find(hash_val & MASK(spare_element_length));
     // }
 
     /* inline void insert_helper(spareItemType hash_val) {
@@ -418,8 +418,8 @@ public:
             assert(pd512::is_full(&pd_array[pd_index]));
             pd_capacity_vec[pd_index] |= 1u;
             /**Todo!*/
-    // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
-    //         insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
+    // insert_to_spare_with_pop(hash_val & MASK(spare_element_length));
+    //         insert_to_spare_without_pop(hash_val & MASK(spare_element_length));
     //         return;
     //     }
     //     auto res = pd512::pd_add_50(quot, r, &pd_array[pd_index]);
@@ -539,34 +539,34 @@ public:
     // inline auto wrap_hash(itemType x) const -> spareItemType {
     //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
     //     return (Hash_ns::BobHash(&x, 8, 42));
-    // return (Hash_ns::BobHash(&x, 8, 42)) & MASK(sparse_element_length);
-    // return s_pd_filter::hashint64(x) & MASK(sparse_element_length);
+    // return (Hash_ns::BobHash(&x, 8, 42)) & MASK(spare_element_length);
+    // return s_pd_filter::hashint64(x) & MASK(spare_element_length);
 
     /*if (insert_counter < 10){
                 spareItemType h1 = s_pd_filter::hashint(x);
-                spareItemType h2 = s_pd_filter::my_hash64(x, 42) & MASK(sparse_element_length);
-                spareItemType h3 = s_pd_filter::hashint64(x) & MASK(sparse_element_length);
+                spareItemType h2 = s_pd_filter::my_hash64(x, 42) & MASK(spare_element_length);
+                spareItemType h3 = s_pd_filter::hashint64(x) & MASK(spare_element_length);
                 std::cout << "x: " << x << std::endl;
-                std::cout << "h1: " << h1 << "\t(" << (h1 & MASK(sparse_element_length)) << ")" <<  std::endl;
+                std::cout << "h1: " << h1 << "\t(" << (h1 & MASK(spare_element_length)) << ")" <<  std::endl;
                 std::cout << "h2: " << h2 << "\t(" << s_pd_filter::my_hash64(x, 42) << ")" << std::endl;
                 std::cout << "h3: " << h3 << "\t(" << s_pd_filter::hashint64(x) << ")" << std::endl;
                 std::cout << std::string(32,'-') << "\n" << std::endl;
             }*/
-    //        return s_pd_filter::my_hash64(x, 42) & MASK(sparse_element_length);
+    //        return s_pd_filter::my_hash64(x, 42) & MASK(spare_element_length);
     //        return s_pd_filter::hashint(x);
-    //        return s_pd_filter::hashint(x) & MASK(sparse_element_length);;
-    //        return s_pd_filter::hashint64(x) & MASK(sparse_element_length);
+    //        return s_pd_filter::hashint(x) & MASK(spare_element_length);;
+    //        return s_pd_filter::hashint64(x) & MASK(spare_element_length);
 
     /* Todo:
-                     * x &= MASK(sparse_element_length);
-                     * return s_pd_filter::hashint(x) & MASK(sparse_element_length);
+                     * x &= MASK(spare_element_length);
+                     * return s_pd_filter::hashint(x) & MASK(spare_element_length);
                      * is this necessary?
                      * */
 
-    //        assert(x == (x & MASK(sparse_element_length)));
-    // assert(x == (x & MASK(sparse_element_length)));
-    // return s_pd_filter::hashint(x) & MASK(sparse_element_length);
-    // if (sparse_element_length <= 32ul)
+    //        assert(x == (x & MASK(spare_element_length)));
+    // assert(x == (x & MASK(spare_element_length)));
+    // return s_pd_filter::hashint(x) & MASK(spare_element_length);
+    // if (spare_element_length <= 32ul)
     // {
 
     // }
@@ -576,8 +576,8 @@ public:
     /*
             // inline auto wrap_hash(const string *s) const -> spareItemType {
                 // assert(false);
-                // assert(sparse_element_length <= 32);
-                return s_pd_filter::my_hash(s, HASH_SEED) & MASK(sparse_element_length);
+                // assert(spare_element_length <= 32);
+                return s_pd_filter::my_hash(s, HASH_SEED) & MASK(spare_element_length);
             }
 
             inline void wrap_split(const string *s, size_t *pd_index, D_TYPE *q, D_TYPE *r) const {
@@ -631,14 +631,14 @@ public:
     //     size_t pd_index = -1;
     //     uint32_t quot = -1, r = -1;
     //     split(hash_val, &pd_index, &quot, &r);
-    //     auto temp = hash_val & MASK(sparse_element_length);
-    //     bool res = temp == (hash_val & sparse_element_length);
+    //     auto temp = hash_val & MASK(spare_element_length);
+    //     bool res = temp == (hash_val & spare_element_length);
     //     if (!res) {
     //         std::cout << "temp: " << temp << std::endl;
-    //         std::cout << "hash_val & sparse_element_length: " << (hash_val & sparse_element_length) << std::endl;
+    //         std::cout << "hash_val & spare_element_length: " << (hash_val & spare_element_length) << std::endl;
     //         std::cout << "hash_val " << (hash_val) << std::endl;
     //     }
-    //     return (temp == (hash_val & sparse_element_length));
+    //     return (temp == (hash_val & spare_element_length));
     // }
 
     // //     auto w_insert(const itemType s) -> db_key {
@@ -688,7 +688,7 @@ public:
     //             pd_capacity_vec[pd_index] |= 1u;
     //             /**Todo!*/
     //             insert_to_spare_without_pop(hash_val);
-    //             // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
+    //             // insert_to_spare_with_pop(hash_val & MASK(spare_element_length));
     //             return w_res;
     //         }
     //         //        auto res2 = pd_vec[pd_index]->insert(quot, r);
@@ -814,8 +814,8 @@ public:
     //                 pd_capacity_vec[pd_index] |= 1u;
     //                 /**Todo!*/
     //                 insert_to_spare_without_pop(hash_val);
-    //                 // insert_to_spare_with_pop(hash_val & MASK(sparse_element_length));
-    //                 //            insert_to_spare_without_pop(hash_val & MASK(sparse_element_length));
+    //                 // insert_to_spare_with_pop(hash_val & MASK(spare_element_length));
+    //                 //            insert_to_spare_without_pop(hash_val & MASK(spare_element_length));
     //                 return;
     //             }
     //             auto res = inlining_pd_add_50(quot, r, &pd_array[pd_index], pd_index);
