@@ -186,6 +186,7 @@ struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
 
     static void Remove(itemType key, Table *table)
     {
+        // std::cout << "Remove in Wrapper!" << std::endl;
         table->remove(key);
     }
 

@@ -109,29 +109,41 @@ public:
     }
 
     auto lookup(const itemType s) const -> bool {
-        size_t pd_index1 = -1, pd_index2 = -1;
-        uint32_t quot = -1, r = -1;
-        hash_for_buckets(s, &pd_index1, &pd_index2);
-        hash_for_fingerprint(s, &quot, &r);
+        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        auto h1 = Hash_ns::BobHash(&s, 16, 45679);
+        auto h2 = Hash_ns::BobHash(&s, 16, 389561);
+        auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
+        auto h4 = Hash_ns::BobHash(&s, 16, 23467721);
 
-        return (pd512::pd_find_50(quot, r, &pd_array[pd_index1]) || pd512::pd_find_50(quot, r, &pd_array[pd_index2]));
+        const uint32_t pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+        const uint32_t pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
+        const uint32_t quot = reduce32((uint32_t) h3, (uint32_t) quot_range);
+        const uint32_t rem = h4 & MASK(remainder_length);
+
+        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1]) || pd512::pd_find_50(quot, rem, &pd_array[pd_index2]));
     }
 
     void insert(const itemType s) {
-        size_t pd_index1 = -1, pd_index2 = -1;
-        uint32_t quot = -1, r = -1;
-        hash_for_buckets(s, &pd_index1, &pd_index2);
-        hash_for_fingerprint(s, &quot, &r);
+        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        auto h1 = Hash_ns::BobHash(&s, 16, 45679);
+        auto h2 = Hash_ns::BobHash(&s, 16, 389561);
+        auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
+        auto h4 = Hash_ns::BobHash(&s, 16, 23467721);
+
+        const uint32_t pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+        const uint32_t pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
+        const uint32_t quot = reduce32((uint32_t) h3, (uint32_t) quot_range);
+        const uint32_t rem = h4 & MASK(remainder_length);
 
         if (pd512::get_capacity(&pd_array[pd_index1]) < pd512::get_capacity(&pd_array[pd_index2])) {
-            auto res = pd512::pd_add_50(quot, r, &pd_array[pd_index1]);
+            auto res = pd512::pd_add_50(quot, rem, &pd_array[pd_index1]);
             if (!res) {
                 cout << "insertion failed!!!" << std::endl;
                 assert(false);
             }
             return;
         } else {
-            auto res = pd512::pd_add_50(quot, r, &pd_array[pd_index2]);
+            auto res = pd512::pd_add_50(quot, rem, &pd_array[pd_index2]);
             if (!res) {
                 cout << "insertion failed!!!" << std::endl;
                 assert(false);
@@ -139,31 +151,49 @@ public:
             return;
         }
     }
+    void remove(const itemType s) {
+        assert(false);
+        //// This can not work unless <pd_index2> is equal to f(pd_index2), where f is a permutation of order 2. 
+        assert(lookup(s));
 
-    inline void hash_for_buckets(const itemType s, size_t *pd_index1, size_t *pd_index2) const {
+        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        auto h1 = Hash_ns::BobHash(&s, 16, 45679);
+        auto h2 = Hash_ns::BobHash(&s, 16, 389561);
+        auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
+        auto h4 = Hash_ns::BobHash(&s, 16, 23467721);
+
+        const uint32_t pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+        const uint32_t pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
+        const uint32_t quot = reduce32((uint32_t) h3, (uint32_t) quot_range);
+        const uint32_t rem = h4 & MASK(remainder_length);
+
+        pd512::conditional_remove(quot, rem, &pd_array[pd_index1]) || pd512::conditional_remove(quot, rem, &pd_array[pd_index2]);
+
+        // std::cout << "remove counter is: " << remove_counter++ << std::endl;
+        // return remove_helper(wrap_hash(x));
+    }
+
+    inline void hash_for_buckets(const itemType s, uint32_t *pd_index1, uint32_t *pd_index2) const {
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
         unsigned long long h1 = Hash_ns::BobHash(&s, 16, 45679);
         unsigned long long h2 = Hash_ns::BobHash(&s, 16, 389561);
+        *pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+        *pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
         // unsigned long long h1 = all_hash & MASK(32ull);
         // unsigned long long h2 = all_hash >> 32ull;
-        *pd_index1 = h1 % number_of_pd;
-        *pd_index2 = h2 % number_of_pd;
+        // *pd_index1 = h1 % number_of_pd;
+        // *pd_index2 = h2 % number_of_pd;
     }
 
     inline void hash_for_fingerprint(const itemType s, uint32_t *quot, uint32_t *rem) const {
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
         unsigned long long h1 = Hash_ns::BobHash(&s, 16, 352582481);
         unsigned long long h2 = Hash_ns::BobHash(&s, 16, 23467721);
-        *quot = h1 % quotient_range;
+        *quot = reduce32((uint32_t) h1, (uint32_t) quot_range);
         *rem = h2 & MASK(remainder_length);
     }
 
-    void
-    remove(itemType x) {
-        assert(false);
-        // std::cout << "remove counter is: " << remove_counter++ << std::endl;
-        // return remove_helper(wrap_hash(x));
-    }
+
     // void insert_to_spare_without_pop(spareItemType hash_val) {
     //     size_t pd_index = -1;
     //     uint32_t quot = -1, r = -1;
@@ -187,7 +217,7 @@ public:
         // table_print(num, names, val);
     }
 
-    auto get_extended_info()->std::stringstream{
+    auto get_extended_info() -> std::stringstream {
         std::stringstream empty;
         empty << "Empty Data!\n";
         return empty;

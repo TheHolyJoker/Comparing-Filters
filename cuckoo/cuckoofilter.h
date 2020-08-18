@@ -1,17 +1,17 @@
 #ifndef CUCKOO_FILTER_CUCKOO_FILTER_H_
 #define CUCKOO_FILTER_CUCKOO_FILTER_H_
 
-#include <assert.h>
 #include <algorithm>
+#include <assert.h>
 
-#include "debug.h"
 #include "../hashutil.h"
+#include "debug.h"
 #include "packedtable.h"
 #include "printutil.h"
 #include "singletable.h"
 
 namespace cuckoofilter {
-// status returned by a cuckoo filter operation
+    // status returned by a cuckoo filter operation
     enum Status {
         Ok = 0,
         NotFound = 1,
@@ -19,19 +19,19 @@ namespace cuckoofilter {
         NotSupported = 3,
     };
 
-// maximum number of cuckoo kicks before claiming failure
+    // maximum number of cuckoo kicks before claiming failure
     const size_t kMaxCuckooCount = 500;
 
-// A cuckoo filter class exposes a Bloomier filter interface,
-// providing methods of Add, Delete, Contain. It takes three
-// template parameters:
-//   itemType:  the type of item you want to insert
-//   bits_per_item: how many bits each item is hashed into
-//   TableType: the storage of table, SingleTable by default, and
-// PackedTable to enable semi-sorting
+    // A cuckoo filter class exposes a Bloomier filter interface,
+    // providing methods of Add, Delete, Contain. It takes three
+    // template parameters:
+    //   itemType:  the type of item you want to insert
+    //   bits_per_item: how many bits each item is hashed into
+    //   TableType: the storage of table, SingleTable by default, and
+    // PackedTable to enable semi-sorting
     template<typename ItemType, size_t bits_per_item,
-            template<size_t> class TableType = SingleTable,
-            typename HashFamily = hashing::TwoIndependentMultiplyShift>
+             template<size_t> class TableType = SingleTable,
+             typename HashFamily = hashing::TwoIndependentMultiplyShift>
     class CuckooFilter {
         // Storage of items
         TableType<bits_per_item> *table_;
@@ -53,6 +53,7 @@ namespace cuckoofilter {
             // table_->num_buckets is always a power of two, so modulo can be replaced
             // with
             // bitwise-and:
+            // return hv % (table_->NumBuckets() - 1);
             return hv & (table_->NumBuckets() - 1);
         }
 
@@ -75,7 +76,7 @@ namespace cuckoofilter {
             // index ^ HashUtil::BobHash((const void*) (&tag), 4)) & table_->INDEXMASK;
             // now doing a quick-n-dirty way:
             // 0x5bd1e995 is the hash constant from MurmurHash2
-            return IndexHash((uint32_t) (index ^ (tag * 0x5bd1e995)));
+            return IndexHash((uint32_t)(index ^ (tag * 0x5bd1e995)));
         }
 
         Status AddImpl(const size_t i, const uint32_t tag);
@@ -97,7 +98,6 @@ namespace cuckoofilter {
             victim_.used = false;
             table_ = new TableType<bits_per_item>(num_buckets);
             // std::cout << "byte size: "<< SizeInBytes() << std::endl;
-
         }
 
         ~CuckooFilter() { delete table_; }
@@ -123,7 +123,7 @@ namespace cuckoofilter {
     };
 
     template<typename ItemType, size_t bits_per_item,
-            template<size_t> class TableType, typename HashFamily>
+             template<size_t> class TableType, typename HashFamily>
     Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Add(
             const ItemType &item) {
         size_t i;
@@ -138,7 +138,7 @@ namespace cuckoofilter {
     }
 
     template<typename ItemType, size_t bits_per_item,
-            template<size_t> class TableType, typename HashFamily>
+             template<size_t> class TableType, typename HashFamily>
     Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImpl(
             const size_t i, const uint32_t tag) {
         size_t curindex = i;
@@ -165,7 +165,7 @@ namespace cuckoofilter {
     }
 
     template<typename ItemType, size_t bits_per_item,
-            template<size_t> class TableType, typename HashFamily>
+             template<size_t> class TableType, typename HashFamily>
     Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Contain(
             const ItemType &key) const {
         bool found = false;
@@ -188,7 +188,7 @@ namespace cuckoofilter {
     }
 
     template<typename ItemType, size_t bits_per_item,
-            template<size_t> class TableType, typename HashFamily>
+             template<size_t> class TableType, typename HashFamily>
     Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Delete(
             const ItemType &key) {
         size_t i1, i2;
@@ -237,5 +237,5 @@ namespace cuckoofilter {
         }
         return ss.str();
     }
-}  // namespace cuckoofilter
-#endif  // CUCKOO_FILTER_CUCKOO_FILTER_H_
+}// namespace cuckoofilter
+#endif// CUCKOO_FILTER_CUCKOO_FILTER_H_

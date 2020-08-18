@@ -20,7 +20,8 @@ typedef chrono::nanoseconds ns;
 
 ///////Basic functions:
 template<typename itemType>
-auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements);
+auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements, size_t bench_precision = 20);
+
 
 // template<typename itemType>
 // auto init_elements_att(size_t max_filter_capacity, size_t lookup_reps, vector<unordered_set<itemType> *> *elements);
@@ -142,7 +143,7 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
         debug_info << ss.str();
     }
     if (pd512) {
-        // while (true) {
+
         using spare_item = uint64_t;
         using temp_hash = att_hTable<spare_item, 4>;
         std::stringstream v_info;
@@ -156,11 +157,12 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
                 std::cout << "pd512 is not valid!" << std::endl;
         }
         if ((!validate_before_benchmarking) or (valid)) {
-            std::stringstream ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            std::stringstream ss;
+            // while (true) {
+                ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            // }
             debug_info << ss.str();
         }
-
-        // }
     }
     if (TC) {
         // while (true) {
@@ -235,27 +237,29 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     auto find_vec = elements->at(1);
     auto delete_vec = elements->at(2);
 
+
     size_t add_step = add_vec->size() / benchmark_precision;
     size_t find_step = find_vec->size() / benchmark_precision;
-    size_t delete_step = delete_vec->size() / benchmark_precision;
-    auto insertion_time = time_insertions(wrap_filter, add_vec, round_counter * add_step,
-                                          (round_counter + 1) * add_step);
-    auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step,
-                                            (round_counter + 1) * find_step);
-    auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, add_step);
+    // size_t delete_step = delete_vec->size() / benchmark_precision;
 
     size_t removal_time = 0;
     if (delete_vec->size()) {
-        removal_time = time_deletions(wrap_filter, delete_vec, round_counter * delete_step,
-                                      (round_counter + 1) * delete_step);
+        auto del_insertion_time = time_insertions(wrap_filter, delete_vec, 0, delete_vec->size());
+        removal_time = time_deletions(wrap_filter, delete_vec, 0, delete_vec->size());
     }
+
+
+    auto insertion_time = time_insertions(wrap_filter, add_vec, round_counter * add_step, (round_counter + 1) * add_step);
+    auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step, (round_counter + 1) * find_step);
+    auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, add_step);
+
 
     const size_t var_num = 6;
     //    string names[var_num] = {"Load", "insertion_time", "uniform_lookup_time", "true_lookup_time", "removal_time"};
     size_t values[var_num] = {round_counter + 1, benchmark_precision, insertion_time, uniform_lookup_time,
                               true_lookup_time, removal_time};
 
-    size_t divisors[var_num - 2] = {add_step, find_step, delete_step};
+    size_t divisors[var_num - 2] = {add_step, find_step, delete_vec->size()};
     auto temp = print_single_round(var_num, values, divisors);
     *ss << temp.str();
 
@@ -382,8 +386,6 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
     }
 
     if (pd512) {
-        int x = 1;
-
         // while (true) {
         std::stringstream ss;
         using spare_item = uint64_t;
@@ -407,6 +409,7 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
             min_output << end.str();
             std::cout << end.str();
         }
+        // }
     }
     if (TC) {
         std::stringstream ss;
@@ -488,10 +491,11 @@ auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *
 
 
 template<typename itemType>
-auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements) {
+auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements, size_t bench_precision) {
     fill_vec(elements->at(0), max_filter_capacity);
+    size_t del_size = max_filter_capacity / (double) bench_precision;
+    fill_vec(elements->at(2), del_size);
     fill_vec(elements->at(1), lookup_reps);
-    //    fill_vec(&elements, load->at(2),0);
 }
 
 

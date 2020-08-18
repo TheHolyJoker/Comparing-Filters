@@ -95,7 +95,59 @@ void testing_cf_ss() {
     // assert(FilterAPI<Table>::Contain(x, &filter));
 }
 
+
+void simple_deletion() {
+    using spare_item = uint64_t;
+    using temp_hash = att_hTable<spare_item, 4>;
+    using Table = att_d512<temp_hash, spare_item, uint64_t>;
+    Table filter = FilterAPI<Table>::ConstructFromAddCount(1000);
+
+    std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
+    FilterAPI<Table>::Add(4242, &filter);
+    std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
+    assert(FilterAPI<Table>::Contain(4242, &filter));
+    FilterAPI<Table>::Remove(4242, &filter);
+    std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
+    assert(!FilterAPI<Table>::Contain(4242, &filter));
+}
 int main(int argc, char **argv) {
+
+
+    // return 0;
+
+
+    // std::cout << "Add(4242): " << (FilterAPI<Table>::Add(4242, &filter)) << std::endl;
+
+
+    // uint64_t arr[8] __attribute__((aligned(64))) = {(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0};
+    // for (size_t i = 0; i < 8; i++)
+    // {
+    //     std::cout << "arr[i]: " << arr[i] << std::endl;
+    // }
+
+    // auto pd __attribute__((aligned(64))) = _mm512_load_epi64(&arr);
+    //  __m512i x;
+    //  __epi
+    //   = __m512i{(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0};
+    //  pd512::pd_add_50((uint64_t)i,(uint8_t) i, &pd);
+    // auto pd = __m512i{(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0};
+    // pd512::print512(&pd);
+    // pd512::pd_add_50((uint64_t)0,(char) 0, &pd);
+    // pd512::print512(&pd);
+    // pd512::pd_add_50((uint64_t)1,(char) 1, &pd);
+    // pd512::print512(&pd);
+    // pd512::pd_add_50(2,2, &pd);
+    // pd512::print512(&pd);
+    // pd512::pd_add_50(3,3, &pd);
+    // pd512::print512(&pd);
+    // for (size_t i = 0; i < 50; i++) {
+    //     pd512::pd_add_50(i, i, &pd);
+    // assert (pd512::pd_find_50(i, i, &pd));
+    // pd512::print512(&pd);
+    // }
+    // pd512::print512(&pd);
+    // return 0;
+
     // testing_cf_ss();
     // return 0;
     // srand(45);
@@ -120,7 +172,7 @@ int main(int argc, char **argv) {
 
     //Default values
     size_t filter_indicator = 127;
-    ulong shift = 25u;
+    ulong shift = 21u;
     size_t shift_add_to_lookups = 1u;
     size_t bench_precision = 8;
     size_t remainder_length = BITS_PER_ELEMENT_MACRO;
@@ -150,11 +202,34 @@ int main(int argc, char **argv) {
     // max_distinct_capacity = std::ceil(max_distinct_capacity * .51);
     using itemType = uint64_t;
 
-    // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
-    //         31205621, 31205621 * 2,
+
+    // size_t temp_cap = (1 << 21ul) * 0.88;
+
+    // std::stringstream ss;
+    size_t c = std::ceil((1 << 22u) * 0.88);
+    size_t r = 1 << 23u;
+    // fp_rates_all_wrapper<itemType, 8, 13>(
+    //         c,
+    //         r,
+    //         BITS_PER_ELEMENT_MACRO,
+    //         true,
+    //         true,
+    //         true,
+    //         true,
+    //         true,
+    //         true,
+    //         false,
+    //         true,
+    //         true);
+
+    // for (size_t i = 0; i < 1024ul; i++)
+    // {
+    //     size_t size = (rand() & MASK(23)) + 500000;
+    //     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
+    //         size, size<<1,
     //         BITS_PER_ELEMENT_MACRO,
     //         bench_precision,
-    //         false,
+    //         true,
     //         false,
     //         false,
     //         false,
@@ -163,42 +238,39 @@ int main(int argc, char **argv) {
     //         false,
     //         true,
     //         false);
-    // return 0;
 
-    size_t temp_cap = (1 << 21ul) * 0.88;
-
-    std::stringstream ss;
-    size_t c = std::ceil((1 << 22u) * 0.88);
-    size_t r = 1 << 23u;
-    fp_rates_all_wrapper<itemType, 8, 13>(
-            c,
-            r,
-            BITS_PER_ELEMENT_MACRO,
-            true,
-            true,
-            true,
-            true,
-            true,
-            true,
-            false,
-            true,
-            true);
-
+    // }
+    
+    // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
+    //         500000, 500000 * 2,
+    //         BITS_PER_ELEMENT_MACRO,
+    //         bench_precision,
+    //         true,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         true,
+    //         false);
 
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
             31205621, 31205621 * 2,
             BITS_PER_ELEMENT_MACRO,
             bench_precision,
             false,
-            true,
-            true,
-            true,
-            true,
-            true,
+            false,
+            false,
+            false,
+            false,
+            false,
             false,
             true,
-            true);
+            false);
 
+
+    return 0;
     fp_rates_all_wrapper<itemType, 12, 13>(
             c,
             r,
