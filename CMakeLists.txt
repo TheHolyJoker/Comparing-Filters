@@ -41,7 +41,7 @@ add_executable(
         PD_Filter/hash_table.hpp PD_Filter/hash_table.cpp
         PD_Filter/dict.hpp
         PD_Filter/macros.h
-        xxhash.h
+        #xxhash.h
 
         #        main.cpp
         #        morton/hash_util.h
