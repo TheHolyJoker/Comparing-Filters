@@ -89,10 +89,9 @@ namespace pd512 {
     inline bool pd_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
-        unsigned __int128 header = 0;
-        memcpy(&header, pd, sizeof(header));
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
         constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
-        header = header & kLeftoverMask;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
         // [begin,end) are the zeros in the header that correspond to the fingerprints
         // with quotient quot.
         const int64_t pop = _mm_popcnt_u64(header);
