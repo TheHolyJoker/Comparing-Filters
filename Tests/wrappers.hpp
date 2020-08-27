@@ -20,8 +20,8 @@
 #include "TPD_Filter/T_dict.hpp"
  //#include "../TPD_Filter/pd512_wrapper.hpp"
  //#include "dict512.hpp"
-#include "TPD_Filter/dict512.hpp"
-#include "d512/att_d512.hpp"
+#include "d512/Dict512.hpp"
+#include "TPD_Filter/old_dict512.hpp"
 #include "d512/twoChoicer.hpp"
 // #include "../cuckoo/cuckoofilter.h"
 #include "../cuckoofilter/src/cuckoofilter.h"
@@ -151,10 +151,9 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
 template <
         class TableType, typename spareItemType,
         typename itemType>
-struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
+struct FilterAPI<Dict512<TableType, spareItemType, itemType>>
 {
-    using Table = att_d512<TableType, spareItemType, itemType, 8, 51, 50>;
-    //    using Table = dict512<TableType, spareItemType, itemType>;
+    using Table = Dict512<TableType, spareItemType, itemType, 8, 51, 50>;
 
     static Table ConstructFromAddCount(size_t add_count)
     {
@@ -192,7 +191,10 @@ struct FilterAPI<att_d512<TableType, spareItemType, itemType>>
 
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
     {
+        
         return table->lookup(key);
+        // return table->bitwise_lookup(key);
+        // return table->minimal_lookup(key);
     }
 
     static string get_name(Table *table)
@@ -220,7 +222,7 @@ struct FilterAPI<twoChoicer<itemType>>
 
     static Table ConstructFromAddCount(size_t add_count)
     {
-        return Table(add_count, .9, .5);
+        return Table(add_count, .8, .5);
     }
 
     static void Add(itemType key, Table *table)
@@ -248,7 +250,8 @@ struct FilterAPI<twoChoicer<itemType>>
 
     static void Remove(itemType key, Table *table)
     {
-        table->remove(key);
+        throw std::runtime_error("Unsupported");
+        // table->remove(key);
     }
 
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
@@ -515,7 +518,7 @@ struct FilterAPI<MortonFilter>
     }
 };
 
-//template<typename itemType, size_t bits_per_item,brancless, Hashfam>
+//template<typename itemType, size_t bits_per_item,branchless, Hashfam>
 //template<typename itemType, size_t bits_per_item, bool branchless, typename HashFamily>
 //template<typename itemType, template<typename> class TableType>
 
@@ -743,10 +746,10 @@ template <
     class TableType, typename spareItemType,
     typename itemType>
     struct FilterAPI<
-    dict512<TableType, spareItemType,
+    old_dict512<TableType, spareItemType,
     itemType>>
 {
-    using Table = dict512<TableType, spareItemType, itemType, 8, 51, 50>;
+    using Table = old_dict512<TableType, spareItemType, itemType, 8, 51, 50>;
     //    using Table = dict512<TableType, spareItemType, itemType>;
 
     static Table ConstructFromAddCount(size_t add_count)

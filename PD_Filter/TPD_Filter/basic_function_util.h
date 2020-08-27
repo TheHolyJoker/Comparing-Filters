@@ -28,6 +28,13 @@ auto compute_spare_element_size(size_t max_number_of_elements, float level1_load
 auto pd_filter_total_byte_size(size_t max_number_of_elements, size_t max_capacity, double l1_load, double l2_load) -> size_t;
 
 /* Taken from the Xor filter repository https://github.com/FastFilter/fastfilter_cpp.*/
+
+__attribute__((always_inline))
+inline uint16_t reduce16(uint16_t hash, uint16_t n) {
+    // http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/
+    return (uint16_t) (((uint32_t) hash * n) >> 16);
+}
+
 __attribute__((always_inline))
 inline uint32_t reduce32(uint32_t hash, uint32_t n) {
     // http://lemire.me/blog/2016/06/27/a-fast-alternative-to-the-modulo-reduction/

@@ -41,6 +41,9 @@
 #define MAX_CUCKOO_LOOP (256)
 #define EMPTY (0x80000000)
 #define DEFAULT_BUCKET_SIZE (4)
+
+constexpr static uint32_t HTA_seed1{123123}, HTA_seed2{456456};
+
 //#define MAX_CUCKOO_LOOP_MULT (128)
 
 

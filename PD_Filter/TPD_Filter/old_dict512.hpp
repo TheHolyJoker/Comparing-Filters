@@ -10,8 +10,8 @@
 #include "pd512_wrapper.hpp"
 #include <cstring>
 
-#define D512_DB1 (true)
-#define D512_DB2 (true & D512_DB1)
+#define OLD_D512_DB1 (true)
+#define OLD_D512_DB2 (true & OLD_D512_DB1)
 
 template <
     class TableType, typename spareItemType,
@@ -19,7 +19,7 @@ template <
     size_t bits_per_item = 8,
     size_t max_capacity = 51,
     size_t quot_range = 50>
-class dict512 {
+class old_dict512 {
     //    using basic_tpd = temp_PD<slot_type, bits_per_item, max_capacity>;
 
     pd512_wrapper* pd_array;
@@ -39,7 +39,7 @@ class dict512 {
     const size_t sparse_element_length;
 
 public:
-    dict512(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
+    old_dict512(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
         : number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))
         , pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)))
         , sparse_element_length(pd_index_length + quotient_length + remainder_length)
@@ -78,7 +78,7 @@ public:
         pd_capacity_vec.resize(number_of_pd, 0);
     }
 
-    virtual ~dict512()
+    virtual ~old_dict512()
     {
         std::cout << "spare capacity is:" << spare->get_capacity() << std::endl;
         free(pd_array);
@@ -328,7 +328,7 @@ private:
 
     inline void remove_helper(spareItemType hash_val)
     {
-        if (D512_DB1)
+        if (OLD_D512_DB1)
             assert(lookup_helper(hash_val));
         size_t pd_index = -1;
         uint32_t quot = -1, r = -1;
@@ -420,7 +420,7 @@ private:
             cout << "element with hash_val: (" << element << ") was pop." << endl;
             return true;
         }
-        if (D512_DB1) {
+        if (OLD_D512_DB1) {
             assert(pd_array[pd_index].is_full());
 
             /*             auto cap = pd_array[pd_index].get_capacity();

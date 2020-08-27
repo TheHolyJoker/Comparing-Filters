@@ -143,13 +143,16 @@ auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_se
 }
 
 template<class Table, typename itemType>
-auto v_deleting(Table *wrap_filter, unordered_set<itemType> *to_be_deleted_set,
+auto uset_deleting(Table *wrap_filter, unordered_set<itemType> *to_be_deleted_set,
                 unordered_set<itemType> *to_keep_elements_set) -> bool {
     size_t counter = 0;
     for (auto el : *to_be_deleted_set) {
         if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
-            std::cout << "In deletions (v_deleting with unordered set type): " << std::endl;
+            string line = std::string(80,'&');
+            std::cout << line << std::endl;
+            std::cout << "In deletions (uset_deleting with unordered set type): " << std::endl;
             std::cout << "Lookup failed.\t counter =  " << counter << "/" << to_be_deleted_set->size() << std::endl;
+            std::cout << line << std::endl;
 
             return false;
         }
@@ -169,7 +172,7 @@ auto v_deleting(Table *wrap_filter, unordered_set<itemType> *to_be_deleted_set,
 }
 
 template<class Table, typename itemType>
-auto v_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t start, size_t end) -> bool {
+auto vec_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t start, size_t end) -> bool {
     try {
         FilterAPI<Table>::Remove(to_be_deleted_vec->at(start), wrap_filter);
     } catch (std::runtime_error &msg) {
@@ -180,7 +183,7 @@ auto v_deleting(Table *wrap_filter, vector<itemType> *to_be_deleted_vec, size_t 
         auto el = to_be_deleted_vec->at(i);
         if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
             auto db_res = FilterAPI<Table>::Contain(el, wrap_filter);
-            std::cout << "In deletions (v_deleting with vector type): " << std::endl;
+            std::cout << "In deletions (vec_deleting with vector type): " << std::endl;
             std::cout << "Lookup failed.\t counter =  " << i << "/" << (to_be_deleted_vec->size()) << std::endl;
 
             return false;
@@ -216,7 +219,7 @@ auto v_insertions(Table *wrap_filter, vector<itemType> *to_add_vec, size_t start
 
 template<class Table, typename itemType, bool block_insertion = false>
 auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-                   double level1_load_factor, double level2_load_factor, std::stringstream *ss) -> bool {
+                   double level1_load_factor, double level2_load_factor, std::stringstream *ss) -> int {
     //    Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     //    auto number_of_elements_in_the_filter = filter_max_capacity;
 
@@ -228,23 +231,21 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
 
     size_t counter = 0;
     /**Insertion*/
-    bool cond = v_insertion_plus_imm_lookups<Table, itemType, block_insertion>(wrap_filter, &member_set);
-    if (!cond) {
-        std::cout << "H91" << std::endl;
-        return false;
-    }
-    assert(cond);
-    cond &= v_insertion_plus_imm_lookups<Table, itemType, block_insertion>(wrap_filter, &to_be_deleted_set);
-    assert(cond);
-    // if (!cond)
-    //     return false;
+    bool valid = v_insertion_plus_imm_lookups<Table, itemType, block_insertion>(wrap_filter, &member_set);
+    if (!valid)
+        return -1;
+
+    valid &= v_insertion_plus_imm_lookups<Table, itemType, block_insertion>(wrap_filter, &to_be_deleted_set);
+    if (!valid)
+        return -2;
+
     /**Lookup*/
-    cond &= v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
-    // if (!cond)
-    //     return false;
-    assert(cond);
-    cond &= v_true_positive_elements<Table, itemType>(wrap_filter, &to_be_deleted_set);
-    assert(cond);
+    valid &= v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
+    if (!valid)
+        return -3;
+    valid &= v_true_positive_elements<Table, itemType>(wrap_filter, &to_be_deleted_set);
+    if (!valid)
+        return -4;
 
 
     /**Count False positive*/
@@ -265,10 +266,9 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
             //Validating there is no false negative.
             tp_counter++;
             assert(FilterAPI<Table>::Contain(iter, wrap_filter));
-            cond &= FilterAPI<Table>::Contain(iter, wrap_filter);
-            // if (!cond)
-            //     return false;
-            // continue;
+            valid &= FilterAPI<Table>::Contain(iter, wrap_filter);
+            if (!valid)
+                return -5;
         } else if (FilterAPI<Table>::Contain(iter, wrap_filter)) {
             fp_counter++;
         }
@@ -285,25 +285,23 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
 
     // std::cout << "deletion validation" << std::endl;
     counter = 0;
-    cond &= v_deleting<Table, itemType>(wrap_filter, &to_be_deleted_set, &member_set);
-    if (!cond) {
-        std::cout << "H92" << std::endl;
-        return false;
-    }
+    valid &= uset_deleting<Table, itemType>(wrap_filter, &to_be_deleted_set, &member_set);
+    if (!valid)
+        return -6;
 
-    assert(cond);
     /**Deletions*/
 
     /**Verifying no unwanted element was deleted (prone to error as deleting from filter is not well defined)*/
-    cond &= v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
-    // if (!cond)
-    //     return false;
+    valid &= v_true_positive_elements<Table, itemType>(wrap_filter, &member_set);
+    if (!valid)
+        return -7;
 
-    assert(cond);
+    return 1;
+    // if (!valid)
+    //     return false;
     // if (FilterAPI<Table>::get_ID(wrap_filter) == CF) {
     //     FilterAPI<Table>::get_dynamic_info(wrap_filter);
     // }
-    return cond;
 }
 
 
@@ -313,9 +311,13 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     size_t line_width = 160;// number of columns (6) * column's width (24)
     print_name(FilterAPI<Table>::get_name(&wrap_filter));
-    bool res = v_filter_core<Table, itemType, block_insertion>(&wrap_filter, filter_max_capacity, lookup_reps,
+    auto res = v_filter_core<Table, itemType, block_insertion>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                                error_power_inv, level1_load_factor, level2_load_factor, ss);
-    assert(res);
+    if (res != 1){
+        std::cout << "v_filter_core failed. Error value is: " << res << std::endl;
+        assert(false);
+    }
+    assert(res == 1);
     return res;
 }
 
@@ -330,9 +332,9 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity, error_power_inv);
     print_name(FilterAPI<Table>::get_name(&wrap_filter));
     std::stringstream ss;
-    bool res = v_filter_core<Table, itemType, false>(&wrap_filter, filter_max_capacity, lookup_reps,
+    auto res = v_filter_core<Table, itemType, false>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                      error_power_inv, level1_load_factor, level2_load_factor, &ss);
-    assert(res);
+    assert(res == 1);
     return res;
 }
 

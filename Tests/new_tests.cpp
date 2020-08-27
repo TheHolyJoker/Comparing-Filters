@@ -99,7 +99,7 @@ void testing_cf_ss() {
 void simple_deletion() {
     using spare_item = uint64_t;
     using temp_hash = att_hTable<spare_item, 4>;
-    using Table = att_d512<temp_hash, spare_item, uint64_t>;
+    using Table = Dict512<temp_hash, spare_item, uint64_t>;
     Table filter = FilterAPI<Table>::ConstructFromAddCount(1000);
 
     std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
@@ -252,22 +252,21 @@ int main(int argc, char **argv) {
     //         false,
     //         false,
     //         false,
-    //         true,
-    //         false);
-
+    //         1,1);
+    // return 0;
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
             31205621, 31205621 * 2,
             BITS_PER_ELEMENT_MACRO,
             bench_precision,
             false,
             false,
-            false,
-            false,
+            1,
+            0,
             false,
             false,
             false,
             true,
-            false);
+            true);
 
 
     return 0;

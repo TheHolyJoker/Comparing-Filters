@@ -5,7 +5,7 @@
 #include "Analyse/analyse.hpp"
 #include "TPD_Filter/att_hTable.hpp"
 #include "TPD_Filter/basic_function_util.h"
-#include "TPD_Filter/pd512.hpp"
+#include "d512/pd512.hpp"
 #include "hash_table.hpp"
 #include "printutil.hpp"
 // #include "pd512_wrapper.hpp"
@@ -31,8 +31,7 @@ template<
         size_t max_capacity = 51,
         size_t quot_range = 50>
 class twoChoicer {
-    vector<uint16_t> pd_capacity_vec;
-
+    hashing::TwoIndependentMultiplyShift hasher;
     size_t capacity{0};
     const size_t filter_max_capacity;
     const size_t remainder_length{bits_per_item},
@@ -66,86 +65,86 @@ public:
             return;
         }
         std::fill(pd_array, pd_array + number_of_pd, __m512i{(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0});
-        pd_capacity_vec.resize(number_of_pd, 0);
+        // pd_capacity_vec.resize(number_of_pd, 0);
     }
 
     virtual ~twoChoicer() {
-        /*             size_t temp_capacity = 0;
-            for (size_t i = 0; i < number_of_pd; i++) {
-                temp_capacity += (pd_capacity_vec[i] >> 1u);
-            }
-
-            // std::sum(pd_capacity_vec);
-            auto line = std::string(64, '*');
-            std::cout << line << std::endl;
-
-            std::cout << "filter max capacity is: " << str_format(filter_max_capacity) << std::endl;
-            std::cout << "l1_capacity is: " << str_format(temp_capacity) << std::endl;
-            std::cout << "total capacity is: " << str_format(temp_capacity + spare->get_capacity()) << std::endl;
-            std::cout << "spare capacity is: " << str_format(spare->get_capacity()) << std::endl;
-            std::cout << "spare load factor is: " << spare->get_load_factor() << std::endl;
-            double ratio = spare->get_capacity() /(double)temp_capacity;
-            std::cout << "l2/l1 capacity ratio is: " << ratio << std::endl;
-
-
-            if (insert_existing_counter) {
-                std::cout << "insert_existing_counter: "<< insert_existing_counter << std::endl;
-                double ratio = insert_existing_counter/ (double)filter_max_capacity;
-                assert(ratio > 0);
-                std::cout << "ratio to max capacity: "<< ratio << std::endl;
-
-            }
-            std::cout << line << std::endl;
-            get_dynamic_info();
-            std::cout << "l1 byte size is: " << str_format(get_byte_size()) << std::endl;
-            std::cout << "total byte size is: " << str_format(get_byte_size_with_spare()) << std::endl;
-            std::cout << line << std::endl;
-
-            spare->get_info();
- */
-
         free(pd_array);
-        pd_capacity_vec.clear();
+        // pd_capacity_vec.clear();
+    }
+
+    auto get_alt_index(uint32_t index, uint32_t rem) const -> uint32_t {
+        return reduce32((uint32_t)(index ^ (rem * 0x5bd1e995)), (uint32_t) number_of_pd);
     }
 
     auto lookup(const itemType s) const -> bool {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        auto h1 = Hash_ns::BobHash(&s, 16, 45679);
-        auto h2 = Hash_ns::BobHash(&s, 16, 389561);
-        auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
-        auto h4 = Hash_ns::BobHash(&s, 16, 23467721);
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // uint32_t out1 = 647586, out2 = 14253653;
+        // Hash_ns::BobHash(&s, 8, &out1, &out2);
+        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
+        // assert(pd_index < number_of_pd);
+        // assert(quot <= 50);
 
-        const uint32_t pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
-        const uint32_t pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
-        const uint32_t quot = reduce32((uint32_t) h3, (uint32_t) quot_range);
-        const uint32_t rem = h4 & MASK(remainder_length);
+        uint64_t hash_res = hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2 ^ out1, (uint32_t) quot_range);
+        const uint8_t rem = (out2 ^ out1) & MASK(bits_per_item);
+        assert(pd_index1 < number_of_pd);
+        assert(quot <= 50);
 
-        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1]) || pd512::pd_find_50(quot, rem, &pd_array[pd_index2]));
+        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1])) || (pd512::pd_find_50(quot, rem, &pd_array[reduce32(out2, (uint32_t) number_of_pd)]));
+        // ((pd_capacity_vec[pd_index] & 1u) &&
+        //         spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // auto h1 = Hash_ns::BobHash(&s, 16, 45679);
+        // auto h2 = Hash_ns::BobHash(&s, 16, 389561);
+        // auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
+        // auto h4 = Hash_ns::BobHash(&s, 16, 23467721);
+
+        // const uint32_t pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
+        // const uint32_t quot = reduce32((uint32_t) h3, (uint32_t) quot_range);
+        // const uint32_t rem = h4 & MASK(remainder_length);
+
+        // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1]) || pd512::pd_find_50(quot, rem, &pd_array[pd_index2]));
     }
 
     void insert(const itemType s) {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        auto h1 = Hash_ns::BobHash(&s, 16, 45679);
-        auto h2 = Hash_ns::BobHash(&s, 16, 389561);
-        auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
-        auto h4 = Hash_ns::BobHash(&s, 16, 23467721);
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // auto h1 = Hash_ns::BobHash(&s, 16, 45679);
+        // auto h2 = Hash_ns::BobHash(&s, 16, 389561);
+        // auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
+        // auto h4 = Hash_ns::BobHash(&s, 16, 23467721);
 
-        const uint32_t pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
-        const uint32_t pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
-        const uint32_t quot = reduce32((uint32_t) h3, (uint32_t) quot_range);
-        const uint32_t rem = h4 & MASK(remainder_length);
+        // const uint32_t pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
+        // const uint32_t quot = reduce32((uint32_t) h3, (uint32_t) quot_range);
+        // const uint32_t rem = h4 & MASK(remainder_length);
+
+        uint64_t hash_res = hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2 ^ out1, (uint32_t) quot_range);
+        const uint8_t rem = (out2 ^ out1) & MASK(bits_per_item);
+
+        // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) || (pd512::pd_find_50(quot, rem, &pd_array[get_alt_index(pd_index, rem)]));
 
         if (pd512::get_capacity(&pd_array[pd_index1]) < pd512::get_capacity(&pd_array[pd_index2])) {
             auto res = pd512::pd_add_50(quot, rem, &pd_array[pd_index1]);
             if (!res) {
-                cout << "insertion failed!!!" << std::endl;
+                cout << "insertion failed1!!!" << std::endl;
                 assert(false);
             }
             return;
         } else {
             auto res = pd512::pd_add_50(quot, rem, &pd_array[pd_index2]);
             if (!res) {
-                cout << "insertion failed!!!" << std::endl;
+                cout << "insertion failed2!!!" << std::endl;
                 assert(false);
             }
             return;
@@ -153,10 +152,20 @@ public:
     }
     void remove(const itemType s) {
         assert(false);
-        //// This can not work unless <pd_index2> is equal to f(pd_index2), where f is a permutation of order 2. 
+        //// This can not work unless <pd_index2> is equal to f(pd_index2), where f is a permutation of order 2.
         assert(lookup(s));
 
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        uint64_t hash_res = hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2 ^ out1, (uint32_t) quot_range);
+        const uint8_t rem = (out2 ^ out1) & MASK(bits_per_item);
+
+        pd512::conditional_remove(quot, rem, &pd_array[pd_index1]) || pd512::conditional_remove(quot, rem, &pd_array[reduce32(out2, (uint32_t) number_of_pd)]);
+        // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) || (pd512::pd_find_50(quot, rem, &pd_array[alt_index(pd_index, rem)]));
+
+        /* using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
         auto h1 = Hash_ns::BobHash(&s, 16, 45679);
         auto h2 = Hash_ns::BobHash(&s, 16, 389561);
         auto h3 = Hash_ns::BobHash(&s, 16, 352582481);
@@ -168,7 +177,7 @@ public:
         const uint32_t rem = h4 & MASK(remainder_length);
 
         pd512::conditional_remove(quot, rem, &pd_array[pd_index1]) || pd512::conditional_remove(quot, rem, &pd_array[pd_index2]);
-
+ */
         // std::cout << "remove counter is: " << remove_counter++ << std::endl;
         // return remove_helper(wrap_hash(x));
     }
@@ -203,8 +212,8 @@ public:
     // }
 
     auto validate_capacity_functions(size_t pd_index) -> bool {
-        bool c = (pd512::get_capacity(&pd_array[pd_index]) == (pd512::get_capacity_naive(&pd_array[pd_index])));
-        return c & pd512::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
+        return (pd512::get_capacity(&pd_array[pd_index]) == (pd512::get_capacity_naive(&pd_array[pd_index])));
+        // return c & pd512::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
     }
     void get_static_info() {
         // const size_t num = 8;
@@ -287,14 +296,14 @@ public:
         for (int i = 0; i < number_of_pd; ++i) {
             res += pd512::get_capacity(&pd_array[i]);
         }
-        for (int i = 0; i < number_of_pd; ++i) {
-            validate_res += (pd_capacity_vec[i] >> 1u);
-        }
-        if (res != validate_res) {
-            std::cout << "res: " << res << std::endl;
-            std::cout << "validate_res: " << validate_res << std::endl;
-            assert(false);
-        }
+        // for (int i = 0; i < number_of_pd; ++i) {
+        // validate_res += (pd_capacity_vec[i] >> 1u);
+        // }
+        // if (res != validate_res) {
+        //     std::cout << "res: " << res << std::endl;
+        //     std::cout << "validate_res: " << validate_res << std::endl;
+        //     assert(false);
+        // }
         return res;
     }
 
@@ -302,16 +311,11 @@ public:
         return "twoChoicer";
     }
 
-    auto count_overflowing_PDs() -> size_t {
+    auto count_full_PDs() -> size_t {
         size_t count_overflowing_PD = 0;
         for (int i = 0; i < number_of_pd; ++i) {
-            bool add_cond = (pd_capacity_vec[i] & 1u);
-            count_overflowing_PD += add_cond;
-            bool is_full = pd512::is_full(&pd_array[i]);
-            //            bool is_full2 = pd_vec[i]->is_full();
-            //            assert(is_full == is_full2);
-            bool final = (!add_cond or is_full);
-            assert(final);
+            count_overflowing_PD += pd512::is_full(&pd_array[i]);
+            ;
         }
         return count_overflowing_PD;
     }
@@ -319,32 +323,7 @@ public:
     auto count_empty_PDs() -> size_t {
         size_t count_empty_PD = 0;
         for (int i = 0; i < number_of_pd; ++i) {
-            /* bool temp_cond = (pd_capacity_vec[i] >> 1ul) == pd512::get_capacity(&pd_array[i]);
-                size_t r1 = pd_capacity_vec[i] >> 1ul;
-                size_t r2 = pd512::get_capacity(&pd_array[i]);
-                size_t r3 = pd512::get_capacity(&pd_array[i]);
-
-                if (!temp_cond) {
-                    if (r1 == r2) {
-                        std::cout << "r3 is wrong: " << r3 << "\t instead of " << r1 << std::endl;
-                        // assert(false);
-
-                    }
-                    else {
-                        std::cout << "r1 is: " << r1 << std::endl;
-                        std::cout << "r2 is: " << r2 << std::endl;
-                        std::cout << "r3 is: " << r3 << std::endl;
-                        assert(false);
-                    }
-                } */
-            assert((pd_capacity_vec[i] >> 1ul) == pd512::get_capacity(&pd_array[i]));
-            bool add_cond = (pd_capacity_vec[i] <= 0);
-            count_empty_PD += add_cond;
-            // bool is_full = pd512::is_full(&pd_array[i]);
-            //            bool is_full2 = pd_vec[i]->is_full();
-            //            assert(is_full == is_full2);
-            // bool final = (!add_cond or is_full);
-            // assert(final);
+            count_empty_PD += pd512::get_capacity(&pd_array[i]) == 0;
         }
         return count_empty_PD;
     }

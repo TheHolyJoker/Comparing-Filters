@@ -6,8 +6,10 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
+
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
+
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -ggdb")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
@@ -41,7 +43,7 @@ add_executable(
         PD_Filter/hash_table.hpp PD_Filter/hash_table.cpp
         PD_Filter/dict.hpp
         PD_Filter/macros.h
-        xxhash.h
+        # xxhash.h
 
         #        main.cpp
         #        morton/hash_util.h
@@ -60,16 +62,18 @@ add_executable(
         PD_Filter/TPD_Filter/T_dict.hpp
         PD_Filter/TPD_Filter/att_hTable.hpp
         PD_Filter/TPD_Filter/TPD.hpp
-        PD_Filter/TPD_Filter/dict512.hpp
-        PD_Filter/TPD_Filter/pd512.hpp
-        PD_Filter/TPD_Filter/pd512.cpp
+        PD_Filter/TPD_Filter/old_dict512.hpp
         #        TPD_Filter/pd-test.cpp
         PD_Filter/TPD_Filter/pd512_wrapper.hpp
         PD_Filter/TPD_Filter/basic_function_util.cpp PD_Filter/TPD_Filter/basic_function_util.h
         PD_Filter/Analyse/analyse.hpp PD_Filter/Analyse/analyse.cpp
 
-        PD_Filter/d512/att_d512.hpp
+        PD_Filter/d512/pd512.hpp
+        PD_Filter/d512/pd512.cpp
+        PD_Filter/d512/Dict512.hpp
         PD_Filter/d512/twoChoicer.hpp
+        PD_Filter/d512/hashTable_Aligned.hpp
+        PD_Filter/d512/hashTable_Packed.hpp
         PD_Filter/Safe/safe512.hpp
         PD_Filter/Safe/cc_pd.hpp
         PD_Filter/Validation/validate_hash_table.hpp PD_Filter/Validation/validate_hash_table.cpp

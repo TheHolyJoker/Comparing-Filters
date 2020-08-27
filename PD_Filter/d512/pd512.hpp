@@ -13,8 +13,8 @@
 
 #include <iostream>
 
-// #include "immintrin.h"
 #include <immintrin.h>
+// #include "immintrin.h"
 //#include "x86intrin.h"
 
 namespace pd512 {
@@ -87,6 +87,32 @@ namespace pd512 {
     bool pd_find_64(int64_t quot, char rem, const __m512i *pd);
 
     inline bool pd_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+        
+        // [begin,end) are the zeros in the header that correspond to the fingerprints
+        // with quotient quot.
+        const int64_t pop = _mm_popcnt_u64(header);
+        const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
+        const uint64_t end = select128withPop64(header, quot, pop) - quot;
+        if (begin == end) return false;
+        assert(begin <= end);
+        assert(end <= 51);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        // round up to remove the header
+        constexpr unsigned kHeaderBytes = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        assert(kHeaderBytes < sizeof(header));
+        v = v >> kHeaderBytes;
+        return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+    }
+
+
+    inline bool pd_find_50_old(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
         unsigned __int128 header = 0;

@@ -145,10 +145,10 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
     if (pd512) {
 
         using spare_item = uint64_t;
-        using temp_hash = att_hTable<spare_item, 4>;
+        using temp_hash = hashTable_Aligned<spare_item, 4>;
         std::stringstream v_info;
 
-        using Table = att_d512<temp_hash, spare_item, itemType>;
+        using Table = Dict512<temp_hash, spare_item, itemType>;
         bool valid = true;
         if (validate_before_benchmarking) {
             valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
@@ -159,7 +159,7 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
         if ((!validate_before_benchmarking) or (valid)) {
             std::stringstream ss;
             // while (true) {
-                ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
             // }
             debug_info << ss.str();
         }
@@ -274,7 +274,7 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 //////////////////////////////////////////////////////////////
 
 // template<typename itemType>
-// auto wierd_name2(size_t max_filter_capacity, size_t lookup_reps, vector<unordered_set<itemType> *> *elements) {
+// auto weird_name2(size_t max_filter_capacity, size_t lookup_reps, vector<unordered_set<itemType> *> *elements) {
 //     set_init(max_filter_capacity, elements->at(0));
 //     set_init(lookup_reps, elements->at(1));
 //     // set_init(max_filter_capacity, elements->at(2)); // for deletions.
@@ -390,7 +390,7 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
         std::stringstream ss;
         using spare_item = uint64_t;
         using temp_hash = att_hTable<spare_item, 4>;
-        using Table = att_d512<temp_hash, spare_item, itemType>;
+        using Table = Dict512<temp_hash, spare_item, itemType>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
 
@@ -524,8 +524,13 @@ auto time_insertions(Table *wrap_filter, vector<itemType> *element_set, size_t s
 
 template<class Table, typename itemType>
 auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong {
+    try {
+        FilterAPI<Table>::Remove(element_set->at(start), wrap_filter);
+    } catch (std::runtime_error &msg) {
+        return 0;
+    }
     auto t0 = chrono::high_resolution_clock::now();
-    for (int i = start; i < end; ++i)
+    for (int i = start + 1; i < end; ++i)
         FilterAPI<Table>::Remove(element_set->at(i), wrap_filter);
     auto t1 = chrono::high_resolution_clock::now();
     return chrono::duration_cast<ns>(t1 - t0).count();
@@ -594,7 +599,7 @@ auto att_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t erro
 
     using spare_item = uint64_t;
     using temp_hash = att_hTable<spare_item, 4>;
-    using Table = att_d512<temp_hash, spare_item, itemType>;
+    using Table = Dict512<temp_hash, spare_item, itemType>;
     benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
     // // bool valid = (w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_element, 1, .5,os));
     // // if (!valid) {
@@ -749,7 +754,7 @@ auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bits_p
         cout << "delete (start, end): "
              << "( " << start << ", " << start + step_size << ")" << endl;
         //        if()
-        cond = v_deleting(&filter, &member_vec, start, start + step_size);
+        cond = vec_deleting(&filter, &member_vec, start, start + step_size);
         assert(cond);
         start = ((i + bench_precision) % (bench_precision + 1)) * step_size;
         cout << "add (start, end): "

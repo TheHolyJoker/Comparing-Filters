@@ -7,7 +7,7 @@
 #ifndef FILTERS_PD512_WRAPPER_HPP
 #define FILTERS_PD512_WRAPPER_HPP
 
-#include "pd512.hpp"
+#include "../d512/pd512.hpp"
 #include <cstddef>
 #include <memory>
 #include <string>

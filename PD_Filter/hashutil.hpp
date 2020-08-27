@@ -5,10 +5,10 @@
 #ifndef MINIMAL_S_PD_FILTER_HASHUTIL_HPP
 #define MINIMAL_S_PD_FILTER_HASHUTIL_HPP
 
+#include "../cuckoofilter/src/hashutil.h"
 #include <cstring>
 #include <stdint.h>
 #include <string>
-#include "../cuckoofilter/src/hashutil.h"
 
 namespace s_pd_filter {
     static const uint32_t SEED_1 = 1, SEED_2 = 42;
@@ -17,16 +17,16 @@ namespace s_pd_filter {
     // MurmurHash3 was written by Austin Appleby, and is placed in the public
     // domain. The author hereby disclaims copyright to this source code.
     //-----------------------------------------------------------------------------
-//    namespace MurmurHash {
+    //    namespace MurmurHash {
     void MurmurHash3_x86_32(const void *key, int len, uint32_t seed, void *out);
 
     void MurmurHash3_x86_128(const void *key, int len, uint32_t seed, void *out);
 
     void MurmurHash3_x64_128(const void *key, int len, uint32_t seed, void *out);
     //    }
-        //-----------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------
 
-        /*
+    /*
     * taken from
     * https://burtleburtle.net/bob/hash/integer.html
     * */
@@ -82,7 +82,7 @@ namespace s_pd_filter {
         x = hashint2(x);
         y = hashint(y);
         //        uint64_t res = (uint64_t) y | (((uint64_t) x) << 32ul);
-        return (uint64_t)y | (((uint64_t)x) << 32ul);
+        return (uint64_t) y | (((uint64_t) x) << 32ul);
         //
         //        a = (a^0xdeadbeef) + (a<<4);
         //        a = a ^ (a>>10);
@@ -95,34 +95,34 @@ namespace s_pd_filter {
         uint32_t y = a & 4294967295ul;
         x = hashint(x);
         y = hashint2(y);
-        return (uint64_t)y | (((uint64_t)x) << 32ul);
+        return (uint64_t) y | (((uint64_t) x) << 32ul);
     }
 
     inline uint32_t my_hash(const uint32_t el, uint32_t seed) {
         uint32_t a = 0, b = 0;
-        MurmurHash3_x86_32(&el, (int)(64), SEED_1, &a);
-        MurmurHash3_x86_32(&el, (int)(64), SEED_2, &b);
+        MurmurHash3_x86_32(&el, (int) (64), SEED_1, &a);
+        MurmurHash3_x86_32(&el, (int) (64), SEED_2, &b);
         return a + seed * b;
     }
 
     inline uint64_t my_hash64(const uint64_t el, uint32_t seed) {
         uint64_t a = 0, b = 0;
-        MurmurHash3_x86_32(&el, (int)(64), SEED_1, &a);
-        MurmurHash3_x86_32(&el, (int)(64), SEED_2, &b);
+        MurmurHash3_x86_32(&el, (int) (64), SEED_1, &a);
+        MurmurHash3_x86_32(&el, (int) (64), SEED_2, &b);
         return a + seed * b;
     }
 
     inline uint32_t my_hash(const uint64_t el, uint32_t seed) {
         uint32_t a = 0, b = 0;
-        MurmurHash3_x86_32(&el, (int)(64), SEED_1, &a);
-        MurmurHash3_x86_32(&el, (int)(64), SEED_2, &b);
+        MurmurHash3_x86_32(&el, (int) (64), SEED_1, &a);
+        MurmurHash3_x86_32(&el, (int) (64), SEED_2, &b);
         return a + seed * b;
     }
 
     inline uint32_t my_hash(const char *elementP, uint32_t seed) {
         uint32_t a, b;
-        MurmurHash3_x86_32(elementP, (int)(std::strlen(elementP)), SEED_1, &a);
-        MurmurHash3_x86_32(elementP, (int)(std::strlen(elementP)), SEED_2, &b);
+        MurmurHash3_x86_32(elementP, (int) (std::strlen(elementP)), SEED_1, &a);
+        MurmurHash3_x86_32(elementP, (int) (std::strlen(elementP)), SEED_2, &b);
         return a + seed * b;
     }
 
@@ -130,15 +130,15 @@ namespace s_pd_filter {
         //    assert(false);
         char const *cp = elementP->c_str();
         uint32_t a, b;
-        MurmurHash3_x86_32(cp, (int)(strlen(cp)), SEED_1, &a);
-        MurmurHash3_x86_32(cp, (int)(strlen(cp)), SEED_2, &b);
+        MurmurHash3_x86_32(cp, (int) (strlen(cp)), SEED_1, &a);
+        MurmurHash3_x86_32(cp, (int) (strlen(cp)), SEED_2, &b);
         return a + seed * b;
     }
 
     /* Taken from Morton filter repository*/
 
     // Based on code in the public domain (MurmurHash3a)
-    // See https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp 
+    // See https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp
     // 92cf370
     // The disavowing of the copyright is reproduced below and applies only to MurmurHash3:
     //-----------------------------------------------------------------------------
@@ -178,7 +178,7 @@ namespace s_pd_filter {
             // Useful for Cuckoo hashing, power of two choices, etc.
             // Use idx1 before idx2, when possible. idx1 and idx2 should be initialized to seeds.
             static void BobHash(const void *buf, size_t length, uint32_t *idx1,
-                uint32_t *idx2);
+                                uint32_t *idx2);
             static void BobHash(const std::string &s, uint32_t *idx1, uint32_t *idx2);
 
             // MurmurHash2
@@ -199,7 +199,9 @@ namespace s_pd_filter {
         private:
             HashUtil();
         };
-    }; //cuckoofilter 
-};
 
-#endif //MINIMAL_S_PD_FILTER_HASHUTIL_HPP
+        
+    };// namespace cuckoofilter
+};    // namespace s_pd_filter
+
+#endif//MINIMAL_S_PD_FILTER_HASHUTIL_HPP
