@@ -31,6 +31,7 @@ template<
         class TableType,
         typename spareItemType,
         typename itemType,
+        // bool round_to_upperpower2 = false,
         size_t bits_per_item = 8,
         size_t max_capacity = 51,
         size_t quot_range = 50>
@@ -63,53 +64,33 @@ class Dict512 {
 public:
     Dict512(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
         : filter_max_capacity(max_number_of_elements),
-          number_of_pd(compute_number_of_PD(max_number_of_elements,
-                                            max_capacity, level1_load_factor)),
-          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements,
-                                                         max_capacity, level1_load_factor))),
-          spare_element_length(pd_index_length + quotient_length + remainder_length) {
-
+          number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 0)),
+          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 0))),
+          spare_element_length(pd_index_length + quotient_length + remainder_length) 
+          {
+        // std::cout << "filter_max_capacity: " << filter_max_capacity << std::endl;
+        // std::cout << "number_of_PDs: " << number_of_pd << std::endl;
+        // std::cout << "pd_index_length: " << pd_index_length << std::endl;
         expected_pd_capacity = max_capacity * level1_load_factor;
         //        hashing_test = false;
         assert(single_pd_capacity == 51);
         assert(spare_element_length < (sizeof(spareItemType) * CHAR_BIT));
         assert(sizeof(itemType) <= sizeof(spareItemType));
 
-        /* Problems here. log2size is not used! fake news! */
         size_t log2_size = ceil_log2(max_number_of_elements);
         size_t temp = ceil(max_number_of_elements / (double) 1.5);
         auto res = my_ceil(temp, log2_size);
 
-        // std::cout << "max_number_of_elements is: " << max_number_of_elements << std::endl;
-        // std::cout << "spare size is: " << res << std::endl;
         size_t spare_max_capacity = res;
         spare = new TableType(spare_max_capacity, spare_element_length, level2_load_factor);
 
-        // assert(sizeof(pd512_wrapper) == 64);
-        // pd_array = new pd512_wrapper[number_of_pd];
-
-        /* pd_array = new __m512i[number_of_pd];
-            assert(is_aligned<__m512i>(pd_array));
-            std::fill(pd_array, pd_array + number_of_pd,
-                      __m512i{(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0});
-            */
         int ok = posix_memalign((void **) &pd_array, 64, 64 * number_of_pd);
-
         if (ok != 0) {
             cout << "Failed!!!" << endl;
             assert(false);
             return;
         }
         std::fill(pd_array, pd_array + number_of_pd, __m512i{(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0});
-
-        /* for (size_t i = 0; i < number_of_pd; i++)
-            {
-                assert(pd512::get_capacity(&pd_array[i]) == 0);
-                assert(pd512::validate_number_of_quotient(&pd_array[i]));
-            }
-
-            std::cout << "pass!" << std::endl;
-     */
         pd_capacity_vec.resize(number_of_pd, 0);
     }
 
@@ -135,6 +116,7 @@ public:
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index = out1 & MASK(pd_index_length);
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
         assert(pd_index < number_of_pd);
@@ -158,8 +140,8 @@ public:
         // const uint32_t pd_index = out1 % number_of_pd;
         // const uint64_t quot = (out2 >> 8) % quot_range;
         // const uint8_t rem = out2 % 255;
-
-        const uint32_t pd_index = out1 & MASK(pd_index_length);
+// 
+        // const uint32_t pd_index = out1 & MASK(pd_index_length);
         // const uint64_t quot = (((out2 >> 8u) & 63u) < 51) ? ((out2 >> 8u) & 63u) : 63 - ((out2 >> 8u) & 63u);
         const uint64_t quot = (out2 >> 8u) & 63u;
 
@@ -169,7 +151,7 @@ public:
         // const uint64_t quot = (out2 >> 8u) & quot_range;
         // const uint8_t rem = out2 & 255u;
 
-        return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
+        // return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
 
         // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) ||
         //        ((pd_capacity_vec[pd_index] & 1u) &&
@@ -235,6 +217,7 @@ public:
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index = out1 & MASK(pd_index_length);
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
         assert(pd_index < number_of_pd);
@@ -276,6 +259,7 @@ public:
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index = out1 & MASK(pd_index_length);
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
         assert(pd_index < number_of_pd);
@@ -378,7 +362,6 @@ public:
     }
 
     inline auto new_hasher(const itemType x) const -> uint64_t {
-
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
         uint32_t out1 = 647586, out2 = 14253653;
         Hash_ns::BobHash(&x, 8, &out1, &out2);
@@ -648,7 +631,6 @@ public:
     // }
 
     auto get_dynamic_info() -> std::stringstream {
-
         /* if (!hashing_test) {
                 std::cout << std::string(120, '$') << std::endl;
                 std::cout << "Probably did not hit all PD's. (hashing_test is false)." << std::endl;

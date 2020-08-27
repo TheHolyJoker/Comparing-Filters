@@ -112,107 +112,33 @@ namespace pd512 {
     }
 
 
-    inline bool pd_find_50_old(int64_t quot, uint8_t rem, const __m512i *pd) {
-        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
-        assert(quot < 50);
-        unsigned __int128 header = 0;
-        memcpy(&header, pd, sizeof(header));
-        const unsigned __int128 *h = (const unsigned __int128 *) pd;
-        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
-        const unsigned __int128 header = (*h) & kLeftoverMask;
-        // [begin,end) are the zeros in the header that correspond to the fingerprints
-        // with quotient quot.
-        const int64_t pop = _mm_popcnt_u64(header);
-        const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
-        const uint64_t end = select128withPop64(header, quot, pop) - quot;
-        assert(begin <= end);
-        assert(end <= 51);
-        const __m512i target = _mm512_set1_epi8(rem);
-        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
-        // round up to remove the header
-        constexpr unsigned kHeaderBytes = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-        assert(kHeaderBytes < sizeof(header));
-        v = v >> kHeaderBytes;
-        return (v & ((UINT64_C(1) << end) - 1)) >> begin;
-    }
-
+    bool pd_find_50_old(int64_t quot, uint8_t rem, const __m512i *pd);
+    
 
     // insert a pair of a quotient (mod 50) and an 8-bit remainder in a pocket dictionary.
     // Returns false if the dictionary is full.
-    inline bool pd_add_50_old(int64_t quot, char rem, __m512i *pd) {
-        assert(quot < 50);
-        // The header has size 50 + 51
-        unsigned __int128 header = 0;
-        // We need to copy (50+51) bits, but we copy slightly more and mask out the ones we
-        // don't care about.
-        //
-        // memcpy is the only defined punning operation
-        const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-        assert(kBytes2copy < sizeof(header));
-        memcpy(&header, pd, kBytes2copy);
-
-        // Number of bits to keep. Requires little-endianness
-        const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
-        const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
-        header = header & kLeftoverMask;
-        assert(popcount128(header) == 50);
-        const unsigned fill = select128(header, 50 - 1) - (50 - 1);
-        assert((fill <= 14) || (fill == pd_popcount(pd)));
-        assert((fill == 51) == pd_full(pd));
-        if (fill == 51)
-            return false;
-        // [begin,end) are the zeros in the header that correspond to the fingerprints with
-        // quotient quot.
-        const uint64_t begin = quot ? (select128(header, quot - 1) + 1) : 0;
-        const uint64_t end = select128(header, quot);
-        assert(begin <= end);
-        // assert(end <= 50 + 51);
-        unsigned __int128 new_header = header & ((((unsigned __int128) 1) << begin) - 1);
-        new_header |= ((header >> end) << (end + 1));
-        assert(popcount128(new_header) == 50);
-        assert(select128(new_header, 50 - 1) - (50 - 1) == fill + 1);
-        memcpy(pd, &new_header, kBytes2copy);
-        const uint64_t begin_fingerprint = begin - quot;
-        const uint64_t end_fingerprint = end - quot;
-        assert(begin_fingerprint <= end_fingerprint);
-        assert(end_fingerprint <= 51);
-        uint64_t i = begin_fingerprint;
-        for (; i < end_fingerprint; ++i) {
-            if (rem <= ((const char *) pd)[kBytes2copy + i])
-                break;
-        }
-        assert((i == end_fingerprint) || (rem <= ((const char *) pd)[kBytes2copy + i]));
-        memmove(&((char *) pd)[kBytes2copy + i + 1],
-                &((const char *) pd)[kBytes2copy + i],
-                sizeof(*pd) - (kBytes2copy + i + 1));
-        ((char *) pd)[kBytes2copy + i] = rem;
-
-        assert(pd_find_50(quot, rem, pd));
-        return true;
-        // //// jbapple: STOPPED HERE
-        // const __m512i target = _mm512_set1_epi8(rem);
-        // uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
-        // // round up to remove the header
-        // v = v >> ((51 + 50 + CHAR_BIT - 1) / CHAR_BIT);
-        // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
-    }
+    bool pd_add_50_old(int64_t quot, char rem, __m512i *pd);
+    
 
     inline bool pd_add_50(int64_t quot, char rem, __m512i *pd) {
         assert(quot < 50);
         // The header has size 50 + 51
-        unsigned __int128 header = 0;
+        // unsigned __int128 header = 0;
         // We need to copy (50+51) bits, but we copy slightly more and mask out the ones we
         // don't care about.
         //
         // memcpy is the only defined punning operation
-        const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-        assert(kBytes2copy < sizeof(header));
-        memcpy(&header, pd, kBytes2copy);
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+        constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        // assert(kBytes2copy < sizeof(header));
+        // memcpy(&header, pd, kBytes2copy);
 
         // Number of bits to keep. Requires little-endianness
-        const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
-        const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
-        header = header & kLeftoverMask;
+        // const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
+        // const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        // header = header & kLeftoverMask;
 
         assert(popcount128(header) == 50);
         const unsigned fill = select128(header, 50 - 1) - (50 - 1);
@@ -272,23 +198,25 @@ namespace pd512 {
         assert(quot < 50);
         assert(pd_find_50(quot, rem, pd));
         // The header has size 50 + 51
-        unsigned __int128 header = 0;
+        // unsigned __int128 header = 0;
         // We need to copy (50+51) bits, but we copy slightly more and mask out the ones we
         // don't care about.
         //
         // memcpy is the only defined punning operation
-        const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-        assert(kBytes2copy < sizeof(header));
-        memcpy(&header, pd, kBytes2copy);
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+        assert(popcount128(header) == 50);
+        constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        // assert(kBytes2copy < sizeof(header));
+        // memcpy(&header, pd, kBytes2copy);
         // auto my_temp = popcount128(header);
-
         // std::cout << "my_temp: " << my_temp << std::endl;
         // Number of bits to keep. Requires little-endianness
-        const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
-        const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
-        header = header & kLeftoverMask;
-        assert(popcount128(header) == 50);
-
+        // const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
+        // const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        // header = header & kLeftoverMask;
+        // assert(popcount128(header) == 50);
         //// const unsigned fill = select128(header, 50 - 1) - (50 - 1);
         //// assert((fill <= 14) || (fill == pd_popcount(pd)));
         //// assert((fill == 51) == pd_full(pd));
@@ -330,16 +258,19 @@ namespace pd512 {
 
     inline auto conditional_remove(int64_t quot, char rem, __m512i *pd) -> bool {
         assert(quot < 50);
-        unsigned __int128 header = 0;
-        const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-        assert(kBytes2copy < sizeof(header));
-        memcpy(&header, pd, kBytes2copy);
-        const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
-        const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
-        header = header & kLeftoverMask;
+        // unsigned __int128 header = 0;
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
         assert(popcount128(header) == 50);
-
-
+        constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        // const unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        // assert(kBytes2copy < sizeof(header));
+        // memcpy(&header, pd, kBytes2copy);
+        // const unsigned __int128 kLeftover = sizeof(header) * CHAR_BIT - 50 - 51;
+        // const unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        // header = header & kLeftoverMask;
+        // assert(popcount128(header) == 50);
         // [begin,end) are the zeros in the header that correspond to the fingerprints with
         // quotient quot.
         /* const int64_t pop = _mm_popcnt_u64(header);
@@ -377,7 +308,6 @@ namespace pd512 {
         assert(popcount128(new_header) == 50);
 
         memcpy(pd, &new_header, kBytes2copy);
-
         memmove(&((char *) pd)[kBytes2copy + i],
                 &((const char *) pd)[kBytes2copy + i + 1],
                 sizeof(*pd) - (kBytes2copy + i + 1));

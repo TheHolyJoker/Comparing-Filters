@@ -18,10 +18,10 @@
 #include "../Bloom_Filter/bloom.hpp"
 #include "../PD_Filter/dict.hpp"
 #include "TPD_Filter/T_dict.hpp"
- //#include "../TPD_Filter/pd512_wrapper.hpp"
- //#include "dict512.hpp"
-#include "d512/Dict512.hpp"
+//#include "../TPD_Filter/pd512_wrapper.hpp"
+//#include "dict512.hpp"
 #include "TPD_Filter/old_dict512.hpp"
+#include "d512/Dict512.hpp"
 #include "d512/twoChoicer.hpp"
 // #include "../cuckoo/cuckoofilter.h"
 #include "../cuckoofilter/src/cuckoofilter.h"
@@ -42,8 +42,7 @@
 
 #define CONTAIN_ATTRIBUTES __attribute__((noinline))
 
-enum filter_id
-{
+enum filter_id {
     BF,
     CF,
     CF_ss,
@@ -56,26 +55,21 @@ enum filter_id
     twoChoicer_id
 };
 
-template <typename Table>
-struct FilterAPI
-{
+template<typename Table>
+struct FilterAPI {
 };
 
 
-template <typename ItemType, size_t bits_per_item, template <size_t> class TableType, typename HashFamily>
-struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>>
-{
+template<typename ItemType, size_t bits_per_item, template<size_t> class TableType, typename HashFamily>
+struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>> {
     using Table = cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
+    static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count);
     }
 
-    static void Add(uint64_t key, Table *table)
-    {
-        if (table->Add(key) != cuckoofilter::Ok)
-        {
+    static void Add(uint64_t key, Table *table) {
+        if (table->Add(key) != cuckoofilter::Ok) {
             std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
             get_info(table);
 
@@ -83,12 +77,9 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
         }
     }
 
-    static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
-            if (table->Add(keys[i]) != cuckoofilter::Ok)
-            {
+    static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            if (table->Add(keys[i]) != cuckoofilter::Ok) {
                 std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
                 get_info(table);
 
@@ -97,180 +88,172 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
         }
     }
 
-    static void AddAll(const std::vector<ItemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
+    static void AddAll(const std::vector<ItemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
             if (table->Add(keys[i]) != cuckoofilter::Ok) {
                 std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
                 // std::cerr << "Load before insertion is: " << ;
                 get_info(table);
-                
-                throw logic_error("The filter is too small to hold all of the elements");
 
+                throw logic_error("The filter is too small to hold all of the elements");
             }
         }
         //        table->AddAll(keys, 0, keys.size());
     }
 
-    static void Remove(uint64_t key, Table *table)
-    {
+    static void Remove(uint64_t key, Table *table) {
         table->Delete(key);
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table)
-    {
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
         return (0 == table->Contain(key));
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         auto ss = table->Info();
         std::string temp = "PackedHashtable";
-        if (ss.find(temp)!= std::string::npos){
+        if (ss.find(temp) != std::string::npos) {
             return "CF-ss";
         }
         return "Cuckoo";
     }
 
-    static auto get_info(const Table *table) ->std::stringstream
-    {
-        std::string state =  table->Info();
+    static auto get_info(const Table *table) -> std::stringstream {
+        std::string state = table->Info();
         std::stringstream ss;
         ss << state;
         return ss;
         // std::cout << state << std::endl;
     }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return CF;
     }
 };
 
-template <
+template<
         class TableType, typename spareItemType,
         typename itemType>
-struct FilterAPI<Dict512<TableType, spareItemType, itemType>>
-{
+struct FilterAPI<Dict512<TableType, spareItemType, itemType>> {
     using Table = Dict512<TableType, spareItemType, itemType, 8, 51, 50>;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
+    static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count, .955, .5);
     }
 
-    static void Add(itemType key, Table *table)
-    {
+    static void Add(itemType key, Table *table) {
         // assert(table->case_validate());
         table->insert(key);
         // assert(table->case_validate());
     }
 
-    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void AddAll(const std::vector<itemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void Remove(itemType key, Table *table)
-    {
+    static void Remove(itemType key, Table *table) {
         // std::cout << "Remove in Wrapper!" << std::endl;
         table->remove(key);
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
-    {
-        
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
+
         return table->lookup(key);
         // return table->bitwise_lookup(key);
         // return table->minimal_lookup(key);
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return table->get_name();
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         return table->get_extended_info();
     }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return att_d512_id;
     }
 };
 
 
-template <typename itemType>
-struct FilterAPI<twoChoicer<itemType>>
-{
+template<typename itemType>
+struct FilterAPI<twoChoicer<itemType>> {
     using Table = twoChoicer<itemType, 8, 51, 50>;
     //    using Table = dict512<TableType, spareItemType, itemType>;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
+    static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count, .8, .5);
     }
 
-    static void Add(itemType key, Table *table)
-    {
+    static void Add(itemType key, Table *table) {
         // assert(table->case_validate());
         table->insert(key);
         // assert(table->case_validate());
     }
 
-    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void AddAll(const std::vector<itemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void Remove(itemType key, Table *table)
-    {
+    static void Remove(itemType key, Table *table) {
         throw std::runtime_error("Unsupported");
         // table->remove(key);
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
-    {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
         return table->lookup(key);
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return table->get_name();
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         return table->get_extended_info();
     }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 3;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return twoChoicer_id;
     }
 };
@@ -281,171 +264,157 @@ struct FilterAPI<twoChoicer<itemType>>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-template <typename ItemType, size_t bits_per_item, bool branchless, typename HashFamily>
-struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFamily>>
-{
+template<typename ItemType, size_t bits_per_item, bool branchless, typename HashFamily>
+struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFamily>> {
     using Table = bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFamily>;
 
     static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count);
     }
 
-    static void Add(uint64_t key, Table *table)
-    {
+    static void Add(uint64_t key, Table *table) {
         table->Add(key);
     }
 
-    static void AddAll(const std::vector<ItemType> keys, const size_t start, const size_t end, Table *table)
-    {
+    static void AddAll(const std::vector<ItemType> keys, const size_t start, const size_t end, Table *table) {
         table->AddAll(keys, start, end);
     }
 
-    static void AddAll(const std::vector<ItemType> keys, Table *table)
-    {
+    static void AddAll(const std::vector<ItemType> keys, Table *table) {
         table->AddAll(keys, 0, keys.size());
     }
 
-    static void Remove(uint64_t key, Table *table)
-    {
+    static void Remove(uint64_t key, Table *table) {
         throw std::runtime_error("Unsupported");
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return "Bloom";
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         assert(false);
         std::stringstream ss;
         return ss;
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table)
-    {
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
         return (0 == table->Contain(key));
     }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table)->uint32_t {
+        return 3;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return BF;
     }
 };
 
 
-
-template <>
-struct FilterAPI<SimdBlockFilter<>>
-{
+template<>
+struct FilterAPI<SimdBlockFilter<>> {
     using Table = SimdBlockFilter<>;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
+    static Table ConstructFromAddCount(size_t add_count) {
         Table ans(ceil(log2(add_count * 8.0 / CHAR_BIT)));
         return ans;
     }
 
-    static void Add(uint64_t key, Table *table)
-    {
+    static void Add(uint64_t key, Table *table) {
         table->Add(key);
     }
 
-    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
             table->Add(keys[i]);
         }
     }
 
-    static void AddAll(const std::vector<uint64_t> keys, Table *table)
-    {
+    static void AddAll(const std::vector<uint64_t> keys, Table *table) {
         AddAll(keys, 0, keys.size(), table);
         /*  for (int i = 0; i < keys.size(); ++i) {
               table->Add(keys[i]);
           }*/
     }
 
-    static bool Contain(uint64_t key, const Table *table)
-    {
+    static bool Contain(uint64_t key, const Table *table) {
         return table->Find(key);
     }
 
-    static void Remove(uint64_t key, Table *table)
-    {
+    static void Remove(uint64_t key, Table *table) {
         throw std::runtime_error("Unsupported");
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return "SimdBlockFilter";
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         assert(false);
         std::stringstream ss;
         return ss;
-
     }
 
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table)->uint32_t {
+        return 3;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return SIMD;
     }
 };
 
-class MortonFilter
-{
+class MortonFilter {
     using mf7_6 = CompressedCuckoo::Morton7_6;
     mf7_6 *filter;
     size_t size;
 
 public:
-    MortonFilter(const size_t size)
-    {
+    MortonFilter(const size_t size) {
         //        filter = new CompressedCuckoo::Morton3_8((size_t) (size / 0.95) + 64);
         //        filter = new CompressedCuckoo::Morton3_8((size_t) (2.1 * size) + 64);
         filter = new mf7_6((size_t)(size / 0.95) + 64);
         this->size = size;
     }
 
-    ~MortonFilter()
-    {
+    ~MortonFilter() {
         delete filter;
     }
 
-    void Add(uint64_t key)
-    {
+    void Add(uint64_t key) {
         filter->insert(key);
     }
 
-    void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end)
-    {
+    void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end) {
         size_t size = end - start;
         ::std::vector<uint64_t> k(size);
         ::std::vector<bool> status(size);
-        for (size_t i = start; i < end; i++)
-        {
+        for (size_t i = start; i < end; i++) {
             k[i - start] = keys[i];
         }
         // TODO return value and status is ignored currently
         filter->insert_many(k, status, size);
     }
 
-    void AddAll(const std::vector<uint64_t> keys)
-    {
+    void AddAll(const std::vector<uint64_t> keys) {
         AddAll(keys, 0, keys.size());
     }
 
-    inline bool Contain(uint64_t &item)
-    {
+    inline bool Contain(uint64_t &item) {
         return filter->likely_contains(item);
     };
 
-    size_t SizeInBytes() const
-    {
+    size_t SizeInBytes() const {
         // according to morton_sample_configs.h:
         // Morton3_8 - 3-slot buckets with 8-bit fingerprints: 11.7 bits/item
         // (load factor = 0.95)
@@ -457,63 +426,58 @@ public:
     }
 };
 
-template <>
-struct FilterAPI<MortonFilter>
-{
+template<>
+struct FilterAPI<MortonFilter> {
     using Table = MortonFilter;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
+    static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count);
     }
 
-    static void Add(uint64_t key, Table *table)
-    {
+    static void Add(uint64_t key, Table *table) {
         table->Add(key);
     }
 
-    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
             table->Add(keys[i]);
         }
         //        table->AddAll(keys, start, end);
     }
 
-    static void AddAll(const std::vector<uint64_t> keys, Table *table)
-    {
-        for (unsigned long key : keys)
-        {
+    static void AddAll(const std::vector<uint64_t> keys, Table *table) {
+        for (unsigned long key : keys) {
             table->Add(key);
         }
     }
 
-    static void Remove(uint64_t key, Table *table)
-    {
+    static void Remove(uint64_t key, Table *table) {
         throw std::runtime_error("Unsupported");
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, Table *table)
-    {
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, Table *table) {
         return table->Contain(key);
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return "Morton";
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         assert(false);
         std::stringstream ss;
         return ss;
-
     }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table)->uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return MF;
     }
 };
@@ -525,63 +489,58 @@ struct FilterAPI<MortonFilter>
 //template<template<typename> class TableType, typename itemType, size_t bits_per_item>
 //struct FilterAPI<dict<PD, TableType, itemType, bits_per_item>> {
 
-template <template <typename> class TableType, typename itemType, typename spareItemType>
-struct FilterAPI<dict<PD, TableType, itemType, spareItemType>>
-{
+template<template<typename> class TableType, typename itemType, typename spareItemType>
+struct FilterAPI<dict<PD, TableType, itemType, spareItemType>> {
     //    using Table = dict<PD, hash_table<uint32_t>, itemType, bits_per_item, branchless, HashFamily>;
     using Table = dict<PD, TableType, itemType, spareItemType>;
 
-    static Table ConstructFromAddCount(size_t add_count, size_t bits_per_item)
-    {
+    static Table ConstructFromAddCount(size_t add_count, size_t bits_per_item) {
         return Table(add_count, bits_per_item, .95, .5);
     }
 
-    static void Add(itemType key, Table *table)
-    {
+    static void Add(itemType key, Table *table) {
         table->insert(key);
     }
 
-    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void AddAll(const std::vector<itemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void Remove(itemType key, Table *table)
-    {
+    static void Remove(itemType key, Table *table) {
         table->remove(key);
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
-    {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
         return table->lookup(key);
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return "PD";
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         assert(false);
         std::stringstream ss;
         return ss;
-
     }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table)->uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return pd_id;
     }
 };
@@ -674,134 +633,121 @@ struct FilterAPI<dict<temp_PD<slot_type, bits_per_item, max_capacity>, TableType
 
 //<slot_type, bits_per_item, max_capacity>
 
-template <
-    class temp_PD,
-    typename slot_type, size_t bits_per_item, size_t max_capacity,
-    typename itemType,
-    class TableType, typename spareItemType>
-    struct FilterAPI<
-    T_dict<temp_PD,
-    slot_type, bits_per_item, max_capacity,
-    TableType, spareItemType,
-    itemType>>
-{
+template<
+        class temp_PD,
+        typename slot_type, size_t bits_per_item, size_t max_capacity,
+        typename itemType,
+        class TableType, typename spareItemType>
+struct FilterAPI<
+        T_dict<temp_PD,
+               slot_type, bits_per_item, max_capacity,
+               TableType, spareItemType,
+               itemType>> {
     //    using Table = T_dict<TPD_name::TPD<slot_type,bits_per_item, max_capacity>, slot_type, bits_per_item, max_capacity, TableType, spareItemType, itemType>;
     using Table = T_dict<temp_PD, slot_type, bits_per_item, max_capacity, TableType, spareItemType, itemType>;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
+    static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count, .95, .5);
     }
 
-    static void Add(itemType key, Table *table)
-    {
+    static void Add(itemType key, Table *table) {
         table->insert(key);
     }
 
-    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void AddAll(const std::vector<itemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void Remove(itemType key, Table *table)
-    {
+    static void Remove(itemType key, Table *table) {
         table->remove(key);
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
-    {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
         return table->lookup(key);
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return table->get_name();
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         table->get_dynamic_info();
         std::stringstream ss;
         return ss;
     }
 
-    static auto get_ID(Table *table) -> filter_id
-    {
+    static auto get_functionality(Table *table)->uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return tpd_id;
     }
 };
 
-template <
-    class TableType, typename spareItemType,
-    typename itemType>
-    struct FilterAPI<
-    old_dict512<TableType, spareItemType,
-    itemType>>
-{
+template<
+        class TableType, typename spareItemType,
+        typename itemType>
+struct FilterAPI<
+        old_dict512<TableType, spareItemType,
+                    itemType>> {
     using Table = old_dict512<TableType, spareItemType, itemType, 8, 51, 50>;
     //    using Table = dict512<TableType, spareItemType, itemType>;
 
-    static Table ConstructFromAddCount(size_t add_count)
-    {
+    static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count, 1, .5);
     }
 
-    static void Add(itemType key, Table *table)
-    {
+    static void Add(itemType key, Table *table) {
         table->insert(key);
     }
 
-    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table)
-    {
-        for (int i = start; i < end; ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void AddAll(const std::vector<itemType> keys, Table *table)
-    {
-        for (int i = 0; i < keys.size(); ++i)
-        {
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
             table->insert(keys[i]);
         }
     }
 
-    static void Remove(itemType key, Table *table)
-    {
+    static void Remove(itemType key, Table *table) {
         table->remove(key);
     }
 
-    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table)
-    {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
         return table->lookup(key);
     }
 
-    static string get_name(Table *table)
-    {
+    static string get_name(Table *table) {
         return table->get_name();
     }
 
-    static auto get_info(Table *table) ->std::stringstream
-    {
+    static auto get_info(Table *table) -> std::stringstream {
         table->get_dynamic_info();
         std::stringstream ss;
         return ss;
     }
-
-    static auto get_ID(Table *table) -> filter_id
-    {
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
         return d512;
     }
 };
@@ -1232,4 +1178,4 @@ struct FilterAPI<xorfilter_plus::XorFilterPlus<itemType, FingerprintType, HashFa
 };
 */
 
-#endif //FILTERS_WRAPPERS_HPP
+#endif//FILTERS_WRAPPERS_HPP
