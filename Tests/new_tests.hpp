@@ -66,6 +66,10 @@ template<class Table, typename itemType>
 auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *> *elements) -> std::tuple<size_t, size_t>;
 
 
+template<typename itemType, size_t bits_per_element, typename HashFamily>
+auto hash_fp_rates_with_Dict512(size_t filter_max_capacity, size_t lookup_reps, bool validate_before_benchmarking) -> std::stringstream;
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -147,9 +151,9 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
     }
     if (pd512) {
 
-        b_hash_with_Dict512<itemType, bits_per_element,hashing::TwoIndependentMultiplyShift >(filter_max_capacity, lookup_reps, validate_before_benchmarking);
-        b_hash_with_Dict512<itemType, bits_per_element,hashing::my_wyhash64 >(filter_max_capacity, lookup_reps, validate_before_benchmarking);
-        b_hash_with_Dict512<itemType, bits_per_element,hashing::my_xxhash64 >(filter_max_capacity, lookup_reps, validate_before_benchmarking);
+        b_hash_with_Dict512<itemType, bits_per_element, hashing::TwoIndependentMultiplyShift>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
+        b_hash_with_Dict512<itemType, bits_per_element, hashing::my_wyhash64>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
+        b_hash_with_Dict512<itemType, bits_per_element, hashing::my_xxhash64>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
 
         /* using spare_item = uint64_t;
         using temp_hash = hashTable_Aligned<spare_item, 4>;
@@ -219,6 +223,37 @@ auto b_hash_with_Dict512(size_t filter_max_capacity, size_t lookup_reps, bool va
         // debug_info << ss.str();
     }
     return v_info;
+}
+template<typename itemType, size_t bits_per_element, typename HashFamily>
+auto hash_fp_rates_with_Dict512(size_t filter_max_capacity, size_t lookup_reps, bool validate_before_benchmarking) -> std::stringstream {
+    unordered_set<itemType> v_add, v_find, v_delete;
+    size_t add_size = std::floor(filter_max_capacity * 1);
+    set_init(add_size, &v_add);
+    set_init(lookup_reps, &v_find);
+    vector<unordered_set<itemType> *> elements{&v_add, &v_find, &v_delete};
+
+    std::stringstream ss;
+    using spare_item = uint64_t;
+    using temp_hash = att_hTable<spare_item, 4>;
+    using Table = Dict512<temp_hash, spare_item, itemType, HashFamily>;
+    Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+    string filter_name = FilterAPI<Table>::get_name(&filter);
+
+    bool valid = true;
+    if (validate_before_benchmarking) {
+        std::stringstream v_info;
+        valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+        if (!valid)
+            std::cout << filter_name << " is not valid!" << std::endl;
+        // debug_info << ss.str();
+    }
+    if ((!validate_before_benchmarking) or (valid)) {
+        std::stringstream end;
+        auto tp = fp_rates_single_filter<Table, itemType>(&filter, &elements);
+        end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp), false);
+        std::cout << end.str();
+    }
+    return ss;
 }
 
 
@@ -419,11 +454,15 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
     }
 
     if (pd512) {
-        // while (true) {
-        std::stringstream ss;
+        hash_fp_rates_with_Dict512<itemType, bits_per_element, hashing::TwoIndependentMultiplyShift>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
+        hash_fp_rates_with_Dict512<itemType, bits_per_element, hashing::my_wyhash64>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
+        hash_fp_rates_with_Dict512<itemType, bits_per_element, hashing::my_xxhash64>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
+        
+         // while (true) {
+        /* std::stringstream ss;
         using spare_item = uint64_t;
         using temp_hash = att_hTable<spare_item, 4>;
-        using Table = Dict512<temp_hash, spare_item, itemType>;
+        using Table = Dict512<temp_hash, spare_item, itemType, hashing::TwoIndependentMultiplyShift>;
         Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
         string filter_name = FilterAPI<Table>::get_name(&filter);
 
@@ -441,7 +480,7 @@ auto fp_rates_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t
             end = print_single_round_false_positive_rates(filter_name, lookup_reps, bits_per_element, std::get<1>(tp), std::get<0>(tp), true ^ TC);
             min_output << end.str();
             std::cout << end.str();
-        }
+        } */
         // }
     }
     if (TC) {

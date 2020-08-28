@@ -270,34 +270,34 @@ int main(int argc, char **argv) {
 
 
     return 0;
-    fp_rates_all_wrapper<itemType, 12, 13>(
-            c,
-            r,
-            BITS_PER_ELEMENT_MACRO_12,
-            true,
-            true,
-            true,
-            true,
-            true,
-            true,
-            false,
-            true,
-            true);
+    // fp_rates_all_wrapper<itemType, 12, 13>(
+    //         c,
+    //         r,
+    //         BITS_PER_ELEMENT_MACRO_12,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false,
+    //         false);
 
 
-    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO_12, 13>(
-            5000000, 10000000,
-            BITS_PER_ELEMENT_MACRO_12,
-            bench_precision,
-            false,
-            true,
-            true,
-            false,
-            false,
-            true,
-            false,
-            true,
-            true);
+    // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO_12, 13>(
+    //         5000000, 10000000,
+    //         BITS_PER_ELEMENT_MACRO_12,
+    //         bench_precision,
+    //         false,
+    //         true,
+    //         true,
+    //         false,
+    //         false,
+    //         true,
+    //         false,
+    //         true,
+    //         true);
 
     // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO>(
     //         max_distinct_capacity, reps, BITS_PER_ELEMENT_MACRO, bench_precision,
