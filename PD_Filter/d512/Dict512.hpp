@@ -32,6 +32,7 @@ template<
         typename spareItemType,
         typename itemType,
         // bool round_to_upperpower2 = false,
+        typename HashFamily = hashing::TwoIndependentMultiplyShift,
         size_t bits_per_item = 8,
         size_t max_capacity = 51,
         size_t quot_range = 50>
@@ -43,7 +44,7 @@ class Dict512 {
     //    temp_spare *spare;
     // att_hTable<uint64_t, 4> *spare;
     TableType *spare;
-    hashing::TwoIndependentMultiplyShift hasher;
+    HashFamily hasher;
 
     size_t capacity{0};
     const size_t filter_max_capacity;
@@ -51,7 +52,7 @@ class Dict512 {
             quotient_range{quot_range},
             quotient_length{ceil_log2(quot_range)},
             single_pd_capacity{max_capacity};
-    const uint32_t seed{12345};
+    // const uint64_t seed{12345};
 
     const size_t pd_index_length, number_of_pd;
     const size_t spare_element_length;
@@ -64,10 +65,11 @@ class Dict512 {
 public:
     Dict512(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
         : filter_max_capacity(max_number_of_elements),
-          number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 0)),
-          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 0))),
-          spare_element_length(pd_index_length + quotient_length + remainder_length) 
-          {
+          number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
+          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
+          spare_element_length(pd_index_length + quotient_length + remainder_length),
+          hasher() {
+        // assert(upperpower2(number_of_pd) == number_of_pd);
         // std::cout << "filter_max_capacity: " << filter_max_capacity << std::endl;
         // std::cout << "number_of_PDs: " << number_of_pd << std::endl;
         // std::cout << "pd_index_length: " << pd_index_length << std::endl;
@@ -97,7 +99,7 @@ public:
     virtual ~Dict512() {
         // auto ss = get_extended_info();
         // std::cout << ss.str();
-
+        std::cout << "squared chi test: " << squared_chi_test() << std::endl;
         free(pd_array);
         pd_capacity_vec.clear();
         delete spare;
@@ -114,9 +116,12 @@ public:
         assert(quot <= 50); */
 
         uint64_t hash_res = hasher(s);
+        // uint64_t hash_res = XXHash64::hash(&s, 8, seed);
+        // uint64_t hash_res = wyhash64(s, seed);
+
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // const uint32_t pd_index = out1 & MASK(pd_index_length);
+        // const uint32_t pd_index = out1 & (number_of_pd - 1);
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
         assert(pd_index < number_of_pd);
@@ -126,82 +131,6 @@ public:
                ((pd_capacity_vec[pd_index] & 1u) &&
                 spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
     }
-
-
-    inline auto bitwise_lookup(const itemType s) const -> bool {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t out1 = 647586, out2 = 14253653;
-        Hash_ns::BobHash(&s, 8, &out1, &out2);
-        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // const uint16_t quot = reduce16((uint16_t) out2, (uint16_t) quot_range);
-        const uint8_t rem = out2 & 8u;
-
-
-        // const uint32_t pd_index = out1 % number_of_pd;
-        // const uint64_t quot = (out2 >> 8) % quot_range;
-        // const uint8_t rem = out2 % 255;
-// 
-        // const uint32_t pd_index = out1 & MASK(pd_index_length);
-        // const uint64_t quot = (((out2 >> 8u) & 63u) < 51) ? ((out2 >> 8u) & 63u) : 63 - ((out2 >> 8u) & 63u);
-        const uint64_t quot = (out2 >> 8u) & 63u;
-
-        // const uint8_t rem = out2 & 255u;
-
-        // const uint32_t pd_index = out1 & number_of_pd;
-        // const uint64_t quot = (out2 >> 8u) & quot_range;
-        // const uint8_t rem = out2 & 255u;
-
-        // return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
-
-        // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) ||
-        //        ((pd_capacity_vec[pd_index] & 1u) &&
-        //         spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));// const uint32_t pd_index =
-        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // assert(pd_index < number_of_pd);
-        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        // assert(quot <= 50);
-        // const uint8_t rem = out2 & MASK(bits_per_item);
-
-        // return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
-    }
-
-    inline auto minimal_lookup(const itemType s) const -> bool {
-        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        // uint32_t out1 = 647586, out2 = 14253653;
-        // uint64_t out = xorshf96();
-        const uint32_t out1 = s_pd_filter::hashint((uint64_t) s);
-        const uint32_t out2 = s_pd_filter::hashint2((uint64_t) s);
-        // Hash_ns::BobHash(&s, 8, &out1, &out2);
-        // return pd512::pd_find_50(
-        //         reduce32((uint32_t) out2, (uint32_t) quot_range),
-        //         out2 & MASK(bits_per_item),
-        //         &pd_array[reduce32(out1, (uint32_t) number_of_pd)]);
-
-
-        return pd512::pd_find_50(
-                (((out2 >> 8u) & 63) < 51) ? ((out2 >> 8u) & 63) : 63 - ((out2 >> 8u) & 63),
-                // (out2 >> 8u) & 63u,
-                out2 & 255u,
-                &pd_array[out1 & 524287ul]);
-        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // assert(pd_index < number_of_pd);
-        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        // assert(quot <= 50);
-        // const uint8_t rem = out2 & MASK(bits_per_item);
-
-        // return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
-    }
-    // inline auto minimal_lookup(const itemType s) const -> bool {
-    //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-    //     uint32_t out1 = 647586, out2 = 14253653;
-    //     Hash_ns::BobHash(&s, 8, &out1, &out2);
-
-    //     return pd512::pd_find_50(
-    //             // (out2 >> 8u) & 63,
-    //             (((out2 >> 8u) & 63) < 51) ? ((out2 >> 8u) & 63) : 63 - ((out2 >> 8u) & 63),
-    //             out2 & 255,
-    //             &pd_array[out1 & number_of_pd]);
-    // }
 
 
     void insert(const itemType s) {
@@ -215,11 +144,15 @@ public:
          */
 
         uint64_t hash_res = hasher(s);
+        // uint64_t hash_res = XXHash64::hash(&s, 8, seed);
+        // uint64_t hash_res = wyhash64(s, seed);
+
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // const uint32_t pd_index = out1 & MASK(pd_index_length);
+        // const uint32_t pd_index = out1 & (number_of_pd - 1);
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
+        // if (pd_index >= number_of_pd)
         assert(pd_index < number_of_pd);
         assert(quot <= 50);
         assert(validate_capacity_functions(pd_index));
@@ -257,9 +190,12 @@ public:
         uint8_t rem = out2 & MASK(bits_per_item); */
 
         uint64_t hash_res = hasher(s);
+        // uint64_t hash_res = XXHash64::hash(&s, 8, seed);
+        // uint64_t hash_res = wyhash64(s, seed);
+
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // const uint32_t pd_index = out1 & MASK(pd_index_length);
+        // const uint32_t pd_index = out1 & (number_of_pd - 1);
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
         assert(pd_index < number_of_pd);
@@ -414,7 +350,7 @@ public:
         // return upper | mid | lower;
 
         uint64_t out[2];
-        s_pd_filter::MurmurHash3_x86_128(&x, sizeof(x), seed, out);
+        s_pd_filter::MurmurHash3_x86_128(&x, sizeof(x), -42, out);
 
         assert(reduce32(out[0], number_of_pd) < number_of_pd);
         uint64_t upper = reduce32(out[0], number_of_pd) << (quotient_length + bits_per_item);
@@ -491,6 +427,69 @@ public:
         *r = h & MASK(remainder_length);// r is has dependency in pd_index, and q. not sure how to solve it without an PRG
     }
 
+
+    inline auto bitwise_lookup(const itemType s) const -> bool {
+        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        uint32_t out1 = 647586, out2 = 14253653;
+        Hash_ns::BobHash(&s, 8, &out1, &out2);
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint16_t quot = reduce16((uint16_t) out2, (uint16_t) quot_range);
+        const uint8_t rem = out2 & 8u;
+
+
+        // const uint32_t pd_index = out1 % number_of_pd;
+        // const uint64_t quot = (out2 >> 8) % quot_range;
+        // const uint8_t rem = out2 % 255;
+        //
+        // const uint64_t quot = (((out2 >> 8u) & 63u) < 51) ? ((out2 >> 8u) & 63u) : 63 - ((out2 >> 8u) & 63u);
+        const uint64_t quot = (out2 >> 8u) & 63u;
+
+        // const uint8_t rem = out2 & 255u;
+
+        // const uint32_t pd_index = out1 & number_of_pd;
+        // const uint64_t quot = (out2 >> 8u) & quot_range;
+        // const uint8_t rem = out2 & 255u;
+
+        // return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
+
+        // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) ||
+        //        ((pd_capacity_vec[pd_index] & 1u) &&
+        //         spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));// const uint32_t pd_index =
+        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // assert(pd_index < number_of_pd);
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // assert(quot <= 50);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
+
+        return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
+    }
+
+    inline auto minimal_lookup(const itemType s) const -> bool {
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // uint32_t out1 = 647586, out2 = 14253653;
+        // uint64_t out = xorshf96();
+        const uint32_t out1 = s_pd_filter::hashint((uint64_t) s);
+        const uint32_t out2 = s_pd_filter::hashint2((uint64_t) s);
+        // Hash_ns::BobHash(&s, 8, &out1, &out2);
+        // return pd512::pd_find_50(
+        //         reduce32((uint32_t) out2, (uint32_t) quot_range),
+        //         out2 & MASK(bits_per_item),
+        //         &pd_array[reduce32(out1, (uint32_t) number_of_pd)]);
+
+
+        return pd512::pd_find_50(
+                (((out2 >> 8u) & 63) < 51) ? ((out2 >> 8u) & 63) : 63 - ((out2 >> 8u) & 63),
+                // (out2 >> 8u) & 63u,
+                out2 & 255u,
+                &pd_array[out1 & 524287ul]);
+        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // assert(pd_index < number_of_pd);
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // assert(quot <= 50);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
+
+        // return pd512::pd_find_50(quot, rem, &pd_array[pd_index]);
+    }
 
     // inline void remove_helper(spareItemType hash_val) {
     //     // if (ATT_D512_DB1)
@@ -705,7 +704,7 @@ public:
     }
 
     auto get_name() -> std::string {
-        return "Dict512";
+        return "Dict512 with hash: " + hasher.get_name();
         /* string a = "dict512:\t";
             string b = pd512::get_name() + "\t";
             //        string b = pd_vec[0]->get_name() + "\t";

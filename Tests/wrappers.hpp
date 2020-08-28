@@ -141,9 +141,10 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
 
 template<
         class TableType, typename spareItemType,
-        typename itemType>
-struct FilterAPI<Dict512<TableType, spareItemType, itemType>> {
-    using Table = Dict512<TableType, spareItemType, itemType, 8, 51, 50>;
+        typename itemType,
+        typename HashFamily>
+struct FilterAPI<Dict512<TableType, spareItemType, itemType, HashFamily>> {
+    using Table = Dict512<TableType, spareItemType, itemType, HashFamily>;
 
     static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count, .955, .5);
@@ -307,7 +308,7 @@ struct FilterAPI<bloomfilter::bloom<ItemType, bits_per_item, branchless, HashFam
      * 2 is for adds.
      * 4 is for deletions.
      */
-    static auto get_functionality(Table *table)->uint32_t {
+    static auto get_functionality(Table *table) -> uint32_t {
         return 3;
     }
     static auto get_ID(Table *table) -> filter_id {
@@ -366,7 +367,7 @@ struct FilterAPI<SimdBlockFilter<>> {
      * 2 is for adds.
      * 4 is for deletions.
      */
-    static auto get_functionality(Table *table)->uint32_t {
+    static auto get_functionality(Table *table) -> uint32_t {
         return 3;
     }
     static auto get_ID(Table *table) -> filter_id {
@@ -474,7 +475,7 @@ struct FilterAPI<MortonFilter> {
      * 2 is for adds.
      * 4 is for deletions.
      */
-    static auto get_functionality(Table *table)->uint32_t {
+    static auto get_functionality(Table *table) -> uint32_t {
         return 7;
     }
     static auto get_ID(Table *table) -> filter_id {
@@ -537,7 +538,7 @@ struct FilterAPI<dict<PD, TableType, itemType, spareItemType>> {
      * 2 is for adds.
      * 4 is for deletions.
      */
-    static auto get_functionality(Table *table)->uint32_t {
+    static auto get_functionality(Table *table) -> uint32_t {
         return 7;
     }
     static auto get_ID(Table *table) -> filter_id {
@@ -684,7 +685,7 @@ struct FilterAPI<
         return ss;
     }
 
-    static auto get_functionality(Table *table)->uint32_t {
+    static auto get_functionality(Table *table) -> uint32_t {
         return 7;
     }
     static auto get_ID(Table *table) -> filter_id {

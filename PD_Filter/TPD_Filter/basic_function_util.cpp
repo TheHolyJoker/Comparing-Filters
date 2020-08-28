@@ -11,9 +11,8 @@ auto compute_number_of_PD(size_t max_number_of_elements, size_t max_capacity, do
     // auto res = (std::size_t)ceil(max_number_of_elements / b);
     // std::cout << "res: "<< res << std::endl;
     //    std::cout << "res is: " << res << std::endl;
-
-    return (round_to_upperpower2) ? upperpower2((std::size_t) ceil(max_number_of_elements / ((double) b)))
-                                  : (std::size_t) ceil(max_number_of_elements / ((double) b));
+    size_t res = (std::size_t) ceil(max_number_of_elements / ((double) b));
+    return (round_to_upperpower2) ? upperpower2(res) : res;
 }
 
 auto compute_spare_element_size(size_t max_number_of_elements, float level1_load_factor,

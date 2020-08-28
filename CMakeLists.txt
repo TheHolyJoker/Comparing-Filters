@@ -43,6 +43,9 @@ add_executable(
         PD_Filter/hash_table.hpp PD_Filter/hash_table.cpp
         PD_Filter/dict.hpp
         PD_Filter/macros.h
+        Hash_functions/xxhash64.h
+        Hash_functions/wyhash.h
+        Hash_functions/woothash.h
         # xxhash.h
 
         #        main.cpp

@@ -1,21 +1,23 @@
 #ifndef HASHUTIL_H_
 #define HASHUTIL_H_
 
+#include <climits>
+#include <cstring>
+#include <iostream>
 #include <stdint.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <iostream>
-#include <cstring>
 #include <string>
-#include <climits>
+#include <sys/types.h>
 
+#include "Hash_functions/wyhash.h"
+#include "Hash_functions/xxhash64.h"
 #include <random>
 #include <vector>
-// #include "xxhash.h"
+// #include "Hash_functions/woothash.h"
 
 namespace hashing {
-// See Martin Dietzfelbinger, "Universal hashing and k-wise independent random
-// variables via integer arithmetic without primes".
+    // See Martin Dietzfelbinger, "Universal hashing and k-wise independent random
+    // variables via integer arithmetic without primes".
     class TwoIndependentMultiplyShift {
         unsigned __int128 multiply_, add_;
 
@@ -33,6 +35,9 @@ namespace hashing {
 
         inline uint64_t operator()(uint64_t key) const {
             return (add_ + multiply_ * static_cast<decltype(multiply_)>(key)) >> 64;
+        }
+        auto get_name() const -> string{
+            return "TwoIndependentMultiplyShift";
         }
     };
 
@@ -62,6 +67,38 @@ namespace hashing {
         }
     };
 
+    class my_xxhash64 {
+        uint64_t seed;
+
+    public:
+        my_xxhash64() {
+            seed = random();
+        }
+        inline uint64_t operator()(uint64_t key) const {
+            return XXHash64::hash(&key, 8, seed);
+        }
+        auto get_name() const -> string{
+            return "xxhash64";
+        }
+    };
+
+    class my_wyhash64 {
+        uint64_t seed;
+
+    public:
+        my_wyhash64() {
+            seed = random();
+        }
+        inline uint64_t operator()(uint64_t key) const {
+            return wyhash64(key, seed);
+        }
+
+        auto get_name() const -> string{
+            return "wyhash64";
+        }
+        
+    };
+
     inline uint32_t hashint(uint32_t a) {
         a = (a + 0x7ed55d16) + (a << 12);
         a = (a ^ 0xc761c23c) ^ (a >> 19);
@@ -83,6 +120,6 @@ namespace hashing {
     }
 
 
-}
+}// namespace hashing
 
-#endif  // CUCKOO_FILTER_HASHUTIL_H_
+#endif// CUCKOO_FILTER_HASHUTIL_H_
