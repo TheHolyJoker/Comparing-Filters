@@ -46,6 +46,10 @@ add_executable(
         Hash_functions/xxhash64.h
         Hash_functions/wyhash.h
         Hash_functions/woothash.h
+        Hash_functions/MurmurHash3.h
+        Hash_functions/MurmurHash3.cpp
+        Hash_functions/BobJenkins.h
+        Hash_functions/BobJenkins.cpp
         # xxhash.h
 
         #        main.cpp

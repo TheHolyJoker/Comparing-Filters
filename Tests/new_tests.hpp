@@ -154,26 +154,27 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
         b_hash_with_Dict512<itemType, bits_per_element, hashing::TwoIndependentMultiplyShift>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
         b_hash_with_Dict512<itemType, bits_per_element, hashing::my_wyhash64>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
         b_hash_with_Dict512<itemType, bits_per_element, hashing::my_xxhash64>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
+        b_hash_with_Dict512<itemType, bits_per_element, hashing::my_BobHash>(filter_max_capacity, lookup_reps, validate_before_benchmarking);
 
-        /* using spare_item = uint64_t;
-        using temp_hash = hashTable_Aligned<spare_item, 4>;
-        std::stringstream v_info;
+        // using spare_item = uint64_t;
+        // using temp_hash = hashTable_Aligned<spare_item, 4>;
+        // std::stringstream v_info;
 
-        using Table = Dict512<temp_hash, spare_item, itemType>;
-        bool valid = true;
-        if (validate_before_benchmarking) {
-            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
-            debug_info << v_info.str();
-            if (!valid)
-                std::cout << "pd512 is not valid!" << std::endl;
-        }
-        if ((!validate_before_benchmarking) or (valid)) {
-            std::stringstream ss;
-            // while (true) {
-            ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
-            // }
-            debug_info << ss.str();
-        } */
+        // using Table = Dict512<temp_hash, spare_item, itemType, hashing::TwoIndependentMultiplyShift>;
+        // bool valid = true;
+        // if (validate_before_benchmarking) {
+        //     valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+        //     debug_info << v_info.str();
+        //     if (!valid)
+        //         std::cout << "pd512 is not valid!" << std::endl;
+        // }
+        // if ((!validate_before_benchmarking) or (valid)) {
+        //     std::stringstream ss;
+        //     // while (true) {
+        //     ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+        //     // }
+        //     debug_info << ss.str();
+        // }
     }
     if (TC) {
         // while (true) {

@@ -11,6 +11,7 @@
 
 #include "Hash_functions/wyhash.h"
 #include "Hash_functions/xxhash64.h"
+#include "Hash_functions/BobJenkins.h"
 #include <random>
 #include <vector>
 // #include "Hash_functions/woothash.h"
@@ -36,7 +37,7 @@ namespace hashing {
         inline uint64_t operator()(uint64_t key) const {
             return (add_ + multiply_ * static_cast<decltype(multiply_)>(key)) >> 64;
         }
-        auto get_name() const -> string{
+        auto get_name() const -> std::string {
             return "TwoIndependentMultiplyShift";
         }
     };
@@ -77,7 +78,7 @@ namespace hashing {
         inline uint64_t operator()(uint64_t key) const {
             return XXHash64::hash(&key, 8, seed);
         }
-        auto get_name() const -> string{
+        auto get_name() const -> std::string {
             return "xxhash64";
         }
     };
@@ -93,10 +94,37 @@ namespace hashing {
             return wyhash64(key, seed);
         }
 
-        auto get_name() const -> string{
+        auto get_name() const -> std::string {
             return "wyhash64";
         }
-        
+    };
+
+    class my_BobHash {
+        uint64_t seed1, seed2;
+
+    public:
+        my_BobHash() {
+            seed1 = random();
+            seed2 = random();
+        }
+
+
+        inline uint64_t operator()(uint32_t s) const {
+            uint32_t out1 = seed1, out2 = seed2;
+            void BobHash(const void *buf, size_t length, uint32_t *idx1, uint32_t *idx2);
+            BobJenkins::BobHash((void *) &s, 4, &out1, &out2);
+            return ((uint64_t) out1 << 32ul) | ((uint64_t) out2);
+
+            // return BobJenkins::BobHash((void *) &s, 4, seed);
+        }
+
+        // inline uint64_t operator()(uint64_t s) const {
+        //     return BobJenkins::BobHash((void *) &s, 8, seed);
+        // }
+
+        auto get_name() const -> std::string {
+            return "BobHash";
+        }
     };
 
     inline uint32_t hashint(uint32_t a) {

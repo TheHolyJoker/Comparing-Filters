@@ -242,7 +242,7 @@ int main(int argc, char **argv) {
     // }
 
     // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
-    //         500000, 500000 * 2,
+    //         10000000, 10000000 * 2,
     //         BITS_PER_ELEMENT_MACRO,
     //         bench_precision,
     //         true,
@@ -252,7 +252,8 @@ int main(int argc, char **argv) {
     //         false,
     //         false,
     //         false,
-    //         1, 0);
+    //         0, 
+    //         1);
     // return 0;
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
             31205621, 31205621 * 2,
@@ -266,7 +267,7 @@ int main(int argc, char **argv) {
             false,
             false,
             true,
-            false);
+            1);
 
 
     return 0;

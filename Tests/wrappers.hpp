@@ -208,7 +208,7 @@ struct FilterAPI<twoChoicer<itemType>> {
     //    using Table = dict512<TableType, spareItemType, itemType>;
 
     static Table ConstructFromAddCount(size_t add_count) {
-        return Table(add_count, .8, .5);
+        return Table(add_count, .955, .5);
     }
 
     static void Add(itemType key, Table *table) {
@@ -230,8 +230,8 @@ struct FilterAPI<twoChoicer<itemType>> {
     }
 
     static void Remove(itemType key, Table *table) {
-        throw std::runtime_error("Unsupported");
-        // table->remove(key);
+        // throw std::runtime_error("Unsupported");
+        table->remove(key);
     }
 
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {

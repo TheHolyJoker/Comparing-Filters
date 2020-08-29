@@ -50,10 +50,8 @@ class twoChoicer {
 public:
     twoChoicer(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
         : filter_max_capacity(max_number_of_elements),
-          number_of_pd(compute_number_of_PD(max_number_of_elements,
-                                            max_capacity, level1_load_factor)),
-          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements,
-                                                         max_capacity, level1_load_factor))) {
+          number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 1)),
+          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 1))) {
         //        hashing_test = false;
         assert(single_pd_capacity == 51);
 
@@ -74,7 +72,24 @@ public:
     }
 
     auto get_alt_index(uint32_t index, uint32_t rem) const -> uint32_t {
-        return reduce32((uint32_t)(index ^ (rem * 0x5bd1e995)), (uint32_t) number_of_pd);
+        // auto res = reduce32((uint32_t)(index ^ (rem * 0x5bd1e995)), (uint32_t) number_of_pd);
+        // auto index_to_validate = reduce32((uint32_t)(res ^ (rem * 0x5bd1e995)), (uint32_t) number_of_pd);
+
+        // auto res = index ^ ((rem * 0x5bd1e995) % number_of_pd);
+        auto temp_res = index ^ (rem * 0x5bd1e995);
+        // auto index_to_validate = reduce32((uint32_t)(temp_res ^ (rem * 0x5bd1e995)), (uint32_t) number_of_pd);
+        auto index_to_validate = (temp_res ^ (rem * 0x5bd1e995)) % number_of_pd;
+        if (index_to_validate != index) {
+            std::cout << "index: " << index << std::endl;
+            std::cout << "rem: " << rem << std::endl;
+            std::cout << "index_to_validate: " << index_to_validate << std::endl;
+            assert(false);
+        }
+        //     std::cout << "REDUCE PROBLEM!!" << std::endl;
+        //     assert(false);
+        // }
+        // assert(index_to_validate == res);
+        return (index ^ (rem * 0x5bd1e995)) % number_of_pd;
     }
 
     auto lookup(const itemType s) const -> bool {
@@ -89,14 +104,16 @@ public:
 
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        const uint32_t pd_index1 = out1 % number_of_pd;
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = (out2) &MASK(bits_per_item);
         // const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
-        const uint64_t quot = reduce32((uint32_t) out2 ^ out1, (uint32_t) quot_range);
-        const uint8_t rem = (out2 ^ out1) & MASK(bits_per_item);
         assert(pd_index1 < number_of_pd);
         assert(quot <= 50);
 
-        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1])) || (pd512::pd_find_50(quot, rem, &pd_array[reduce32(out2, (uint32_t) number_of_pd)]));
+        // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1])) || (pd512::pd_find_50(quot, rem, &pd_array[reduce32(out2, (uint32_t) number_of_pd)]));
+        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1])) || (pd512::pd_find_50(quot, rem, &pd_array[get_alt_index(pd_index1, rem)]));
         // ((pd_capacity_vec[pd_index] & 1u) &&
         //         spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
         // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
@@ -127,11 +144,17 @@ public:
 
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
-        const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
-        const uint64_t quot = reduce32((uint32_t) out2 ^ out1, (uint32_t) quot_range);
-        const uint8_t rem = (out2 ^ out1) & MASK(bits_per_item);
-
+        // const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        const uint32_t pd_index1 = out1 % number_of_pd;
+        // const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quotient_range);
+        const uint8_t rem = (out2) &MASK(bits_per_item);
+        assert(pd_index1 < number_of_pd);
+        assert(quot <= quotient_range);
+        assert(rem <= MASK(bits_per_item));
+        const uint32_t pd_index2 = get_alt_index(pd_index1, rem);
+        assert(pd_index2 < number_of_pd);
+        // assert(get_alt_index(pd_index2, rem) == pd_index1);
         // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) || (pd512::pd_find_50(quot, rem, &pd_array[get_alt_index(pd_index, rem)]));
 
         if (pd512::get_capacity(&pd_array[pd_index1]) < pd512::get_capacity(&pd_array[pd_index2])) {
@@ -145,24 +168,29 @@ public:
             auto res = pd512::pd_add_50(quot, rem, &pd_array[pd_index2]);
             if (!res) {
                 cout << "insertion failed2!!!" << std::endl;
+                std::cout << "pd_index1: " << pd_index1 << std::endl;
+                std::cout << "pd_index2: " << pd_index2 << std::endl;
+                std::cout << "capacity: " << get_capacity() << std::endl;
+                std::cout << "filter_max_capacity: " << filter_max_capacity << std::endl;
                 assert(false);
             }
             return;
         }
     }
     void remove(const itemType s) {
-        assert(false);
+        // assert(false);
         //// This can not work unless <pd_index2> is equal to f(pd_index2), where f is a permutation of order 2.
         assert(lookup(s));
 
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
+        const uint32_t pd_index1 = out1 % number_of_pd;
         // const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
-        const uint64_t quot = reduce32((uint32_t) out2 ^ out1, (uint32_t) quot_range);
-        const uint8_t rem = (out2 ^ out1) & MASK(bits_per_item);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = (out2) &MASK(bits_per_item);
 
-        pd512::conditional_remove(quot, rem, &pd_array[pd_index1]) || pd512::conditional_remove(quot, rem, &pd_array[reduce32(out2, (uint32_t) number_of_pd)]);
+        pd512::conditional_remove(quot, rem, &pd_array[pd_index1]) || pd512::conditional_remove(quot, rem, &pd_array[get_alt_index(pd_index1, rem)]);
         // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) || (pd512::pd_find_50(quot, rem, &pd_array[alt_index(pd_index, rem)]));
 
         /* using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
