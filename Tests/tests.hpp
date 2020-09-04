@@ -77,7 +77,7 @@ auto v_insertion_plus_imm_lookups(Filter<itemType, bits_per_item, brancless, Has
             cout << "counter: " << counter << endl;
             cout << "element: " << el << endl;
 
-            filter->Add(el);
+            // filter->Add(el);
             filter->Contain(el);
             return false;
         }
@@ -115,7 +115,7 @@ auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *e
             cout << "element: " << el << endl;
 
             //            wrap_filter->Add(el);
-            //            wrap_filter->Contain(el);
+            FilterAPI<Table>::Contain(el, wrap_filter);
             return false;
         }
         counter++;

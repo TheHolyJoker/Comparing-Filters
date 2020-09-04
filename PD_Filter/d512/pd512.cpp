@@ -93,6 +93,7 @@ namespace pd512 {
         // v = v >> ((51 + 50 + CHAR_BIT - 1) / CHAR_BIT);
         // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
     }
+    
     inline bool pd_find_50_old(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
@@ -115,6 +116,47 @@ namespace pd512 {
         assert(kHeaderBytes < sizeof(header));
         v = v >> kHeaderBytes;
         return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+    }
+    
+    void validate_clz(int64_t quot, char rem, const __m512i *pd){
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+
+        // [begin,end) are the zeros in the header that correspond to the fingerprints
+        // with quotient quot.
+        
+        const int64_t pop = _mm_popcnt_u64(header);
+        const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
+        const uint64_t end = select128withPop64(header, quot, pop) - quot;
+        const uint64_t end2 = begin + lzcnt_u128(header >> (begin + quot));
+        const uint64_t end4 = begin + lzcnt_u128(header >> (begin));
+        const uint64_t end22 = begin + lzcnt_u128(header);
+        const uint64_t end3 = begin + tzcnt_u128(header >> begin);
+        const uint64_t end33 = begin + tzcnt_u128(header);
+        const uint64_t end5 = end33 - 63;
+        const uint64_t end6 = begin + lzcnt_u128(header >> (begin + quot)) +(quot - 128);
+        if (end2 == end) return;
+        if (end6 == end) return;
+        
+        std::cout << "quot: " << quot << std::endl;
+        std::cout << "begin: " << begin << std::endl;
+        std::cout << "end: " << end << std::endl;
+        std::cout << "end2: " << end2 << std::endl;
+        std::cout << "end22: " << end22 << std::endl;
+        std::cout << "end3: " << end3 << std::endl;
+        std::cout << "end33: " << end33 << std::endl;
+        std::cout << "end4: " << end4 << std::endl;
+        std::cout << "end5: " << end5 << std::endl;
+        std::cout << "end6: " << end6 << std::endl;
+        std::cout << std::string(64,'@') << std::endl;
+        if (begin == 0) return;
+        if (end5 == end) return;
+        if (end6 == end) return;
+        assert(0);
     }
     void print512(const __m512i *var) {
         uint64_t val[8];

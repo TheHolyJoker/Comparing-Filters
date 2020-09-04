@@ -22,6 +22,8 @@
 //#include "dict512.hpp"
 #include "TPD_Filter/old_dict512.hpp"
 #include "d512/Dict512.hpp"
+#include "d512/Dict512_Ver2.hpp"
+#include "d512/Dict512_With_CF.hpp"
 #include "d512/twoChoicer.hpp"
 // #include "../cuckoo/cuckoofilter.h"
 #include "../cuckoofilter/src/cuckoofilter.h"
@@ -51,6 +53,8 @@ enum filter_id {
     pd_id,
     tpd_id,
     d512,
+    d512_WCF,
+    d512_ver2,
     att_d512_id,
     twoChoicer_id
 };
@@ -177,6 +181,7 @@ struct FilterAPI<Dict512<TableType, spareItemType, itemType, HashFamily>> {
 
         return table->lookup(key);
         // return table->bitwise_lookup(key);
+        // std::cout << "tomer!" << std::endl;
         // return table->minimal_lookup(key);
     }
 
@@ -198,6 +203,130 @@ struct FilterAPI<Dict512<TableType, spareItemType, itemType, HashFamily>> {
     }
     static auto get_ID(Table *table) -> filter_id {
         return att_d512_id;
+    }
+};
+
+
+template<
+        class TableType, typename spareItemType,
+        typename itemType,
+        typename HashFamily>
+struct FilterAPI<Dict512_Ver2<TableType, spareItemType, itemType, HashFamily>> {
+    using Table = Dict512_Ver2<TableType, spareItemType, itemType, HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count, .955, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        // assert(table->case_validate());
+        table->insert(key);
+        // assert(table->case_validate());
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        // std::cout << "Remove in Wrapper!" << std::endl;
+        table->remove(key);
+    }
+
+    // Todo return const here:
+    // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+        // return table->lookup_count(key);
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        return table->get_extended_info();
+    }
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
+        return d512_ver2;
+    }
+};
+
+
+template<typename itemType, typename HashFamily>
+struct FilterAPI<Dict512_With_CF<itemType, HashFamily>> {
+    using Table = Dict512_With_CF<itemType, HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count, .955, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        // assert(table->case_validate());
+        table->insert(key);
+        // assert(table->case_validate());
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        // std::cout << "Remove in Wrapper!" << std::endl;
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
+
+        return table->lookup(key);
+        // return table->bitwise_lookup(key);
+        // std::cout << "tomer!" << std::endl;
+        // return table->minimal_lookup(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        return table->get_extended_info();
+    }
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
+        return d512_WCF;
     }
 };
 
@@ -252,7 +381,7 @@ struct FilterAPI<twoChoicer<itemType>> {
      * 4 is for deletions.
      */
     static auto get_functionality(Table *table) -> uint32_t {
-        return 3;
+        return 7;
     }
     static auto get_ID(Table *table) -> filter_id {
         return twoChoicer_id;

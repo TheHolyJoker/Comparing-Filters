@@ -8,8 +8,8 @@
 
 #include "../hashutil.hpp"
 #include "../macros.h"
-#include "printutil.hpp"
 #include "TPD_Filter/basic_function_util.h"
+#include "printutil.hpp"
 #include <vector>
 
 
@@ -23,7 +23,7 @@
 // static size_t line_counter = 0;
 
 
-template<typename bucket_type, size_t bucket_size>
+template<typename bucket_type, size_t bucket_size, typename HashFamily = hashing::TwoIndependentMultiplyShift>
 class hashTable_Aligned {
 
     struct Bucket {
@@ -37,11 +37,14 @@ class hashTable_Aligned {
     const bucket_type empty_slot{(bucket_type) -1};
 
     size_t insert_existing_counter = 0;
+    HashFamily hasher;
 
 public:
     hashTable_Aligned(size_t max_capacity, size_t element_length, double max_load_factor)
-        : max_capacity(std::ceil(max_capacity / (max_load_factor))), element_length(element_length), max_load_factor(max_load_factor),
-          num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))) {
+        : max_capacity(std::ceil(max_capacity / (max_load_factor))),
+          element_length(element_length), max_load_factor(max_load_factor),
+          num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))),
+          hasher() {
         assert(num_of_buckets <= MASK32);
 
         /* Todo: test changes to second argument */
@@ -52,7 +55,8 @@ public:
             return;
         }
         //        Table = new Bucket[num_of_buckets];
-
+        constexpr auto db_midder1 = sizeof(bucket_type);
+        constexpr auto db_midder2 = sizeof(bucket_type) * CHAR_BIT;
         assert(element_length < sizeof(bucket_type) * CHAR_BIT);
         for (int i = 0; i < num_of_buckets; ++i) {
             auto bp = Table[i].bits_;
@@ -70,11 +74,19 @@ public:
     inline auto find(bucket_type x) const -> bool {
         assert((x & MASK(element_length)) == x);
 
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
-        Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
-        b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
-        b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
+        // Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
+        // b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
+        // b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
+        // assert(does_bucket_contain_valid_elements(b1));
+        // assert(does_bucket_contain_valid_elements(b2));
+
+        const uint64_t out = hasher(x);
+        const uint32_t b1 = reduce32((uint32_t)(out >> 32ul), (uint32_t) num_of_buckets);
+        const uint32_t b2 = reduce32((uint32_t) out & MASK32, (uint32_t) num_of_buckets);
+        assert(b1 < num_of_buckets);
+        assert(b2 < num_of_buckets);
         assert(does_bucket_contain_valid_elements(b1));
         assert(does_bucket_contain_valid_elements(b2));
         return ((find_helper(x, b1)) || find_helper(x, b2));
@@ -90,13 +102,20 @@ public:
         }
         /* http://www.cs.toronto.edu/~noahfleming/CuckooHashing.pdf (Algorithm 2)*/
 
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
-        Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
-        b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
-        b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
+        const uint64_t out = hasher(x);
+        const uint32_t b1 = reduce32((uint32_t) (out >> 32ul), (uint32_t) num_of_buckets);
+        const uint32_t b2 = reduce32((uint32_t) out & MASK32, (uint32_t) num_of_buckets);
+        assert(b1 < num_of_buckets);
+        assert(b2 < num_of_buckets);
         assert(does_bucket_contain_valid_elements(b1));
         assert(does_bucket_contain_valid_elements(b2));
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
+        // Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
+        // b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
+        // b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
+        // assert(does_bucket_contain_valid_elements(b1));
+        // assert(does_bucket_contain_valid_elements(b2));
 
         if (insert_if_bucket_not_full(x, b2)) {
             return;
@@ -133,11 +152,16 @@ public:
         assert(junk != empty_slot);
         *hold = junk;
 
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
-        Hash_ns::BobHash(hold, sizeof(*hold), &b1, &b2);
-        b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
-        b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
+        // Hash_ns::BobHash(hold, sizeof(*hold), &b1, &b2);
+        // b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
+        // b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
+
+        const uint64_t out = hasher(*hold);
+        const uint32_t b1 = reduce32((uint32_t) (out >> 32ul), (uint32_t) num_of_buckets);
+        const uint32_t b2 = reduce32((uint32_t) out & MASK32, (uint32_t) num_of_buckets);
+
         *bucket_index = (b1 == *bucket_index) ? b2 : b1;
         return;
     }
@@ -147,11 +171,15 @@ public:
             std::cout << "Trying to delete from empty hash table" << std::endl;
             //        assert(false);
         }
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
-        Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
-        b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
-        b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
+        const uint64_t out = hasher(x);
+        const uint32_t b1 = reduce32((uint32_t) (out >> 32ul), (uint32_t) num_of_buckets);
+        const uint32_t b2 = reduce32((uint32_t) out & MASK32, (uint32_t) num_of_buckets);
+
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        // uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
+        // Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
+        // b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
+        // b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
 
 
         const bool res = remove_helper(x, b1) || remove_helper(x, b2);
@@ -246,7 +274,7 @@ public:
         os << line;
         return os;
     }
-    
+
     inline auto get_element_buckets(bucket_type x, uint32_t *b1, uint32_t *b2) {
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
         *b1 = HTA_seed1;
@@ -493,13 +521,17 @@ public:
     }
 
     inline void my_hash(bucket_type x, uint32_t *b1, uint32_t *b2) const {
-        *b1 = HTA_seed1;
-        *b2 = HTA_seed2;
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
         assert(x == (x & MASK(element_length)));
-        Hash_ns::BobHash(&x, sizeof(x), b1, b2);
-        *b1 = reduce32((uint32_t) *b1, (uint32_t) num_of_buckets);
-        *b2 = reduce32((uint32_t) *b2, (uint32_t) num_of_buckets);
+        const uint64_t out = hasher(x);
+        *b1 = reduce32((uint32_t) (out >> 32ul), (uint32_t) num_of_buckets);
+        *b2 = reduce32((uint32_t) out & MASK32, (uint32_t) num_of_buckets);
+        // *b1 = HTA_seed1;
+        // *b2 = HTA_seed2;
+        // using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+        assert(x == (x & MASK(element_length)));
+        // Hash_ns::BobHash(&x, sizeof(x), b1, b2);
+        // *b1 = reduce32((uint32_t) *b1, (uint32_t) num_of_buckets);
+        // *b2 = reduce32((uint32_t) *b2, (uint32_t) num_of_buckets);
 
         // *b1 %= num_of_buckets;
         // *b2 %= num_of_buckets;

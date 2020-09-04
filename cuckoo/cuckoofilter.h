@@ -211,7 +211,7 @@ namespace cuckoofilter {
         } else {
             return NotFound;
         }
-        TryEliminateVictim:
+    TryEliminateVictim:
         if (victim_.used) {
             victim_.used = false;
             size_t i = victim_.index;
@@ -222,7 +222,7 @@ namespace cuckoofilter {
     }
 
     template<typename ItemType, size_t bits_per_item,
-            template<size_t> class TableType, typename HashFamily>
+             template<size_t> class TableType, typename HashFamily>
     std::string CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Info() const {
         std::stringstream ss;
         ss << "CuckooFilter Status:\n"

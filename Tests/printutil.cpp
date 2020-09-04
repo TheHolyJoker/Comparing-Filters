@@ -167,10 +167,10 @@ auto print_single_round(size_t var_num, const size_t *values, const size_t *divi
     rate = divisors[1] / (values[3] / 1e9);
     ss << sep << std::setw(name_width) << rate;
     //true_lookup rate (op/sec)
-    rate = divisors[0] / (values[4] / 1e9);
+    rate = divisors[2] / (values[4] / 1e9);
     ss << sep << std::setw(name_width) << rate;
     //deletion rate (op/sec)
-    rate = divisors[2] / (values[4] / 1e9);
+    rate = divisors[3] / (values[5] / 1e9);
     ss << sep << std::setw(name_width) << rate << sep << std::endl;
 
     if (is_last_round)

@@ -96,20 +96,21 @@ void testing_cf_ss() {
 }
 
 
-void simple_deletion() {
-    using spare_item = uint64_t;
-    using temp_hash = att_hTable<spare_item, 4>;
-    using Table = Dict512<temp_hash, spare_item, uint64_t>;
-    Table filter = FilterAPI<Table>::ConstructFromAddCount(1000);
+// void simple_deletion() {
+//     using spare_item = uint64_t;
+//     using temp_hash = att_hTable<spare_item, 4>;
+//     using Table = Dict512<temp_hash, spare_item, uint64_t>;
+//     Table filter = FilterAPI<Table>::ConstructFromAddCount(1000);
 
-    std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
-    FilterAPI<Table>::Add(4242, &filter);
-    std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
-    assert(FilterAPI<Table>::Contain(4242, &filter));
-    FilterAPI<Table>::Remove(4242, &filter);
-    std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
-    assert(!FilterAPI<Table>::Contain(4242, &filter));
-}
+//     std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
+//     FilterAPI<Table>::Add(4242, &filter);
+//     std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
+//     assert(FilterAPI<Table>::Contain(4242, &filter));
+//     FilterAPI<Table>::Remove(4242, &filter);
+//     std::cout << "Contain(4242): " << FilterAPI<Table>::Contain(4242, &filter) << std::endl;
+//     assert(!FilterAPI<Table>::Contain(4242, &filter));
+// }
+
 int main(int argc, char **argv) {
 
 
@@ -206,8 +207,8 @@ int main(int argc, char **argv) {
     // size_t temp_cap = (1 << 21ul) * 0.88;
 
     // std::stringstream ss;
-    size_t c = std::ceil((1 << 22u) * 0.88);
-    size_t r = 1 << 23u;
+    // size_t c = std::ceil((1 << 22u) * 0.88);
+    // size_t r = 1 << 23u;
     // fp_rates_all_wrapper<itemType, 8, 13>(
     //         c,
     //         r,
@@ -220,7 +221,8 @@ int main(int argc, char **argv) {
     //         true,
     //         false,
     //         true,
-    //         true);
+    //         1);
+    
 
     // for (size_t i = 0; i < 1024ul; i++)
     // {
@@ -242,7 +244,7 @@ int main(int argc, char **argv) {
     // }
 
     // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
-    //         10000000, 10000000 * 2,
+    //         100000, 100000 * 2,
     //         BITS_PER_ELEMENT_MACRO,
     //         bench_precision,
     //         true,
@@ -252,13 +254,16 @@ int main(int argc, char **argv) {
     //         false,
     //         false,
     //         false,
+    //         1, 
     //         0, 
-    //         1);
+    //         0);
     // return 0;
+    while (true){
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
-            31205621, 31205621 * 2,
+            31205621 *2, 62411242 *2,
+            // (1<<25) ,1<<26,
             BITS_PER_ELEMENT_MACRO,
-            bench_precision,
+            16,
             false,
             false,
             1,
@@ -266,9 +271,10 @@ int main(int argc, char **argv) {
             false,
             false,
             false,
-            true,
-            1);
-
+            1,
+            0,
+            0);
+    }
 
     return 0;
     // fp_rates_all_wrapper<itemType, 12, 13>(

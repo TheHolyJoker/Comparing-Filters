@@ -18,6 +18,8 @@
 //#include "x86intrin.h"
 
 namespace pd512 {
+    void validate_clz(int64_t quot, char rem, const __m512i *pd);
+
     // returns the position (starting from 0) of the jth set bit of x.
     inline uint64_t select64(uint64_t x, int64_t j) {
         assert(j < 64);
@@ -55,6 +57,20 @@ namespace pd512 {
         return y - _mm_popcnt_u64(z) - _mm_popcnt_u64(z >> 64);
     }
 
+    /*Stackoverflow: https://stackoverflow.com/a/40528716/5381404  */
+    inline int lzcnt_u128(unsigned __int128 u) {
+        uint64_t hi = u >> 64;
+        uint64_t lo = u;
+        lo = (hi == 0) ? lo : -1ULL;
+        return _lzcnt_u64(hi) + _lzcnt_u64(lo);
+    }
+
+    inline int tzcnt_u128(unsigned __int128 u) {
+        uint64_t hi = u >> 64;
+        uint64_t lo = u;
+        lo = (hi == 0) ? lo : -1ULL;
+        return _tzcnt_u64(hi) + _tzcnt_u64(lo);
+    }
     inline int popcount64(uint64_t x) {
         return _mm_popcnt_u64(x);
     }
@@ -89,36 +105,46 @@ namespace pd512 {
     inline bool pd_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
-        
+
         const unsigned __int128 *h = (const unsigned __int128 *) pd;
         constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
         const unsigned __int128 header = (*h) & kLeftoverMask;
-        
+
         // [begin,end) are the zeros in the header that correspond to the fingerprints
         // with quotient quot.
         const int64_t pop = _mm_popcnt_u64(header);
+        
         const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
         const uint64_t end = select128withPop64(header, quot, pop) - quot;
+        const uint64_t end2 = begin + lzcnt_u128(header >> (begin + quot));
+        // validate_clz(quot, rem, pd);
+        // assert(end2 == end);
+        // const uint64_t begin = (((quot ^ rem) & 63) < 51) ? ((quot ^ rem) & 63) : 63 - ((quot ^ rem) & 63);
+        // const uint64_t end = (begin + 10 <= 51) ? (begin + 10) : 51;
         if (begin == end) return false;
         assert(begin <= end);
         assert(end <= 51);
         const __m512i target = _mm512_set1_epi8(rem);
-        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
-        // round up to remove the header
-        constexpr unsigned kHeaderBytes = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-        assert(kHeaderBytes < sizeof(header));
-        v = v >> kHeaderBytes;
+        // uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // return (v >> 1u) & v;
         return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+        // uint64_t v = quot;
+        // round up to remove the header
+        // constexpr unsigned kHeaderBytes = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        // assert(kHeaderBytes < sizeof(header));
+        // v = v >> kHeaderBytes;
+        // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
     }
 
 
     bool pd_find_50_old(int64_t quot, uint8_t rem, const __m512i *pd);
-    
+
 
     // insert a pair of a quotient (mod 50) and an 8-bit remainder in a pocket dictionary.
     // Returns false if the dictionary is full.
     bool pd_add_50_old(int64_t quot, char rem, __m512i *pd);
-    
+
 
     inline bool pd_add_50(int64_t quot, char rem, __m512i *pd) {
         assert(quot < 50);
@@ -313,13 +339,7 @@ namespace pd512 {
                 sizeof(*pd) - (kBytes2copy + i + 1));
         return true;
     }
-    // inline auto conditional_remove(int64_t quot, char rem, __m512i *pd) -> bool {
-    //     if (pd_find_50(quot % 51, rem, pd)) {
-    //         remove(quot % 51, rem, pd);
-    //         return true;
-    //     }
-    //     return false;
-    // }
+
 
     void print512(const __m512i *var);
 
@@ -340,6 +360,8 @@ namespace pd512 {
 
 
     auto validate_number_of_quotient(const __m512i *pd) -> bool;
+
+    
 
     auto get_capacity_old(const __m512i *x) -> size_t;
 

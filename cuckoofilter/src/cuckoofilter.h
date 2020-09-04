@@ -94,7 +94,7 @@ class CuckooFilter {
     double frac = (double)max_num_keys / num_buckets / assoc;
     if (frac > 0.96) {
       std::cout << "CF might fail." << std::endl;
-//       num_buckets <<= 1;
+      //       num_buckets <<= 1;
     }
     victim_.used = false;
     table_ = new TableType<bits_per_item>(num_buckets);

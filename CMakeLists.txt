@@ -75,12 +75,17 @@ add_executable(
         PD_Filter/TPD_Filter/basic_function_util.cpp PD_Filter/TPD_Filter/basic_function_util.h
         PD_Filter/Analyse/analyse.hpp PD_Filter/Analyse/analyse.cpp
 
-        PD_Filter/d512/pd512.hpp
-        PD_Filter/d512/pd512.cpp
+        PD_Filter/d512/pd512.hpp PD_Filter/d512/pd512.cpp
         PD_Filter/d512/Dict512.hpp
+        
         PD_Filter/d512/twoChoicer.hpp
         PD_Filter/d512/hashTable_Aligned.hpp
         PD_Filter/d512/hashTable_Packed.hpp
+        
+        PD_Filter/d512/hashTable_CuckooFilter.hpp
+        PD_Filter/d512/Dict512_With_CF.hpp
+        PD_Filter/d512/Dict512_Ver2.hpp
+        
         PD_Filter/Safe/safe512.hpp
         PD_Filter/Safe/cc_pd.hpp
         PD_Filter/Validation/validate_hash_table.hpp PD_Filter/Validation/validate_hash_table.cpp
