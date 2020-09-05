@@ -215,6 +215,7 @@ struct FilterAPI<Dict320<TableType, spareItemType, itemType, HashFamily>> {
 
     static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count, .955, .5);
+        // return Table(add_count, .8, .5);
     }
 
     static void Add(itemType key, Table *table) {
@@ -242,10 +243,10 @@ struct FilterAPI<Dict320<TableType, spareItemType, itemType, HashFamily>> {
 
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
 
+        // return table->minimal_lookup(key);
         return table->lookup(key);
         // return table->bitwise_lookup(key);
         // std::cout << "tomer!" << std::endl;
-        // return table->minimal_lookup(key);
     }
 
     static string get_name(Table *table) {

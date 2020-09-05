@@ -76,8 +76,7 @@ namespace pd320 {
     }
 
     //Another way to compte begin and end.
-    inline void test_get_begin_and_end(int64_t quot, uint8_t rem, const __m512i *pd)
-    {
+    inline void test_get_begin_and_end(int64_t quot, uint8_t rem, const __m512i *pd) {
         const uint64_t header = ((uint64_t *) pd)[0];
         const uint64_t begin = (quot ? (select64(header, quot - 1) + 1) : 0) - quot;
         const uint64_t end_valid = select64(header, quot) - quot;
@@ -146,47 +145,138 @@ namespace pd320 {
             assert(0);
         }
         assert(my_end == end_valid);
-
     }
 
-    inline bool pd_find_32(int64_t quot, uint8_t rem, const __m512i *pd) {
+    inline bool pd_find_32_ver1(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 32);
 
         const uint64_t header = ((uint64_t *) pd)[0];
 
-        // const uint64_t begin = (quot ? (select64(header, quot - 1) + 1) : 0) - quot;
-        // const uint64_t end = select64(header, quot) - quot;
-        uint64_t begin_helper,end_helper;
-        if (quot == 0) {
-            begin_helper = 0;
-            end_helper = _tzcnt_u64(header);
-            // assert(header);
-            // assert(end_helper < 64);
-            // assert(begin_helper <= end_helper);
-        } else {
-            uint64_t temp = select64(header, quot - 1) + 1;
-            begin_helper = temp - quot;
-            end_helper = begin_helper + _tzcnt_u64(header >> temp);// shifted_header = header >> temp;
-            // assert(shifted_header);
-            // uint64_t temp2 = _tzcnt_u64(header >> temp);
-            // assert(temp2 < 32);   
-        }
-        assert(begin_helper <= end_helper);
-        const uint64_t begin = begin_helper;
-        const uint64_t end = end_helper;
+        const uint64_t begin = (quot ? (select64(header, quot - 1) + 1) : 0) - quot;
+        const uint64_t end = select64(header, quot) - quot;
+        assert(begin <= end);
+        assert(end <= 32);
 
         if (begin == end)
             return false;
-        assert(begin <= end);
-        assert(end <= 32);
+
         const __m512i target = _mm512_set1_epi8(rem);
         uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        v = v >> 8;
+        return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+    }
+
+    inline bool pd_find_32_ver2(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 32);
+
+        const uint64_t header = ((uint64_t *) pd)[0];
+        uint64_t begin_helper, end_helper;
+        if (quot == 0) {
+            begin_helper = 0;
+            end_helper = _tzcnt_u64(header);
+        } else {
+            uint64_t temp = select64(header, quot - 1) + 1;
+            begin_helper = temp - quot;
+            end_helper = begin_helper + _tzcnt_u64(header >> temp);
+        }
+        if (begin_helper == end_helper) return false;
+
+        assert(begin_helper <= end_helper);
+        const uint64_t begin = begin_helper;
+        const uint64_t end = end_helper;
+        assert(begin <= end);
+        assert(end <= 32);
+
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        v = v >> 8;
+        return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+    }
+
+    inline bool pd_find_32_ver3(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 32);
+
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        v = v >> 8;
+        if (v == 0) return false;
+
+        const uint64_t header = ((uint64_t *) pd)[0];
+        // const uint64_t valid_begin = (quot ? (select64(header, quot - 1) + 1) : 0) - quot;
+        // const uint64_t valid_end = select64(header, quot) - quot;
+
+        uint64_t begin_helper, end_helper;
+        if (quot == 0) {
+            begin_helper = 0;
+            end_helper = _tzcnt_u64(header);
+        } else {
+            const uint64_t mask = (UINT64_C(3) << quot - 1);
+            const uint64_t y = _pdep_u64(mask, header);
+            uint64_t temp = _tzcnt_u64(y) + 1;
+            // uint64_t valid_temp = select64(header, quot - 1) + 1;
+            // assert(valid_temp == temp);
+            begin_helper = temp - quot;
+            end_helper = begin_helper + _tzcnt_u64(y >> temp);
+        }
+        if (begin_helper == end_helper) return false;
+
+        return (begin_helper < end_helper) && ((v & ((UINT64_C(1) << end_helper) - 1)) >> begin_helper);
+        // assert(begin_helper <= end_helper);
+        // assert(begin_helper == valid_begin);
+        // assert(end_helper == valid_end);
+        // const uint64_t begin = begin_helper;
+        // const uint64_t end = end_helper;
+        // assert(begin <= end);
+        // assert(end <= 32);
+
+
+        /* very_slow:
+        constexpr unsigned kBytes2copy = 8;
+        uint64_t i = begin_helper;
+        for (; i < end_helper; ++i) {
+            if (rem == ((const char *) pd)[kBytes2copy + i])
+                return true;
+        }
+        return false; */
+
+        // const __m512i target = _mm512_set1_epi8(rem);
+        // uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        // v = v >> 8;
+        // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+    }
+    
+    inline bool pd_find_32_ver4(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 32);
+
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        v = v >> 8;
+        if (!v) return false;
+
+        const uint64_t header = ((uint64_t *) pd)[0];
+        if (quot == 0) {
+            const uint64_t end_helper = _tzcnt_u64(header);
+            return (end_helper) && (v & ((UINT64_C(1) << end_helper) - 1));
+        } else {
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), header);
+            uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+        
+    }
+
+    inline bool pd_find_32(int64_t quot, uint8_t rem, const __m512i *pd) {
+        return pd_find_32_ver4(quot, rem, pd);
         // round up to remove the header
         // constexpr unsigned kHeaderBytes = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
         // assert(kHeaderBytes < sizeof(header));
-        v = v >> 8;
-        return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+        // v = v >> 8;
+        // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
 
         /* //Todo
         const __m512i target = _mm512_set1_epi8(rem);

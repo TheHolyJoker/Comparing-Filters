@@ -33,34 +33,6 @@ namespace v_pd320 {
 }// namespace v_pd320
 
 namespace pd320 {
-    void print512(const __m512i *var) {
-        uint64_t val[8];
-        memcpy(val, var, 64);
-        printf("[%zu, %zu, %zu, %zu, %zu, %zu, %zu, %zu] \n",
-               val[0], val[1], val[2], val[3], val[4], val[5],
-               val[6], val[7]);
-        //     long long unsigned int val[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-        //     assert(sizeof(val) == 64);
-        //     memcpy(val, &var, sizeof(val));
-        //     for (size_t i = 0; i < 8; i++) {
-        //         std::cout << val[i] << ", ";
-        //         /* code */
-        //     }
-        //     std::cout << std::endl;
-        // }
-
-        /* bool
-    is_aligned(const __m512i *ptr) noexcept
-    {
-        auto iptr = reinterpret_cast<std::uintptr_t>(ptr);
-        return !(iptr % alignof(T));
-    } */
-
-        // cout <<
-        // printf("Numerical: %i %i %i %i %i %i %i %i \n",
-        //        val[0], val[1], val[2], val[3], val[4], val[5],
-        //        val[6], val[7]);
-    }
 
     auto validate_number_of_quotient(const __m512i *pd) -> bool {
         // std::cout << "h128: " << std::endl;

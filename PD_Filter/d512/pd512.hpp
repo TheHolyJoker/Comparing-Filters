@@ -105,6 +105,10 @@ namespace pd512 {
     inline bool pd_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return false;
 
         const unsigned __int128 *h = (const unsigned __int128 *) pd;
         constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
@@ -116,17 +120,17 @@ namespace pd512 {
 
         const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
         const uint64_t end = select128withPop64(header, quot, pop) - quot;
-        const uint64_t end2 = begin + lzcnt_u128(header >> (begin + quot));
+        // const uint64_t end2 = begin + lzcnt_u128(header >> (begin + quot));
         // validate_clz(quot, rem, pd);
         // assert(end2 == end);
         // const uint64_t begin = (((quot ^ rem) & 63) < 51) ? ((quot ^ rem) & 63) : 63 - ((quot ^ rem) & 63);
         // const uint64_t end = (begin + 10 <= 51) ? (begin + 10) : 51;
+        // return (begin < end);
         if (begin == end) return false;
         assert(begin <= end);
         assert(end <= 51);
-        const __m512i target = _mm512_set1_epi8(rem);
-        // uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
-        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // const __m512i target = _mm512_set1_epi8(rem);
+        // uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
         // return (v >> 1u) & v;
         return (v & ((UINT64_C(1) << end) - 1)) >> begin;
         // uint64_t v = quot;
