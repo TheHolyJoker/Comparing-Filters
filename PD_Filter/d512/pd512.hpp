@@ -113,7 +113,7 @@ namespace pd512 {
         // [begin,end) are the zeros in the header that correspond to the fingerprints
         // with quotient quot.
         const int64_t pop = _mm_popcnt_u64(header);
-        
+
         const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
         const uint64_t end = select128withPop64(header, quot, pop) - quot;
         const uint64_t end2 = begin + lzcnt_u128(header >> (begin + quot));
@@ -256,7 +256,8 @@ namespace pd512 {
         assert(begin <= end);
         // assert(end <= 50 + 51);
         unsigned __int128 new_header = header & ((((unsigned __int128) 1) << begin) - 1);
-        new_header |= header >> (end - 1);
+        new_header |= ((header >> end) << (end - 1));
+
         assert(popcount128(new_header) == 50);
         //// assert(select128(new_header, 50 - 1) - (50 - 1) == fill + 1);
 
@@ -361,7 +362,6 @@ namespace pd512 {
 
     auto validate_number_of_quotient(const __m512i *pd) -> bool;
 
-    
 
     auto get_capacity_old(const __m512i *x) -> size_t;
 

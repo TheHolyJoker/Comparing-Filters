@@ -244,36 +244,41 @@ int main(int argc, char **argv) {
     // }
 
     // b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
-    //         100000, 100000 * 2,
+    //         100000, 200000,
     //         BITS_PER_ELEMENT_MACRO,
     //         bench_precision,
-    //         true,
-    //         false,
-    //         false,
-    //         false,
-    //         false,
-    //         false,
-    //         false,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
     //         1, 
     //         0, 
+    //         1,
+    //         0,
     //         0);
     // return 0;
     while (true){
+            // 31205621 *2, 62411242 *2,
     b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
-            31205621 *2, 62411242 *2,
-            // (1<<25) ,1<<26,
-            BITS_PER_ELEMENT_MACRO,
-            16,
+            62411242, 124822484,
+            8,
+            10,
             false,
-            false,
+            0,
             1,
             0,
-            false,
-            false,
-            false,
+            0,
+            0,
+            0,
+            0,
+            0,
             1,
             0,
-            0);
+            0
+            );
     }
 
     return 0;

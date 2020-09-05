@@ -8,3 +8,7 @@ heaptracks/xxhash.h
 xxhash.h
 heaptracks/
 Terminal_history
+PD_Filter/Dict320/Dict512_Ver2.hpp
+PD_Filter/Dict320/Dict512_With_CF.hpp
+PD_Filter/Dict320/pd320_old.cpp
+PD_Filter/Dict320/pd320_old.hpp

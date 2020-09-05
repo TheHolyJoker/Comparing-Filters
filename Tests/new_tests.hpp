@@ -52,7 +52,7 @@ auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t b
 
 template<typename itemType, size_t bits_per_element, size_t CF_ss_bits>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision, bool validate_before_benchmarking,
-                   bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool pd512_CF = true, bool TC = true, ostream &os = cout) -> std::stringstream;
+                   bool BF = true, bool CF = true, bool CF_ss = true, bool MT = true, bool SIMD = true, bool call_PD = true, bool pd512 = true, bool pd512_ver2 = true, bool pd320 = true, bool pd512_CF = true, bool TC = true, ostream &os = cout) -> std::stringstream;
 
 template<typename itemType, size_t bits_per_element, typename HashFamily>
 auto b_hash_with_Dict512(size_t filter_max_capacity, size_t lookup_reps, bool validate_before_benchmarking) -> std::stringstream;
@@ -76,7 +76,7 @@ auto hash_fp_rates_with_Dict512(size_t filter_max_capacity, size_t lookup_reps, 
 
 template<typename itemType, size_t bits_per_element, size_t CF_ss_bits>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision, bool validate_before_benchmarking,
-                   bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512, bool pd512_CF, bool TC, ostream &os) -> std::stringstream {
+                   bool BF, bool CF, bool CF_ss, bool MT, bool SIMD, bool call_PD, bool pd512, bool pd512_ver2, bool pd320, bool pd512_CF, bool TC, ostream &os) -> std::stringstream {
 
     std::stringstream debug_info;
     // assert(filter_max_capacity % bench_precision == 0);
@@ -178,7 +178,7 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
         }
     }
 
-    if (true){
+    if (pd512_ver2){
         using spare_item = uint64_t;
         using temp_hash = hashTable_Aligned<spare_item, 4>;
         std::stringstream v_info;
@@ -189,7 +189,7 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
             valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
             debug_info << v_info.str();
             if (!valid)
-                std::cout << "pd512 is not valid!" << std::endl;
+                std::cout << "pd512_ver2 is not valid!" << std::endl;
         }
         if ((!validate_before_benchmarking) or (valid)) {
             std::stringstream ss;
@@ -200,6 +200,29 @@ auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_
         }
         
     }
+    if (pd320){
+        using spare_item = uint64_t;
+        using temp_hash = hashTable_Aligned<spare_item, 4>;
+        std::stringstream v_info;
+
+        using Table = Dict320<temp_hash, spare_item, itemType, hashing::TwoIndependentMultiplyShift>;
+        bool valid = true;
+        if (validate_before_benchmarking) {
+            valid = w_validate_filter<Table, itemType>(filter_max_capacity >> 2u, lookup_reps >> 2u, bits_per_element, 1, .5, &v_info);
+            debug_info << v_info.str();
+            if (!valid)
+                std::cout << "pd320 is not valid!" << std::endl;
+        }
+        if ((!validate_before_benchmarking) or (valid)) {
+            std::stringstream ss;
+            // while (true) {
+            ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, &elements);
+            // }
+            debug_info << ss.str();
+        }
+        
+    }
+    
     if (pd512_CF) {
         using spare_item = uint64_t;
         using temp_hash = hashTable_CuckooFilter;

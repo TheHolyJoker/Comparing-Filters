@@ -86,6 +86,10 @@ add_executable(
         PD_Filter/d512/Dict512_With_CF.hpp
         PD_Filter/d512/Dict512_Ver2.hpp
         
+        PD_Filter/Dict320/pd320.hpp PD_Filter/Dict320/pd320.cpp
+        PD_Filter/Dict320/Dict320.hpp
+
+
         PD_Filter/Safe/safe512.hpp
         PD_Filter/Safe/cc_pd.hpp
         PD_Filter/Validation/validate_hash_table.hpp PD_Filter/Validation/validate_hash_table.cpp

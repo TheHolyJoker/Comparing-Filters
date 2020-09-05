@@ -10,8 +10,8 @@
 
 #define DICT512_VER2_DB1 (true)
 #define DICT512_VER2_DB2 (true & DICT512_VER2_DB1)
-#define DICT512_VER2_SF_BITS (16)
-#define DICT512_VER2_SF_MASK (MASK(DICT512_VER2_SF_BITS))
+// #define DICT512_VER2_SF_BITS (16)
+// #define DICT512_VER2_SF_MASK (MASK(DICT512_VER2_SF_BITS))
 
 
 typedef std::tuple<int, size_t, uint64_t, uint64_t, size_t> db_key;
@@ -115,7 +115,8 @@ public:
         // auto ss = get_extended_info();
         // std::cout << ss.str();
         // std::cout << "squared chi test: " << squared_chi_test() << std::endl;
-        std::cout << counters_stream->str() << std::endl;
+
+        // std::cout << counters_stream->str() << std::endl;
         delete counters_stream;
         free(pd_array);
         pd_capacity_vec.clear();
@@ -134,7 +135,8 @@ public:
         assert(pd_index < number_of_pd);
         assert(quot <= 50);
 
-        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) || (pd_simple_filter_vec[pd_index] & (1ull << quot));
+        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) || 
+        ((pd_capacity_vec[pd_index] & 1u) && (pd_simple_filter_vec[pd_index] & (1ull << quot)));
                 // spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
             //    ((pd_simple_filter_vec[pd_index] & (1ull << quot)) &&
             //     spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
