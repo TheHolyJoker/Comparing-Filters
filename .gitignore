@@ -12,5 +12,6 @@ PD_Filter/Dict320/Dict512_Ver2.hpp
 PD_Filter/Dict320/Dict512_With_CF.hpp
 PD_Filter/Dict320/pd320_old.cpp
 PD_Filter/Dict320/pd320_old.hpp
-PD_Filter/Dict320/pd320_v2.cpp
-PD_Filter/Dict320/pd320_v2.hpp
+# PD_Filter/Dict320/pd320_v2.cpp
+# PD_Filter/Dict320/pd320_v2.hppBuilt_and_Run_valid_test.sh
+Built_and_Run_bench.sh

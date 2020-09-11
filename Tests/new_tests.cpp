@@ -111,7 +111,24 @@ void testing_cf_ss() {
 //     assert(!FilterAPI<Table>::Contain(4242, &filter));
 // }
 
-int main(int argc, char **argv) {
+int o_main(int argc, char **argv) {
+    using itemType = uint64_t;
+    using Table_TC320 = twoChoicer320<itemType>;
+    std::stringstream ss;
+    bool res = w_validate_filter<Table_TC320, itemType>(100000ul, 200000ul, 8ul, 42.0, 42.0, &ss);
+    if (res)
+        std::cout << "Pass" << std::endl;
+    else
+        std::cout << "Failed" << std::endl;
+    // assert(res);
+    // single_fp_rates<Table_TC320, itemType>(std::ceil((1 << 22u) * 0.88), 1<<24, 8, 0);
+    
+    
+    return 0;
+
+    
+}
+int old_main(int argc, char **argv) {
 
 
     // return 0;
@@ -206,23 +223,27 @@ int main(int argc, char **argv) {
 
     // size_t temp_cap = (1 << 21ul) * 0.88;
 
-    // std::stringstream ss;
-    // size_t c = std::ceil((1 << 22u) * 0.88);
-    // size_t r = 1 << 23u;
-    // fp_rates_all_wrapper<itemType, 8, 13>(
-    //         c,
-    //         r,
-    //         BITS_PER_ELEMENT_MACRO,
-    //         true,
-    //         true,
-    //         true,
-    //         true,
-    //         true,
-    //         true,
-    //         false,
-    //         true,
-    //         1);
-    
+    std::stringstream ss;
+    size_t c = std::ceil((1 << 22u) * 0.88);
+    size_t r = 1 << 23u;
+    fp_rates_all_wrapper<itemType, 8, 13>(
+            c,
+            r,
+            BITS_PER_ELEMENT_MACRO,
+            true,
+            0,
+            0,
+            0,
+            0,
+            0,
+            false,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0);
+
 
     // for (size_t i = 0; i < 1024ul; i++)
     // {
@@ -254,33 +275,34 @@ int main(int argc, char **argv) {
     //         0,
     //         0,
     //         0,
-    //         1, 
-    //         0, 
+    //         1,
+    //         0,
+    //         1,
     //         1,
     //         0,
     //         0);
     // return 0;
-    while (true){
-            // 31205621 *2, 62411242 *2,
-            // 62411242, 124822484,            
-            // 31205621, 62411242,
-    b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
-            62411242, 124822484,            
-            8,
-            16,
-            false,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            1,
-            0,
-            0
-            );
+    while (true) {
+        // 31205621 *2, 62411242 *2,
+        // 62411242, 124822484,
+        // 31205621, 62411242,
+        b_all_wrapper<itemType, BITS_PER_ELEMENT_MACRO, 8>(
+                62411242, 124822484,
+                8,
+                16,
+                false,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                1,
+                0,
+                0);
     }
 
     return 0;

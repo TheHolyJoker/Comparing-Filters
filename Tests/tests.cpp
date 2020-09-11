@@ -137,7 +137,7 @@ auto CF_rates_wrapper<s_dict32>(size_t filter_max_capacity, size_t lookup_reps,
 }*/
 
 
-int old_main(int argc, char **argv) {
+int very_old_main(int argc, char **argv) {
     //Default values
     size_t filter_indicator = 0;
     ulong shift = 18u;

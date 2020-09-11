@@ -109,7 +109,7 @@ public:
     virtual ~Dict512() {
         // auto ss = get_extended_info();
         // std::cout << ss.str();
-        std::cout << "squared chi test: " << squared_chi_test() << std::endl;
+        // std::cout << "squared chi test: " << squared_chi_test() << std::endl;
         free(pd_array);
         pd_capacity_vec.clear();
         delete spare;
@@ -137,6 +137,10 @@ public:
         assert(pd_index < number_of_pd);
         assert(quot <= 50);
 
+        assert(pd512::validate_clz(quot, rem, &pd_array[pd_index]));
+        // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) ||
+        //        (pd512::is_full(&pd_array[pd_index]) &&
+        //         spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
         return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) ||
                ((pd_capacity_vec[pd_index] & 1u) &&
                 spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
@@ -724,7 +728,7 @@ public:
     }
 
     auto get_name() -> std::string {
-        return "Dict512 with hash: " + hasher.get_name();
+        return "Dict512 ";// + hasher.get_name();
         /* string a = "dict512:\t";
             string b = pd512::get_name() + "\t";
             //        string b = pd_vec[0]->get_name() + "\t";

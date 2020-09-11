@@ -224,7 +224,8 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     //    auto number_of_elements_in_the_filter = filter_max_capacity;
 
     unordered_set<itemType> member_set, lookup_set, to_be_deleted_set;
-    size_t del_size = filter_max_capacity / 2;
+    size_t del_size = 0;
+    // size_t del_size = filter_max_capacity / 2;
     set_init(filter_max_capacity - del_size, &member_set);
     set_init(lookup_reps, &lookup_set);
     set_init(del_size, &to_be_deleted_set);
@@ -314,6 +315,7 @@ auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t er
     auto res = v_filter_core<Table, itemType, block_insertion>(&wrap_filter, filter_max_capacity, lookup_reps,
                                                                error_power_inv, level1_load_factor, level2_load_factor, ss);
     if (res != 1){
+        std::cout << FilterAPI<Table>::get_name(&wrap_filter) << " Failed in validation." << std::endl;
         std::cout << "v_filter_core failed. Error value is: " << res << std::endl;
         assert(false);
     }

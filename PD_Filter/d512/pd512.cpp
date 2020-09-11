@@ -5,6 +5,49 @@
 
 #include "pd512.hpp"
 
+
+namespace v_pd512 {
+    void bin_print_header(uint64_t header) {
+        // assert(_mm_popcnt_u64(header) == 32);
+        uint64_t b = 1ULL << (64ul - 1u);
+        while (b) {
+            std::string temp = (b & header) ? "1" : "0";
+            std::cout << temp;
+            b >>= 1ul;
+        }
+    }
+    auto bin_print_header_spaced(uint64_t header) -> std::string {
+        // assert(_mm_popcnt_u64(header) == 32);
+        uint64_t b = 1ULL << (64ul - 1u);
+        std::string res = "";
+        while (b) {
+            for (size_t i = 0; i < 4; i++) {
+                res += (b & header) ? "1" : "0";
+                b >>= 1ul;
+            }
+            if (b)
+                res += ".";
+        }
+        return res;
+    }
+
+    auto bin_print_header_spaced128(unsigned __int128 header) -> std::string {
+        // assert(_mm_popcnt_u64(header) == 32);
+        unsigned __int128 b = ((unsigned __int128) 1 ) << 127ul;
+        assert(b > 42);
+        std::string res = "";
+        while (b) {
+            for (size_t i = 0; i < 4; i++) {
+                res += (b & header) ? "1" : "0";
+                b >>= 1ul;
+            }
+            if (b)
+                res += ".";
+        }
+        return res;
+    }
+};// namespace v_pd512
+
 namespace pd512 {
     bool pd_find_64(int64_t quot, char rem, const __m512i *pd) {
         assert(quot < 64);
@@ -93,7 +136,7 @@ namespace pd512 {
         // v = v >> ((51 + 50 + CHAR_BIT - 1) / CHAR_BIT);
         // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
     }
-    
+
     inline bool pd_find_50_old(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
@@ -117,31 +160,291 @@ namespace pd512 {
         v = v >> kHeaderBytes;
         return (v & ((UINT64_C(1) << end) - 1)) >> begin;
     }
-    
-    void validate_clz(int64_t quot, char rem, const __m512i *pd){
+
+    auto validate_clz(int64_t quot, char rem, const __m512i *pd) -> bool {
+        static int counter = 0;
+        counter++;
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
+
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // if (!v) return false;
 
         const unsigned __int128 *h = (const unsigned __int128 *) pd;
         constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
         const unsigned __int128 header = (*h) & kLeftoverMask;
 
-        // [begin,end) are the zeros in the header that correspond to the fingerprints
-        // with quotient quot.
-        
         const int64_t pop = _mm_popcnt_u64(header);
         const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
         const uint64_t end = select128withPop64(header, quot, pop) - quot;
-        const uint64_t end2 = begin + lzcnt_u128(header >> (begin + quot));
+        const uint64_t h0 = ((uint64_t *) pd)[0];
+        const uint64_t h1 = ((uint64_t *) pd)[1];
+
+        if (quot == 0) {
+            // std::cout << "h0" << std::endl;
+            const uint64_t my_end = _tzcnt_u64(header);
+            assert(begin == 0);
+            assert(end == my_end);
+            return true;
+        } else if (quot < pop - 1) {
+            // std::cout << "h1" << std::endl;
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), h0);
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            const uint64_t my_begin = temp - quot;
+            const uint64_t my_end = my_begin + diff;
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else if (quot == pop - 1) {
+            // std::cout << "h2" << std::endl;
+            const uint64_t leading_one_index = _lzcnt_u64(h0);
+            const uint64_t next_leading_one_index = _lzcnt_u64(h0 ^ (1ull << (63ul - leading_one_index)));
+            const uint64_t temp = (63 - _lzcnt_u64(h0)) - quot;
+            const uint64_t my_end = (63 - leading_one_index) - quot;
+            const uint64_t my_begin = (63 - next_leading_one_index) - quot + 1;
+            assert(my_begin <= my_end);
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else if (quot == pop) {
+            // std::cout << "h3" << std::endl;
+            const uint64_t my_begin = (63 - _lzcnt_u64(h0)) - quot + 1;
+            // const uint64_t my_begin = (64 - _lzcnt_u64(h0)) - quot;
+            const uint64_t my_end = 64 + _tzcnt_u64(h1) - quot;
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else if (quot == pop + 1) {
+            // std::cout << "h4" << std::endl;
+            const uint64_t temp = _tzcnt_u64(h1) + 1;
+            const uint64_t my_begin = 64 - quot + temp;
+            const uint64_t my_end = my_begin + _tzcnt_u64(h1 >> temp);
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else {
+            // std::cout << "h5" << std::endl;
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - pop - 1), h1);
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            const uint64_t my_begin = temp - quot + 64;
+            const uint64_t my_end = my_begin + diff;
+            assert(my_begin == begin);
+            assert(my_end == end);
+
+            return true;
+        }
+    }
+    auto validate_clz_old(int64_t quot, char rem, const __m512i *pd) -> bool {
+        static int counter = 0;
+        counter++;
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // if (!v) return false;
+
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+
+        const int64_t pop = _mm_popcnt_u64(header);
+        const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
+        const uint64_t end = select128withPop64(header, quot, pop) - quot;
+
+        /*switch (quot )
+        {
+        case 0:
+            assert(begin == 0);
+            const uint64_t my_end = _tzcnt_u64(header);
+            assert(end == my_end);
+            break;
+        case 1:
+        
+        default:
+            break;
+        } */
+
+        if (quot == 0) {
+            assert(begin == 0);
+            const uint64_t my_end = _tzcnt_u64(header);
+            assert(end == my_end);
+            return true;
+        } else if (quot < pop - 1) {
+            const uint64_t small_header = ((uint64_t *) pd)[0];
+            auto pre1 = _pdep_u64(UINT64_C(1) << (quot - 1), small_header);
+            auto pre2 = _pdep_u64(UINT64_C(1) << (quot), small_header);
+
+            auto mid1 = _tzcnt_u64(pre1);
+            auto mid2 = _tzcnt_u64(pre2);
+
+            const uint64_t safe_begin = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot - 1), small_header));
+            const uint64_t safe_end = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot), small_header));
+
+            const uint64_t safe_begin2 = safe_begin - quot + 1;
+            const uint64_t safe_end2 = safe_end - quot;
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), small_header);
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t mid_val = y >> temp;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            const uint64_t my_begin = temp - quot;
+            const uint64_t my_end = my_begin + diff;
+            assert(my_begin == begin);
+            assert(my_end == end);
+            // bool res = diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+            // assert(res == pd_find_50(quot, rem, pd));
+            return true;
+        } else if (quot == pop - 1) {
+            const uint64_t h0 = ((uint64_t *) pd)[0];
+            // const uint64_t h1 = ((uint64_t *) pd)[1];
+            const uint64_t leading_one_index = _lzcnt_u64(h0);
+            const uint64_t next_leading_one_index = _lzcnt_u64(h0 ^ (1ull << (63ul - leading_one_index)));
+            const uint64_t temp = (63 - _lzcnt_u64(h0)) - quot;
+            const uint64_t my_end = (63 - leading_one_index) - quot;
+            const uint64_t my_begin = (63 - next_leading_one_index) - quot + 1;
+            assert(my_begin <= my_end);
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else if (quot == pop) {
+            const uint64_t h0 = ((uint64_t *) pd)[0];
+            const uint64_t h1 = ((uint64_t *) pd)[1];
+            const uint64_t my_begin = (64 - _lzcnt_u64(h0)) - quot;
+            const uint64_t my_end = 64 + _tzcnt_u64(h1) - quot;
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else if (quot == pop + 1) {
+            // const uint64_t h0 = ((uint64_t *) pd)[0];
+            const uint64_t h1 = ((uint64_t *) pd)[1];
+            const uint64_t temp = _tzcnt_u64(h1) + 1;
+            const uint64_t my_begin = 64 - quot + temp;
+            const uint64_t my_end = my_begin + _tzcnt_u64(h1 >> temp);
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else {
+            const int64_t h0_pop = _mm_popcnt_u64(((uint64_t *) pd)[0]);
+            const int64_t small_header = ((uint64_t *) pd)[1];
+            const uint64_t old_quot = quot;
+            quot -= h0_pop;
+            const uint64_t safe_begin = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot - 1), small_header));
+            const uint64_t safe_end = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot), small_header));
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), small_header);
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            const uint64_t my_begin = temp - old_quot + 64;
+            const uint64_t my_end = my_begin + diff;
+            assert(my_begin == begin);
+            assert(my_end == end);
+
+            // bool res = diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+            // assert(res == pd_find_50(quot, rem, pd));
+            return true;
+        }
+
+        // return validate_clz_helper(quot, rem, pd);
+        /* } else if (quot - 1 < pop) {
+            const uint64_t h0 = ((uint64_t *) pd)[0];
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), h0);
+
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            bool res = diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+            assert(res == pd_find_50(quot, rem, pd));
+            return true;
+        } else if (pop == quot - 1) {
+            const uint64_t h0 = ((uint64_t *) pd)[0];
+            const uint64_t h1 = ((uint64_t *) pd)[1];
+            const uint64_t my_begin = (64 - _lzcnt_u64(h0)) - quot + 1;
+            const uint64_t my_end = 64 + _tzcnt_u64(h1) - quot;
+            assert(my_begin == begin);
+            assert(my_end == end);
+            return true;
+        } else {
+            const uint64_t h1 = ((uint64_t *) pd)[1];
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), h1);
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            bool res = diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+            assert(res == pd_find_50(quot, rem, pd));
+            return true;
+        } */
+    }
+
+    auto validate_clz_helper(int64_t quot, char rem, const __m512i *pd) -> bool {
+        // const __m512i target = _mm512_set1_epi8(rem);
+        // const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // // if (!v) return false;
+
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+
+        const int64_t pop = _mm_popcnt_u64(header);
+        const int64_t h0_pop = _mm_popcnt_u64(((uint64_t *) pd)[0]);
+        const int64_t h1_pop = _mm_popcnt_u64(((uint64_t *) pd)[1]);
+        assert(h0_pop == pop);
+        const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
+        const uint64_t end = select128withPop64(header, quot, pop) - quot;
+        const uint64_t h0 = ((uint64_t *) pd)[0];
+        const uint64_t h1 = ((uint64_t *) pd)[1];
+        const uint64_t small_header = (quot - 1 < pop) ? h0 : h1;
+        if (quot - 1 < pop) {
+            auto pre1 = _pdep_u64(UINT64_C(1) << (quot - 1), small_header);
+            auto pre2 = _pdep_u64(UINT64_C(1) << (quot), small_header);
+
+            auto mid1 = _tzcnt_u64(pre1);
+            auto mid2 = _tzcnt_u64(pre2);
+
+            const uint64_t safe_begin = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot - 1), small_header));
+            const uint64_t safe_end = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot), small_header));
+
+            const uint64_t safe_begin2 = safe_begin - quot + 1;
+            const uint64_t safe_end2 = safe_end - quot;
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), small_header);
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t mid_val = y >> temp;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            const uint64_t my_begin = temp - quot;
+            const uint64_t my_end = my_begin + diff;
+            assert(my_begin == begin);
+            assert(my_end == end);
+            // bool res = diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+            // assert(res == pd_find_50(quot, rem, pd));
+            return true;
+        } else {
+            const uint64_t old_quot = quot;
+            quot -= h0_pop;
+            const uint64_t safe_begin = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot - 1), small_header));
+            const uint64_t safe_end = _tzcnt_u64(_pdep_u64(UINT64_C(1) << (quot), small_header));
+            const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), small_header);
+            const uint64_t temp = _tzcnt_u64(y) + 1;
+            const uint64_t diff = _tzcnt_u64(y >> temp);
+            const uint64_t my_begin = temp - old_quot + 64;
+            const uint64_t my_end = my_begin + diff;
+            assert(my_begin == begin);
+            assert(my_end == end);
+
+            // bool res = diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+            // assert(res == pd_find_50(quot, rem, pd));
+            return true;
+        }
+    }
+
+    /* const uint64_t end2 = begin + lzcnt_u128(header >> (begin + quot));
         const uint64_t end4 = begin + lzcnt_u128(header >> (begin));
         const uint64_t end22 = begin + lzcnt_u128(header);
         const uint64_t end3 = begin + tzcnt_u128(header >> begin);
         const uint64_t end33 = begin + tzcnt_u128(header);
         const uint64_t end5 = end33 - 63;
-        const uint64_t end6 = begin + lzcnt_u128(header >> (begin + quot)) +(quot - 128);
+        const uint64_t end6 = begin + lzcnt_u128(header >> (begin + quot)) + (quot - 128);
         if (end2 == end) return;
         if (end6 == end) return;
-        
+
         std::cout << "quot: " << quot << std::endl;
         std::cout << "begin: " << begin << std::endl;
         std::cout << "end: " << end << std::endl;
@@ -152,12 +455,12 @@ namespace pd512 {
         std::cout << "end4: " << end4 << std::endl;
         std::cout << "end5: " << end5 << std::endl;
         std::cout << "end6: " << end6 << std::endl;
-        std::cout << std::string(64,'@') << std::endl;
+        std::cout << std::string(64, '@') << std::endl;
         if (begin == 0) return;
         if (end5 == end) return;
         if (end6 == end) return;
-        assert(0);
-    }
+        assert(0); */
+    // }// namespace pd512
     void print512(const __m512i *var) {
         uint64_t val[8];
         memcpy(val, var, 64);
@@ -301,7 +604,7 @@ namespace pd512 {
         assert(false);
         return false;
     }
-}// namespace pd512
+};// namespace pd512
 
 auto my_equal(__m512i x, __m512i y) -> bool {
     bool res = (_mm512_cmpeq_epi64_mask(x, y) == 255);

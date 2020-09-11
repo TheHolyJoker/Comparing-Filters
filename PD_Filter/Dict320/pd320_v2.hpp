@@ -3,8 +3,12 @@
  * https://github.com/jbapple/crate-dictionary
  * */
 
-#ifndef FILTERS_PD320_HPP
-#define FILTERS_PD320_HPP
+
+//Notes to continue.
+// 1) fp rates is to big.
+// 2) currently can't delete. hard but possible to solve. when deleting, perform pop, possibly with extra filter for deleted items (not so good idea).
+#ifndef FILTERS_PD320_V2_HPP
+#define FILTERS_PD320_V2_HPP
 
 #include <assert.h>
 #include <limits.h>
@@ -17,7 +21,7 @@
 // #include "immintrin.h"
 //#include "x86intrin.h"
 
-namespace v_pd320 {
+namespace v_pd320_v2 {
     template<typename T>
     void bin_print(T x) {
         if (x == 0) {
@@ -40,10 +44,16 @@ namespace v_pd320 {
     void bin_print_header(uint64_t header);
     auto bin_print_header_spaced(uint64_t header) -> std::string;
 
-}// namespace v_pd320
+}// namespace v_pd320_v2
 
 
-namespace pd320 {
+namespace pd320_v2 {
+
+    enum pd_Status {
+        Found,
+        Maybe,
+        DefinitelyNotMember
+    };
     void validate_clz(int64_t quot, char rem, const __m512i *pd);
 
     // returns the position (starting from 0) of the jth set bit of x.
@@ -63,6 +73,10 @@ namespace pd320 {
         // return header & (1ULL << 63);
     }
 
+    inline bool did_pd_overflowed(const __m512i *pd) {
+        return ((uint64_t *) pd)[5] != 0;
+    }
+
     auto get_capacity_att(const __m512i *x) -> size_t;
 
     // inline int pd_popcount(const __m512i *pd) {
@@ -72,6 +86,11 @@ namespace pd320 {
     inline auto get_capacity(const __m512i *pd) -> int {
         const uint64_t header = ((uint64_t *) pd)[0];
         assert(_mm_popcnt_u64(header) == 32);
+        const auto res = 32 - _lzcnt_u64(header);
+        if (res != get_capacity_att(pd)) {
+            std::cout << "capacity in pd320_v2 is not valid!" << std::endl;
+            assert(0);
+        }
         return 32 - _lzcnt_u64(header);
     }
 
@@ -124,16 +143,16 @@ namespace pd320 {
 
             std::cout << "header: " << header << std::endl;
             std::cout << "bin(header): \t\t";
-            v_pd320::bin_print_header(header);
+            v_pd320_v2::bin_print_header(header);
             std::cout << std::endl;
 
             std::cout << "bin(shifted_header):\t";
-            v_pd320::bin_print_header(shifted_header);
+            v_pd320_v2::bin_print_header(shifted_header);
             std::cout << std::endl;
 
             std::cout << line_mid << std::endl;
-            std::cout << "header:   " << v_pd320::bin_print_header_spaced(header) << std::endl;
-            std::cout << "s_header: " << v_pd320::bin_print_header_spaced(shifted_header) << std::endl;
+            std::cout << "header:   " << v_pd320_v2::bin_print_header_spaced(header) << std::endl;
+            std::cout << "s_header: " << v_pd320_v2::bin_print_header_spaced(shifted_header) << std::endl;
 
 
             std::cout << line << std::endl;
@@ -265,180 +284,31 @@ namespace pd320 {
             const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), header);
             const uint64_t temp = _tzcnt_u64(y) + 1;
             const uint64_t diff = _tzcnt_u64(y >> temp);
+            assert(temp >= quot);
             return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
         }
     }
-    inline bool pd_find_32_ver5(int64_t quot, uint8_t rem, const __m512i *pd) {
-        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
-        assert(quot < 32);
 
-        const __m512i target = _mm512_set1_epi8(rem);
-        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 8ul;
-        if (!v) return false;
-
-
-        const int64_t h0 = ((uint64_t *) pd)[0];
-
-        if (_blsr_u64(v) == 0) {
-            // const int64_t zero_count = _tzcnt_u64(v);
-            const int64_t mask = v << quot;
-            return (!(h0 & mask)) && _mm_popcnt_u64(h0 & (mask - 1)) == quot;
-            // const bool att = (!(h0 & mask)) && _mm_popcnt_u64(h0 & (mask - 1)) == quot;
-            // assert(att == pd_find_32_ver1(quot, rem, pd));
-            // return (!(h0 & (1ULL << (quot + zero_count)))) && _mm_popcnt_u64(_bzhi_u64(h0, quot + zero_count)) == quot;
-        } else {
-            if (quot == 0) {
-                const uint64_t end_helper = _tzcnt_u64(h0);
-                return (end_helper) && (v & ((UINT64_C(1) << end_helper) - 1));
-            } else {
-                const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), h0);
-                const uint64_t temp = _tzcnt_u64(y) + 1;
-                const uint64_t diff = _tzcnt_u64(y >> temp);
-                return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
-            }
-        }
+    inline bool pd_find_using_filter(int64_t quot, uint8_t rem, const __m512i *pd) {
+        const uint64_t filter = ((uint64_t *) pd)[5];
+        return filter && (filter & ((UINT64_C(1) << (rem & 63))));
     }
 
-    inline bool pd_find_32_ver6(int64_t quot, uint8_t rem, const __m512i *pd) {
-        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
-        assert(quot < 32);
-
-        const __m512i target = _mm512_set1_epi8(rem);
-        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 8ul;
-        if (!v) return false;
-
-
-        const int64_t h0 = ((uint64_t *) pd)[0];
-
-        if (_mm_popcnt_u64(v) == 1) {
-            const int64_t zero_count = _tzcnt_u64(v);
-            return (!(h0 & (1ULL << (quot + zero_count)))) && _mm_popcnt_u64(_bzhi_u64(h0, quot + zero_count)) == quot;
-        } else {
-            if (quot == 0) {
-                const uint64_t end_helper = _tzcnt_u64(h0);
-                return (end_helper) && (v & ((UINT64_C(1) << end_helper) - 1));
-            } else {
-                const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), h0);
-                const uint64_t temp = _tzcnt_u64(y) + 1;
-                const uint64_t end = _tzcnt_u64(_blsr_u64(y));
-                return (end - temp) && ((v >> (temp - quot)) & ((UINT64_C(1) << (end - temp)) - 1));
-            }
-        }
+    inline bool filter_find_v1(int64_t quot, uint8_t rem, const __m512i *pd) {
+        return ((uint64_t *) pd)[5] != 0;
     }
 
-    inline bool pd_find_32_ver7(int64_t quot, uint8_t rem, const __m512i *pd) {
-        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
-        assert(quot < 32);
-
-        const __m512i target = _mm512_set1_epi8(rem);
-        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 8ul;
-        const int64_t v_pop = _mm_popcnt_u64(v);
-        const int64_t zero_count = _tzcnt_u64(v);
-        const int64_t h0 = ((uint64_t *) pd)[0];
-        // v = v >> 8;
-        if (!v) return false;
-        /* if (!v) {
-         // c0++;
-            return false;
-        }
- */
-
-        // bool res = pd_find_32_ver4(quot, rem, pd);
-        // static int total_calls = 0;
-        // static int c0 = 0;
-        // static int c1 = 0;
-        // static int c2 = 0;
-        // total_calls++;
-
-
-        if (v_pop == 1) {
-            // assert(zero_count + quot < 64);
-            // c1++;
-            // const bool att = (!(h0 & (1ULL << (quot + zero_count)))) && _mm_popcnt_u64(_bzhi_u64(h0, quot + zero_count)) == quot;
-            // assert(pd_find_32_ver4(quot, rem, pd) == att);
-            return (!(h0 & (1ULL << (quot + zero_count)))) && _mm_popcnt_u64(_bzhi_u64(h0, quot + zero_count)) == quot;
-        } else {
-            if (quot == 0) {
-                const uint64_t end_helper = _tzcnt_u64(h0);
-                return (end_helper) && (v & ((UINT64_C(1) << end_helper) - 1));
-            } else {
-                const uint64_t y = _pdep_u64(UINT64_C(3) << (quot - 1), h0);
-                const uint64_t temp = _tzcnt_u64(y) + 1;
-                const uint64_t end = _tzcnt_u64(_blsr_u64(y));
-                // const uint64_t diff = _tzcnt_u64(y >> temp);
-                // assert(temp + diff == end);
-                return (end - temp) && ((v >> (temp - quot)) & ((UINT64_C(1) << (end - temp)) - 1));
-            }
-        }
+    inline bool filter_find_v2(int64_t quot, uint8_t rem, const __m512i *pd) {
+        const uint64_t filter = ((uint64_t *) pd)[5];
+        return filter & ((UINT64_C(1) << (rem & 63)));
     }
-
-    inline bool pd_find_32_ver8(int64_t quot, uint8_t rem, const __m512i *pd) {
-        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
-        assert(quot < 32);
-
-        const __m512i target = _mm512_set1_epi8(rem);
-        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 8ul;
-        if (!v) return false;
-
-
-        const int64_t h0 = ((uint64_t *) pd)[0];
-
-        if (_blsr_u64(v) == 0) {
-            const int64_t mask = v << quot;
-            return (!(h0 & mask)) && _mm_popcnt_u64(h0 & (mask - 1)) == quot;
-        } else {
-            if (quot == 0) {
-                return v & (_blsmsk_u64(h0) >> 1ul);
-
-            } else {
-                const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
-                const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
-                const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
-                const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
-                bool att = v_mask & (v << quot);
-                assert(pd_find_32_ver1(quot, rem, pd) == att);
-                return v_mask & (v << quot);
-            }
-        }
-    }
-    inline bool pd_find_32_v16(int64_t quot, uint8_t rem, const __m512i *pd) {
-        const __m512i target = _mm512_set1_epi8(rem);
-        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 8ul;
-
-        if (!v) return false;
-        const int64_t h0 = ((uint64_t *) pd)[0];
-
-
-        if (_blsr_u64(v) == 0) {
-            const int64_t mask = v << quot;
-            return (!(h0 & mask)) && _mm_popcnt_u64(h0 & (mask - 1)) == quot;
-        }
-
-        if (quot == 0) {
-            return v & (_blsmsk_u64(h0) >> 1ul);
-        }
-
-        const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
-        const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
-        const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
-        const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0)) >> quot;
-        bool att = v_mask & v;
-        assert(pd_find_32_ver1(quot, rem, pd) == att);
-        return v_mask & v;
-    }
-
-
     inline bool pd_find_32(int64_t quot, uint8_t rem, const __m512i *pd) {
-        assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver4(quot, rem, pd));
-        assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver5(quot, rem, pd));
-        assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver6(quot, rem, pd));
-        assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver7(quot, rem, pd));
-        assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver8(quot, rem, pd));
-        assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_v16(quot, rem, pd));
-        // return pd_find_32_ver4(quot, rem, pd);
-        return pd_find_32_ver8(quot, rem, pd);
-        // return pd_find_32_ver5(quot, rem, pd);
-        // return pd_find_32_v16(quot, rem, pd);
+        return filter_find_v1(quot, rem, pd) || pd_find_32_ver4(quot, rem, pd);
+    }
+    inline int pd_find_32_complex(int64_t quot, uint8_t rem, const __m512i *pd) {
+        return pd_find_using_filter(quot, rem, pd) * 2 + pd_find_32_ver4(quot, rem, pd);
+        // if (pd_find_using_filter(quot, rem, pd))
+        // return pd_find_using_filter(quot, rem, pd) || pd_find_32_ver4(quot, rem, pd);
         // round up to remove the header
         // constexpr unsigned kHeaderBytes = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
         // assert(kHeaderBytes < sizeof(header));
@@ -459,6 +329,11 @@ namespace pd320 {
         return (v & ((UINT64_C(1) << end) - 1)) >> begin; */
     }
 
+    inline void pd_add_to_filter(int64_t quot, char rem, __m512i *pd) {
+        uint64_t *filter = ((uint64_t *) pd);
+        filter[5] |= (UINT64_C(1) << (rem & 63));
+    }
+
 
     inline bool pd_add_32(int64_t quot, char rem, __m512i *pd) {
         assert(quot < 32);
@@ -468,8 +343,10 @@ namespace pd320 {
         const unsigned fill = select64(header, 32 - 1) - (32 - 1);
         // assert((fill <= 14) || (fill == pd_popcount(pd)));
         assert((fill == 32) == pd_full(pd));
-        if (fill == 32)
+        if (fill == 32) {
+            pd_add_to_filter(quot, rem, pd);
             return false;
+        }
 
         // [begin,end) are the zeros in the header that correspond to the fingerprints with
         // quotient quot.
@@ -603,9 +480,7 @@ namespace pd320 {
         assert(get_capacity_naive(x) == get_capacity(x));
         return get_capacity(x) == 32;
     }
-}// namespace pd320
+}// namespace pd320_v2
 
 
-#endif// FILTERS_PD320_HPP
-
-auto my_equal(__m512i x, __m512i y) -> bool;
+#endif// FILTERS_PD320_V2_HPP
