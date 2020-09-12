@@ -269,6 +269,7 @@ public:
           element_length(element_length),
           max_load_factor(max_load_factor),
           table(std::ceil(max_capacity / (max_load_factor))) {
+        assert(element_length <= 128);
         if(element_length > 32){
             auto line = std::string(80,'!');
             std::cout << line << std::endl;
