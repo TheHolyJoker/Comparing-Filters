@@ -12,11 +12,15 @@
 #define FILTERS_HASHTABLE_CUCKOOFILTER_HPP
 
 
+// #include "../../cuckoofilter/ "
 #include "../../cuckoofilter/src/cuckoofilter.h"
-#include "../hashutil.hpp"
+#include "../basic_function_util.h"
+
+// #include "../../hashutil.hpp"
 #include "../macros.h"
-#include "TPD_Filter/basic_function_util.h"
-#include "printutil.hpp"
+// #include "TPD_Filter/basic_function_util.h"
+#include "../../Tests/printutil.hpp"
+// #include "printutil.hpp"
 #include <vector>
 
 

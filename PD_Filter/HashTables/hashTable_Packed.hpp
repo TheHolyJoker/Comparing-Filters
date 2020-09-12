@@ -1,85 +1,73 @@
 //
-// Created by tomer on 7/11/20.
+// Created by tomer on 8/18/20.
 //
+/* This implementation rely on
+ * 1) Every element in the hashTable consists of three parts (msb to lsb) pd_index, quot, rem.
+ * 2) quot is an integer in range [0,51). More specificity, quot != 63.
+ * 3) number of bits for rem is 8. (not a must).
+ * 4) The empty slot can be seen is equal to (63 << 8). 
+ empty slot in a way tha */
+#ifndef FILTERS_HASHTABLE_PACKED_HPP
+#define FILTERS_HASHTABLE_PACKED_HPP
 
-#ifndef FILTERS_ATT_HTABLE_HPP
-#define FILTERS_ATT_HTABLE_HPP
 
-#include "basic_function_util.h"
-#include "hashutil.hpp"
-#include "macros.h"
-#include "printutil.hpp"
-#include <cassert>
-#include <climits>
-#include <cmath>
-#include <cstdint>
-#include <iostream>
-#include <ostream>
+// #include "../../hashutil.hpp"
+#include "../../hashutil.h"
+#include "../macros.h"
+#include "../basic_function_util.h"
+// #include "TPD_Filter/basic_function_util.h"
+// #include "../../Tests/printutil.hpp"
+// #include "printutil.hpp"
 #include <vector>
-#include <zconf.h>
 
 
-static bool found_something = false;
-static bool el3002_was_inserted = false;
-// static int el3002 = 0;
-static size_t HT_insert_counter = 0;
-static size_t HT_lookup_counter = 0;
-static size_t p2_cond_counter = 0;
-static size_t swap_counter = 0;
-static size_t line_counter = 0;
+// static bool found_something = false;
+// static bool el3002_was_inserted = false;
+// // static int el3002 = 0;
+// static size_t HT_insert_counter = 0;
+// static size_t HT_lookup_counter = 0;
+// static size_t p2_cond_counter = 0;
+// static size_t swap_counter = 0;
+// static size_t line_counter = 0;
 
-constexpr static uint32_t seed1{123123}, seed2{456456};
 
-template<typename bucket_type,
-         size_t bucket_size>
-class att_hTable {
+template<typename bucket_type, size_t bucket_size>
+class hashTable_Packed {
 
-    struct Bucket {
-        bucket_type bits_[bucket_size];
-    };
-
-    Bucket *Table;
-    const size_t num_of_buckets, max_capacity, element_length;
+    bucket_type *Table;
+    const size_t table_size, num_of_buckets, max_capacity, element_length;
     size_t capacity{0};
     const double max_load_factor;
-    const bucket_type empty_slot{(bucket_type) -1};
+    constexpr bucket_type empty_slot{63u << 8u};
 
     size_t insert_existing_counter = 0;
 
 public:
-    att_hTable(size_t max_capacity, size_t element_length, double max_load_factor)
+    hashTable_Packed(size_t max_capacity, size_t element_length, double max_load_factor)
         : max_capacity(std::ceil(max_capacity / (max_load_factor))), element_length(element_length), max_load_factor(max_load_factor),
-          num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))) {
+          num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))),
+          table_size((num_of_buckets * (bucket_size * element_length) + 1) / (sizeof(bucket_type) * CHAR_BIT)) {
         assert(num_of_buckets <= MASK32);
 
         /* Todo: test changes to second argument */
-        int ok = posix_memalign((void **) &Table, sizeof(Bucket), sizeof(Bucket) * num_of_buckets);
-
-        if (ok != 0) {
-            cout << "Failed!!!" << endl;
-            return;
-        }
-        //        Table = new Bucket[num_of_buckets];
+        Table = new bucket_type[table_size];
 
         assert(element_length < sizeof(bucket_type) * CHAR_BIT);
-        for (int i = 0; i < num_of_buckets; ++i) {
-            auto bp = Table[i].bits_;
-            for (int j = 0; j < bucket_size; ++j) {
-                bp[j] = empty_slot;
-            }
+        //todo: this is a temp solution
+        for (int i = 0; i < table_size; ++i) {
+            table[i] = -1;
         }
     }
 
-    virtual ~att_hTable() {
-        free(Table);
-        // delete[] Table;
+    virtual ~hashTable_Packed() {
+        delete[] Table;
     }
 
     inline auto find(bucket_type x) const -> bool {
         assert((x & MASK(element_length)) == x);
 
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = seed1, b2 = seed2;
+        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
         Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
         b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
         b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
@@ -99,7 +87,7 @@ public:
         /* http://www.cs.toronto.edu/~noahfleming/CuckooHashing.pdf (Algorithm 2)*/
 
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = seed1, b2 = seed2;
+        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
         Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
         b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
         b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
@@ -142,7 +130,7 @@ public:
         *hold = junk;
 
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = seed1, b2 = seed2;
+        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
         Hash_ns::BobHash(hold, sizeof(*hold), &b1, &b2);
         b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
         b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
@@ -156,7 +144,7 @@ public:
             //        assert(false);
         }
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        uint32_t b1 = seed1, b2 = seed2;
+        uint32_t b1 = HTA_seed1, b2 = HTA_seed2;
         Hash_ns::BobHash(&x, sizeof(x), &b1, &b2);
         b1 = reduce32((uint32_t) b1, (uint32_t) num_of_buckets);
         b2 = reduce32((uint32_t) b2, (uint32_t) num_of_buckets);
@@ -188,19 +176,19 @@ public:
         assert((x & MASK(element_length)) == x);
         auto *bp = Table[bucket_index].bits_;
 
-        if (bp[0] == empty_slot) {
+        if ((bp[0] & empty_slot) == empty_slot) {
             bp[0] = x;
             capacity++;
             return true;
-        } else if (bp[1] == empty_slot) {
+        } else if ((bp[1] & empty_slot) == empty_slot) {
             bp[1] = x;
             capacity++;
             return true;
-        } else if (bp[2] == empty_slot) {
+        } else if ((bp[2] & empty_slot) == empty_slot) {
             bp[2] = x;
             capacity++;
             return true;
-        } else if (bp[3] == empty_slot) {
+        } else if ((bp[3] & empty_slot) == empty_slot) {
             bp[3] = x;
             capacity++;
             return true;
@@ -216,14 +204,6 @@ public:
         // }
         // return false;
     }
-
-    // void insert_by_table_index(bucket_type x, bucket_type table_index) {
-    //     auto bucket_index = table_index / bucket_size;
-    //     auto in_bucket_index = table_index % bucket_size;
-    //     auto *bp = Table[bucket_index];
-    //     bp[in_bucket_index] = x;
-    //     capacity++;
-    // }
 
 
     /**
@@ -262,11 +242,11 @@ public:
         os << line;
         return os;
     }
-    
+
     inline auto get_element_buckets(bucket_type x, uint32_t *b1, uint32_t *b2) {
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        *b1 = seed1;
-        *b2 = seed2;
+        *b1 = HTA_seed1;
+        *b2 = HTA_seed2;
         Hash_ns::BobHash(&x, sizeof(x), b1, b2);
         *b1 = reduce32((uint32_t) *b1, (uint32_t) num_of_buckets);
         *b2 = reduce32((uint32_t) *b2, (uint32_t) num_of_buckets);
@@ -298,6 +278,14 @@ public:
         return Table[bucket_index];
     }
 
+    inline void get_bucket(size_t bucket_index, bucket_type[bucket_size] dest) const {
+        //Does not work. need to mask and shift. Simply copying the memory won't work.
+        assert(false);
+        constexpr uint64_t bytes_to_copy = ((element_length * bucket_size) >> CHAR_BIT) + 1;
+        const size_t bit_count = bucket_index * (element_length * bucket_size);
+        const size_t byte_index = bit_count / CHAR_BIT;
+        memcpy(&((uint8_t *) table)[byte_index], dest, bytes_to_copy);
+    }
 
     auto get_byte_size() {
         return sizeof(bucket_type) * bucket_size * num_of_buckets;
@@ -509,8 +497,8 @@ public:
     }
 
     inline void my_hash(bucket_type x, uint32_t *b1, uint32_t *b2) const {
-        *b1 = seed1;
-        *b2 = seed2;
+        *b1 = HTA_seed1;
+        *b2 = HTA_seed2;
         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
         assert(x == (x & MASK(element_length)));
         Hash_ns::BobHash(&x, sizeof(x), b1, b2);
@@ -550,6 +538,7 @@ public:
 private:
     inline auto find_helper(bucket_type x, size_t bucket_index) const -> bool {
         //        auto table_index = bucket_index * bucket_size;
+
         auto *bp = Table[bucket_index].bits_;
         return ((bp[0] == x) | (bp[1] == x) | (bp[2] == x) | (bp[3] == x));
         // for (int i = 0; i < bucket_size; ++i) {
@@ -658,7 +647,7 @@ private:
     }
 };
 
-#endif//FILTERS_ATT_HTABLE_HPP
+#endif//FILTERS_HASHTABLE_PACKED_HPP
 
 
 //Old functions

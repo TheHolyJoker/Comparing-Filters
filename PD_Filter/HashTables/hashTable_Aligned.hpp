@@ -6,10 +6,11 @@
 #define FILTERS_HASHTABLE_ALIGNED_HPP
 
 
-#include "../hashutil.hpp"
 #include "../macros.h"
-#include "TPD_Filter/basic_function_util.h"
-#include "printutil.hpp"
+#include "../basic_function_util.h"
+#include "../../Tests/printutil.hpp"
+#include "../../hashutil.h"
+
 #include <vector>
 
 
@@ -275,16 +276,16 @@ public:
         return os;
     }
 
-    inline auto get_element_buckets(bucket_type x, uint32_t *b1, uint32_t *b2) {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        *b1 = HTA_seed1;
-        *b2 = HTA_seed2;
-        Hash_ns::BobHash(&x, sizeof(x), b1, b2);
-        *b1 = reduce32((uint32_t) *b1, (uint32_t) num_of_buckets);
-        *b2 = reduce32((uint32_t) *b2, (uint32_t) num_of_buckets);
-        assert(does_bucket_contain_valid_elements(*b1));
-        assert(does_bucket_contain_valid_elements(*b2));
-    }
+    // inline auto get_element_buckets(bucket_type x, uint32_t *b1, uint32_t *b2) {
+    //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+    //     *b1 = HTA_seed1;
+    //     *b2 = HTA_seed2;
+    //     Hash_ns::BobHash(&x, sizeof(x), b1, b2);
+    //     *b1 = reduce32((uint32_t) *b1, (uint32_t) num_of_buckets);
+    //     *b2 = reduce32((uint32_t) *b2, (uint32_t) num_of_buckets);
+    //     assert(does_bucket_contain_valid_elements(*b1));
+    //     assert(does_bucket_contain_valid_elements(*b2));
+    // }
 
     ////Getters
     /*

@@ -2,14 +2,14 @@
 #ifndef TWOCHOICER_HEADER
 #define TWOCHOICER_HEADER
 
-#include "Analyse/analyse.hpp"
-#include "TPD_Filter/att_hTable.hpp"
-#include "TPD_Filter/basic_function_util.h"
-#include "d512/pd512.hpp"
-#include "hash_table.hpp"
+// #include "Analyse/analyse.hpp"
+// #include "TPD_Filter/att_hTable.hpp"
+// #include "TPD_Filter/basic_function_util.h"
+#include "Dict512/pd512.hpp"
+#include "HashTables/hashTable_Aligned.hpp"
 #include "printutil.hpp"
 // #include "pd512_wrapper.hpp"
-#include <cstring>
+// #include <cstring>
 
 #define TWOCHOICER_HEADER_DB1 (false)
 #define TWOCHOICER_HEADER_DB2 (true & TWOCHOICER_HEADER_DB1)
@@ -210,25 +210,25 @@ public:
         // return remove_helper(wrap_hash(x));
     }
 
-    inline void hash_for_buckets(const itemType s, uint32_t *pd_index1, uint32_t *pd_index2) const {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        unsigned long long h1 = Hash_ns::BobHash(&s, 16, 45679);
-        unsigned long long h2 = Hash_ns::BobHash(&s, 16, 389561);
-        *pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
-        *pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
-        // unsigned long long h1 = all_hash & MASK(32ull);
-        // unsigned long long h2 = all_hash >> 32ull;
-        // *pd_index1 = h1 % number_of_pd;
-        // *pd_index2 = h2 % number_of_pd;
-    }
+    // inline void hash_for_buckets(const itemType s, uint32_t *pd_index1, uint32_t *pd_index2) const {
+    //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+    //     unsigned long long h1 = Hash_ns::BobHash(&s, 16, 45679);
+    //     unsigned long long h2 = Hash_ns::BobHash(&s, 16, 389561);
+    //     *pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+    //     *pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
+    //     // unsigned long long h1 = all_hash & MASK(32ull);
+    //     // unsigned long long h2 = all_hash >> 32ull;
+    //     // *pd_index1 = h1 % number_of_pd;
+    //     // *pd_index2 = h2 % number_of_pd;
+    // }
 
-    inline void hash_for_fingerprint(const itemType s, uint32_t *quot, uint32_t *rem) const {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        unsigned long long h1 = Hash_ns::BobHash(&s, 16, 352582481);
-        unsigned long long h2 = Hash_ns::BobHash(&s, 16, 23467721);
-        *quot = reduce32((uint32_t) h1, (uint32_t) quot_range);
-        *rem = h2 & MASK(remainder_length);
-    }
+    // inline void hash_for_fingerprint(const itemType s, uint32_t *quot, uint32_t *rem) const {
+    //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+    //     unsigned long long h1 = Hash_ns::BobHash(&s, 16, 352582481);
+    //     unsigned long long h2 = Hash_ns::BobHash(&s, 16, 23467721);
+    //     *quot = reduce32((uint32_t) h1, (uint32_t) quot_range);
+    //     *rem = h2 & MASK(remainder_length);
+    // }
 
 
     // void insert_to_spare_without_pop(spareItemType hash_val) {
@@ -413,7 +413,8 @@ public:
 
 
     auto analyse_pd_status(size_t p) -> double {
-        return m512i_lp_average(pd_array, number_of_pd, p);
+        return -42.0;
+        // return m512i_lp_average(pd_array, number_of_pd, p);
     }
 
     /* auto case_validate() -> bool {

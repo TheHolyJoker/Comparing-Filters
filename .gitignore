@@ -3,7 +3,7 @@
 .history
 build/
 PD_Filter/TPD_Filter/att_hTable.hpp
-PD_Filter/d512/terminal
+PD_Filter/Dict512/terminal
 heaptracks/xxhash.h
 xxhash.h
 heaptracks/

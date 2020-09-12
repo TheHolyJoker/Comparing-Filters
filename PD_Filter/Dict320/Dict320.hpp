@@ -2,8 +2,8 @@
 #ifndef FILTERS_DICT320_HPP
 #define FILTERS_DICT320_HPP
 
-#include "Analyse/analyse.hpp"
-#include "../d512/hashTable_Aligned.hpp"
+// #include "Analyse/analyse.hpp"
+#include "../HashTables/hashTable_Aligned.hpp"
 #include "../hashutil.h"
 #include "pd320.hpp"
 
@@ -554,7 +554,8 @@ public:
 
 
     auto analyse_pd_status(size_t p) -> double {
-        return m512i_lp_average(pd_array, number_of_pd, p);
+        return -42.0;
+        // return m512i_lp_average(pd_array, number_of_pd, p);
     }
 
 private:

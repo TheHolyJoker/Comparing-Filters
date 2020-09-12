@@ -832,6 +832,40 @@ namespace pd512 {
         }
     }
 
+    inline bool pd_find_50_v19(int64_t quot, uint8_t rem, const __m512i *pd) {
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        // std::cout << "aSHSHNLBJB" << std::endl;
+
+        if (!v) return false;
+
+        // const bool att = (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
+
+        // return (_blsr_u64(v) != 0) || (((unsigned __int128) v) << quot)
+        // const uint64_t h1 = ((uint64_t *) pd)[1];
+
+        if (_blsr_u64(v) == 0) {
+            if (v << quot) {
+                const uint64_t h0 = ((uint64_t *) pd)[0];
+                const int64_t mask = v << quot;
+                const bool att = (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+                assert(att == pd_find_50_v1(quot, rem, pd));
+                return (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+            } else {
+                const unsigned __int128 *h = (const unsigned __int128 *) pd;
+                constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+                const unsigned __int128 header = (*h) & kLeftoverMask;
+                const unsigned __int128 mask = ((unsigned __int128) v) << quot;
+                const bool att = (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
+                assert(att == pd_find_50_v1(quot, rem, pd));
+                return (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
+            }
+        } else {
+            return true;
+        }
+    }
+
 
     inline bool pd_find_50_v5_validation(int64_t quot, uint8_t rem, const __m512i *pd) {
         static int counter = 0;
@@ -1139,16 +1173,118 @@ namespace pd512 {
         assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v18(quot, rem, pd));
         // return pd_find_50_v4(quot, rem, pd);
         // return pd_find_50_v11(quot, rem, pd);
-        return pd_find_50_v18(quot, rem, pd);
+        return pd_find_50_v11(quot, rem, pd);
+        // return pd_find_50_v18(quot, rem, pd);
         // return pd_find_50_v10(quot, rem, pd);
         // return pd_find_body_v2(quot, rem, pd);
         // return pd_find_50_v8(quot, rem, pd);
         // return pd_find_50_v6(quot, rem, pd);
     }
 
+    inline bool did_pd_overflowed_naive(const __m512i *pd) {
+        uint64_t *h_array = ((uint64_t *) pd);
+        return h_array[1] & (1ULL << (102 - 64));
+    }
+    inline bool did_pd_overflowed(const __m512i *pd) {
+        return (_mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 64);
+        // return did_pd_overflowed_naive(pd);
+        // bool att = (_mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 64);
+        // assert(att == res);
+        // if (att != res){
+        //     std::cout << "att: " << att << std::endl;
+        //     std::cout << "res: " << res << std::endl;
+        //     assert(0);
+        // }
+        // assert(did_pd_overflowed_naive(pd) == (_mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 64));
+        // uint64_t *h_array = ((uint64_t *) pd);
+        // bool res =  h_array[1] & (1ULL << (102 - 64));
+
+        // constexpr int index = 6;
+        // __m128i header = _mm512_castsi512_si128(*pd);
+        // bool att = (_mm_extract_epi16(header, index) & 64);
+        // assert(att == res);
+        // return (_mm_extract_epi16(header, index) & 64);
+        // return _mm256_extract_epi16(*pd, 6) & 64;
+        // constexpr __m512i set_bit = __m512i{0, INT64_C(1) << 38ul, 0, 0, 0, 0, 0, 0};
+        // return (_mm512_maskz_and_epi32(3, *pd, set_bit));
+        // _mm512_mask_cmpeq_epi16_mask (*pd, set_bit, __m512i b)
+        // return _mm512_cmpeq_epu8_mask(*pd, set_bit) ;
+        // return _mm512_cvtsi512_si32(_mm512_alignr_epi32(*pd, *pd, 102));
+        // return ((uint64_t *) pd)[2] & 274877906944ULL;
+        // uint64_t *h_array = ((uint64_t *) pd);
+        // return h_array[1] & (1ULL << (102 - 64));
+    }
+
+    inline bool pd_find_special_50(int64_t quot, uint8_t rem, const __m512i *pd) {
+        return pd_find_50_v11(quot, rem, pd) || did_pd_overflowed(pd);
+    }
+
     // insert a pair of a quotient (mod 50) and an 8-bit remainder in a pocket dictionary.
     // Returns false if the dictionary is full.
     bool pd_add_50_old(int64_t quot, char rem, __m512i *pd);
+
+
+    inline bool pd_add_special_50(int64_t quot, char rem, __m512i *pd) {
+        assert(quot < 50);
+
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+        constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+
+        assert(popcount128(header) == 50);
+        const unsigned fill = select128(header, 50 - 1) - (50 - 1);
+        assert((fill <= 14) || (fill == pd_popcount(pd)));
+        assert((fill == 51) == pd_full(pd));
+        if (fill == 51) {
+            uint64_t *h_array = ((uint64_t *) pd);
+            h_array[1] |= (1ULL << (102 - 64));
+            return false;
+        }
+
+        // [begin,end) are the zeros in the header that correspond to the fingerprints with
+        // quotient quot.
+        const uint64_t begin = quot ? (select128(header, quot - 1) + 1) : 0;
+        const uint64_t end = select128(header, quot);
+        assert(begin <= end);
+        assert(end <= 50 + 51);
+        const __m512i target = _mm512_set1_epi8(rem);
+
+
+        unsigned __int128 new_header = header & ((((unsigned __int128) 1) << begin) - 1);
+        new_header |= ((header >> end) << (end + 1));
+        assert(popcount128(new_header) == 50);
+        assert(select128(new_header, 50 - 1) - (50 - 1) == fill + 1);
+        memcpy(pd, &new_header, kBytes2copy);
+
+        const uint64_t begin_fingerprint = begin - quot;
+        const uint64_t end_fingerprint = end - quot;
+        assert(begin_fingerprint <= end_fingerprint);
+        assert(end_fingerprint <= 51);
+
+        // const uint64_t before_shift = _mm512_cmp_epi8_mask(target, *pd, 2);
+        // uint64_t i = _tzcnt_u64(((before_shift >> (begin_fingerprint + 13)) << (begin_fingerprint)) | (1ull << end_fingerprint));
+        // uint64_t i = _tzcnt_u64(((_mm512_cmp_epi8_mask(target, *pd, 2) >> (begin_fingerprint + 13)) << (begin_fingerprint)) | (1ull << end_fingerprint));
+        // uint64_t i = _tzcnt_u64(((before_shift >> (begin_fingerprint + 13)) << (begin_fingerprint)) | (1ull << end_fingerprint));
+        // uint64_t i = (begin == end) ? end_fingerprint : _tzcnt_u64(((before_shift >> (begin_fingerprint + 13)) << (begin_fingerprint)) | (1ull << end_fingerprint));
+        uint64_t i = (begin == end) ? end_fingerprint : _tzcnt_u64(((_mm512_cmp_epi8_mask(target, *pd, 2) >> (begin_fingerprint + 13)) << (begin_fingerprint)) | (1ull << end_fingerprint));
+
+        assert((i == end_fingerprint) || (rem <= ((const char *) pd)[kBytes2copy + i]));
+
+        memmove(&((char *) pd)[kBytes2copy + i + 1],
+                &((const char *) pd)[kBytes2copy + i],
+                sizeof(*pd) - (kBytes2copy + i + 1));
+        ((char *) pd)[kBytes2copy + i] = rem;
+
+        assert(pd_find_50(quot, rem, pd));
+        return true;
+        // //// jbapple: STOPPED HERE
+        // const __m512i target = _mm512_set1_epi8(rem);
+        // uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd);
+        // // round up to remove the header
+        // v = v >> ((51 + 50 + CHAR_BIT - 1) / CHAR_BIT);
+        // return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+    }
 
 
     inline bool pd_add_50(int64_t quot, char rem, __m512i *pd) {

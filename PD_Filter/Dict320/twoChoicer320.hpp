@@ -2,9 +2,9 @@
 #ifndef TWOCHOICER320_HEADER
 #define TWOCHOICER320_HEADER
 
-#include "../d512/hashTable_Aligned.hpp"
+#include "../HashTables/hashTable_Aligned.hpp"
 #include "../hashutil.h"
-#include "Analyse/analyse.hpp"
+// #include "Analyse/analyse.hpp"
 #include "pd320.hpp"
 
 
@@ -131,25 +131,25 @@ public:
         pd320::conditional_remove(quot, rem, &pd_array[pd_index]) || pd320::conditional_remove(quot, rem, &pd_array[get_alt_index(pd_index, rem)]);
     }
 
-    inline void hash_for_buckets(const itemType s, uint32_t *pd_index1, uint32_t *pd_index2) const {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        unsigned long long h1 = Hash_ns::BobHash(&s, 16, 45679);
-        unsigned long long h2 = Hash_ns::BobHash(&s, 16, 389561);
-        *pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
-        *pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
-        // unsigned long long h1 = all_hash & MASK(32ull);
-        // unsigned long long h2 = all_hash >> 32ull;
-        // *pd_index1 = h1 % number_of_pd;
-        // *pd_index2 = h2 % number_of_pd;
-    }
+    // inline void hash_for_buckets(const itemType s, uint32_t *pd_index1, uint32_t *pd_index2) const {
+    //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+    //     unsigned long long h1 = Hash_ns::BobHash(&s, 16, 45679);
+    //     unsigned long long h2 = Hash_ns::BobHash(&s, 16, 389561);
+    //     *pd_index1 = reduce32((uint32_t) h1, (uint32_t) number_of_pd);
+    //     *pd_index2 = reduce32((uint32_t) h2, (uint32_t) number_of_pd);
+    //     // unsigned long long h1 = all_hash & MASK(32ull);
+    //     // unsigned long long h2 = all_hash >> 32ull;
+    //     // *pd_index1 = h1 % number_of_pd;
+    //     // *pd_index2 = h2 % number_of_pd;
+    // }
 
-    inline void hash_for_fingerprint(const itemType s, uint32_t *quot, uint32_t *rem) const {
-        using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
-        unsigned long long h1 = Hash_ns::BobHash(&s, 16, 352582481);
-        unsigned long long h2 = Hash_ns::BobHash(&s, 16, 23467721);
-        *quot = reduce32((uint32_t) h1, (uint32_t) quot_range);
-        *rem = h2 & MASK(remainder_length);
-    }
+    // inline void hash_for_fingerprint(const itemType s, uint32_t *quot, uint32_t *rem) const {
+    //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
+    //     unsigned long long h1 = Hash_ns::BobHash(&s, 16, 352582481);
+    //     unsigned long long h2 = Hash_ns::BobHash(&s, 16, 23467721);
+    //     *quot = reduce32((uint32_t) h1, (uint32_t) quot_range);
+    //     *rem = h2 & MASK(remainder_length);
+    // }
 
 
     // void insert_to_spare_without_pop(spareItemType hash_val) {
@@ -334,7 +334,8 @@ public:
 
 
     auto analyse_pd_status(size_t p) -> double {
-        return m512i_lp_average(pd_array, number_of_pd, p);
+        return -42.0;
+        // return m512i_lp_average(pd_array, number_of_pd, p);
     }
 
     /* auto case_validate() -> bool {

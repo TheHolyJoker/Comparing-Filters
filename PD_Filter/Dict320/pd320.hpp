@@ -401,6 +401,7 @@ namespace pd320 {
             }
         }
     }
+    
     inline bool pd_find_32_v16(int64_t quot, uint8_t rem, const __m512i *pd) {
         const __m512i target = _mm512_set1_epi8(rem);
         uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 8ul;
@@ -427,6 +428,48 @@ namespace pd320 {
         return v_mask & v;
     }
 
+    inline bool pd_find_32_v17(int64_t quot, uint8_t rem, const __m512i *pd) {
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 8ul;
+
+        if (!v) return false;
+        const int64_t h0 = ((uint64_t *) pd)[0];
+
+
+        // if (_blsr_u64(v) == 0) {
+        //     const int64_t mask = v << quot;
+        //     return (!(h0 & mask)) && _mm_popcnt_u64(h0 & (mask - 1)) == quot;
+        // }
+
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        }
+
+        // const uint64_t val_mask = (~_bzhi_u64(-1, quot - 1));
+        const uint64_t mask = (~_bzhi_u64(-1, quot)) >> 1ul;
+        // if (mask != val_mask){
+        //     std::cout << "v_mask: \t\t\t " << v_pd320::bin_print_header_spaced(val_mask) << std::endl;
+        //     std::cout << "mask:   \t\t\t " << v_pd320::bin_print_header_spaced(mask) << std::endl;
+        //     // v_pd320::bin_print_header_spaced(val_mask)
+        //     // v_pd320::bin_print_header_spaced(mask)
+        //     assert(0);
+        // }
+        // assert(mask == val_mask);
+        const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+        const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+        const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0)) >> quot;
+        bool att = v_mask & v;
+        // if(pd_find_32_ver1(quot, rem, pd) != att){
+        //     std::cout << "v_mask: \t\t\t " << v_pd320::bin_print_header_spaced(val_mask) << std::endl;
+        //     std::cout << "mask:   \t\t\t " << v_pd320::bin_print_header_spaced(mask) << std::endl;
+        //     std::cout << "h0:   \t\t\t " << v_pd320::bin_print_header_spaced(h0) << std::endl;
+        //     std::cout << "v:   \t\t\t " << v_pd320::bin_print_header_spaced(v) << std::endl;
+        //     assert(0);
+        // }
+        assert(pd_find_32_ver1(quot, rem, pd) == att);
+        return v_mask & v;
+    }
+
 
     inline bool pd_find_32(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver4(quot, rem, pd));
@@ -435,6 +478,7 @@ namespace pd320 {
         assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver7(quot, rem, pd));
         assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_ver8(quot, rem, pd));
         assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_v16(quot, rem, pd));
+        assert(pd_find_32_ver1(quot, rem, pd) == pd_find_32_v17(quot, rem, pd));
         // return pd_find_32_ver4(quot, rem, pd);
         return pd_find_32_ver8(quot, rem, pd);
         // return pd_find_32_ver5(quot, rem, pd);

@@ -2,16 +2,10 @@
 #ifndef FILTERS_DICT512_WITH_CF_HPP
 #define FILTERS_DICT512_WITH_CF_HPP
 
-#include "Analyse/analyse.hpp"
-// #include "TPD_Filter/att_hTable.hpp"
 #include "../hashutil.h"
-// #include "hashTable_Aligned.hpp"
-#include "hashTable_CuckooFilter.hpp"
+#include "HashTables/hashTable_CuckooFilter.hpp"
 #include "pd512.hpp"
 
-// #include "hash_table.hpp"
-// #include "pd512_wrapper.hpp"
-// #include <cstring>
 
 #define D512_WCF_DB1 (true)
 #define D512_WCF_DB2 (true & D512_WCF_DB1)
