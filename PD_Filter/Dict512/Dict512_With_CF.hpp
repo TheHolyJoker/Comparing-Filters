@@ -2,10 +2,16 @@
 #ifndef FILTERS_DICT512_WITH_CF_HPP
 #define FILTERS_DICT512_WITH_CF_HPP
 
+#include "Analyse/analyse.hpp"
+// #include "TPD_Filter/att_hTable.hpp"
 #include "../hashutil.h"
-#include "HashTables/hashTable_CuckooFilter.hpp"
+// #include "hashTable_Aligned.hpp"
+#include "hashTable_CuckooFilter.hpp"
 #include "pd512.hpp"
 
+// #include "hash_table.hpp"
+// #include "pd512_wrapper.hpp"
+// #include <cstring>
 
 #define D512_WCF_DB1 (true)
 #define D512_WCF_DB2 (true & D512_WCF_DB1)
@@ -29,7 +35,7 @@ template<typename itemType,
 class Dict512_With_CF {
 
     vector<uint16_t> pd_capacity_vec;
-    hashTable_CuckooFilter spare;
+    hashTable_CuckooFilter *spare;
     HashFamily hasher;
 
     size_t capacity{0};
@@ -53,11 +59,14 @@ public:
           number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
           pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
           spare_element_length(pd_index_length + quotient_length + remainder_length),
-          hasher(),
-          spare(ceil(1.0 * max_number_of_elements / (1.5 * ceil_log2(max_number_of_elements))),
-                ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)) + quotient_length + bits_per_item,
-                level2_load_factor) {
-        // std::cout << "spare_element_length: " << spare_element_length << std::endl;
+          hasher()
+    //   ,
+    //   spare(ceil(1.0 * max_number_of_elements / (1.5 * ceil_log2(max_number_of_elements))),
+    //         spare_element_length,
+    //         // ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)) + quotient_length + bits_per_item,
+    //         level2_load_factor)
+    {
+        std::cout << "spare_element_length: " << spare_element_length << std::endl;
         // assert(spare_element_length <= 32);
         // assert(pd_index_length + bits_per_item + quotient_length <= 32);
         // assert(upperpower2(number_of_pd) == number_of_pd);
@@ -75,6 +84,12 @@ public:
         // auto res = my_ceil(temp, log2_size);
         // size_t spare_max_capacity = res;
         // spare = new CuckooFilter(spare_max_capacity, level2_load_factor);
+        size_t log2_size = ceil_log2(max_number_of_elements);
+        size_t temp = ceil(max_number_of_elements / (double) 1.5);
+        auto res = my_ceil(temp, log2_size);
+        size_t spare_max_capacity = res;
+        spare = new hashTable_CuckooFilter(spare_max_capacity, spare_element_length, level2_load_factor);
+
 
         int ok = posix_memalign((void **) &pd_array, 64, 64 * number_of_pd);
         if (ok != 0) {
@@ -92,7 +107,7 @@ public:
         // std::cout << "squared chi test: " << squared_chi_test() << std::endl;
         free(pd_array);
         pd_capacity_vec.clear();
-        // delete spare;
+        delete spare;
     }
 
     inline auto lookup(const itemType s) const -> bool {
@@ -119,7 +134,7 @@ public:
 
         return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) ||
                ((pd_capacity_vec[pd_index] & 1u) &&
-                spare.find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
+                spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
     }
 
 
@@ -152,12 +167,12 @@ public:
 
             pd_capacity_vec[pd_index] |= 1u;
             uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-            spare.insert(spare_val);
+            spare->insert(spare_val);
             // insert_to_spare_without_pop(spare_val);
             // insert_to_spare_with_pop(spare_val);
             if (D512_WCF_DB2) {
                 uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-                assert(spare.find(spare_val));
+                assert(spare->find(spare_val));
             }
             return;
         }
@@ -198,7 +213,7 @@ public:
         }
 
         uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-        spare.remove(spare_val);
+        spare->remove(spare_val);
     }
 
     auto get_extended_info() -> std::stringstream {
@@ -207,12 +222,12 @@ public:
     }
 
     // inline void insert_to_spare_without_pop(spareItemType spare_val) {
-    //     spare.insert(spare_val);
+    //     spare->insert(spare_val);
     // }
 
     // void insert_to_spare_with_pop(spareItemType hash_val) {
     //     uint32_t b1 = -1, b2 = -1;
-    //     spare.get_element_buckets(hash_val, &b1, &b2);
+    //     spare->get_element_buckets(hash_val, &b1, &b2);
     //     if (pop_attempt_with_insertion_by_bucket(hash_val, b2))
     //         return;
 
@@ -222,21 +237,21 @@ public:
     //         if (pop_attempt_with_insertion_by_bucket(hold, bucket)) {
     //             return;
     //         }
-    //         spare.cuckoo_swap(&hold, &bucket);
+    //         spare->cuckoo_swap(&hold, &bucket);
     //     }
-    //     cout << spare.get_capacity() / ((double) spare.get_max_capacity()) << endl;
+    //     cout << spare->get_capacity() / ((double) spare->get_max_capacity()) << endl;
     //     assert(false);
     // }
 
 
     // auto pop_attempt_by_bucket(size_t bucket_index) -> void {
-    //     for (int i = 0; i < spare.get_bucket_size(); ++i) {
-    //         if (spare.is_empty_by_bucket_index_and_location(bucket_index, i))
+    //     for (int i = 0; i < spare->get_bucket_size(); ++i) {
+    //         if (spare->is_empty_by_bucket_index_and_location(bucket_index, i))
     //             continue;
-    //         auto temp_el = spare.get_element_by_bucket_index_and_location(bucket_index, i);
+    //         auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
     //         if (single_pop_attempt(temp_el)) {
     //             //                cout << "here" << endl;
-    //             spare.clear_slot_bucket_index_and_location(bucket_index, i);
+    //             spare->clear_slot_bucket_index_and_location(bucket_index, i);
     //         }
     //     }
     // }
@@ -247,14 +262,14 @@ public:
     //      * 2) another way.
     //      */
 
-    //     for (int i = 0; i < spare.get_bucket_size(); ++i) {
-    //         if (spare.is_empty_by_bucket_index_and_location(bucket_index, i)) {
-    //             spare.insert_by_bucket_index_and_location(hash_val, bucket_index, i);
+    //     for (int i = 0; i < spare->get_bucket_size(); ++i) {
+    //         if (spare->is_empty_by_bucket_index_and_location(bucket_index, i)) {
+    //             spare->insert_by_bucket_index_and_location(hash_val, bucket_index, i);
     //             return true;
     //         }
-    //         auto temp_el = spare.get_element_by_bucket_index_and_location(bucket_index, i);
+    //         auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
     //         if (single_pop_attempt(temp_el)) {
-    //             spare.insert_by_bucket_index_and_location(hash_val, bucket_index, i);
+    //             spare->insert_by_bucket_index_and_location(hash_val, bucket_index, i);
     //             return true;
     //         }
     //     }
@@ -281,7 +296,7 @@ public:
     //         assert(res);
 
     //         (pd_capacity_vec[pd_index]) += 2;
-    //         spare.decrease_capacity();
+    //         spare->decrease_capacity();
 
     //         // cout << "element with hash_val: (" << element << ") was pop." << endl;
     //         return true;
@@ -449,7 +464,7 @@ public:
 
     //     // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index])) ||
     //     //        ((pd_capacity_vec[pd_index] & 1u) &&
-    //     //         spare.find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));// const uint32_t pd_index =
+    //     //         spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));// const uint32_t pd_index =
     //     // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
     //     // assert(pd_index < number_of_pd);
     //     // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
@@ -513,7 +528,7 @@ public:
     //         return;
     //     }
     //     // assert(false);
-    //     spare.remove(hash_val);
+    //     spare->remove(hash_val);
     //     //        pop_attempt_by_hash_val(hash_val);
     // } */
 
@@ -542,7 +557,7 @@ public:
     //     }
     //     if (pd_capacity_vec[pd_index] & 1u) {
     //         uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-    //         return (spare.find(spare_val)) ? 2 : -1;
+    //         return (spare->find(spare_val)) ? 2 : -1;
     //     }
     //     return -1;
     // }
@@ -561,7 +576,7 @@ public:
     //     vector<uint16_t> temp_capacity_vec(pd_capacity_vec);
     //     vector<spareItemType> spare_elements;
 
-    //     spare.get_all_elements(&spare_elements);
+    //     spare->get_all_elements(&spare_elements);
     //     for (size_t i = 0; i < spare_elements.size(); i++) {
     //         auto temp = spare_elements[i];
     //         size_t temp_pd_index = (temp >> (bits_per_item + quotient_length));
@@ -597,10 +612,10 @@ public:
     //     ss << "basic squared chi is: " << squared_chi_test_basic() << std::endl;
     //     ss << "squared chi is: " << squared_chi_test() << std::endl;
 
-    //     // ss << "total capacity is: " << str_format(temp_capacity + spare.get_capacity()) << std::endl;
-    //     ss << "spare capacity is: " << str_format(spare.get_capacity()) << std::endl;
-    //     ss << "spare load factor is: " << spare.get_load_factor() << std::endl;
-    //     double ratio = spare.get_capacity() / (double) temp_capacity;
+    //     // ss << "total capacity is: " << str_format(temp_capacity + spare->get_capacity()) << std::endl;
+    //     ss << "spare capacity is: " << str_format(spare->get_capacity()) << std::endl;
+    //     ss << "spare load factor is: " << spare->get_load_factor() << std::endl;
+    //     double ratio = spare->get_capacity() / (double) temp_capacity;
     //     ss << "l2/l1 capacity ratio is: " << ratio << std::endl;
     //     ss << "spare_element_length is: " << spare_element_length << std::endl;
 
@@ -619,7 +634,7 @@ public:
     //     ss << temp_ss.str();
     //     ss << line << std::endl;
 
-    //     // spare.get_info(&ss);
+    //     // spare->get_info(&ss);
     //     return ss;
     // }
 
@@ -640,7 +655,7 @@ public:
     //             std::cout << "Probably did not hit all PD's. (hashing_test is false)." << std::endl;
     //             std::cout << std::string(120, '$') << std::endl;
     //         } */
-    //     size_t spare_capacity = spare.get_capacity();
+    //     size_t spare_capacity = spare->get_capacity();
     //     size_t count_overflowing_PD = count_overflowing_PDs();
     //     size_t count_empty_PD = count_empty_PDs();
 
@@ -678,16 +693,16 @@ public:
 
     // auto get_hash_val_buckets(itemType hash_val) -> std::tuple<uint32_t, uint32_t> {
     //     uint32_t b1 = -1, b2 = -1;
-    //     spare.my_hash(hash_val, &b1, &b2);
+    //     spare->my_hash(hash_val, &b1, &b2);
     //     return std::make_tuple(b1, b2);
     // }
 
     // auto get_second_level_capacity() -> std::size_t {
-    //     return spare.get_capacity();
+    //     return spare->get_capacity();
     // }
 
     // auto get_second_level_load_ratio() -> double {
-    //     return spare.get_capacity() / ((double) spare.get_max_capacity());
+    //     return spare->get_capacity() / ((double) spare->get_max_capacity());
     // }
 
     auto get_capacity() -> size_t {
@@ -713,7 +728,7 @@ public:
         /* string a = "dict512:\t";
             string b = pd512::get_name() + "\t";
             //        string b = pd_vec[0]->get_name() + "\t";
-            string c = spare.get_name();
+            string c = spare->get_name();
             return a + b + c; */
     }
 
@@ -809,14 +824,14 @@ public:
         res += sizeof(__m512i) * number_of_pd;
         // Capacity vec.
         res += sizeof(uint8_t) * number_of_pd;
-        // Pointer to spare.
+        // Pointer to spare->
         res += 1;
         return res;
     }
 
     // auto get_byte_size_with_spare() {
     //     auto l1_size = get_byte_size();
-    //     auto l2_size = spare.get_byte_size();
+    //     auto l2_size = spare->get_byte_size();
     //     return l1_size + l2_size;
     // }
 
