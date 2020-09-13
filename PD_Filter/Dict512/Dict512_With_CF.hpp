@@ -2,11 +2,11 @@
 #ifndef FILTERS_DICT512_WITH_CF_HPP
 #define FILTERS_DICT512_WITH_CF_HPP
 
-#include "Analyse/analyse.hpp"
+// #include "Analyse/analyse.hpp"
 // #include "TPD_Filter/att_hTable.hpp"
-#include "../hashutil.h"
+// #include "../hashutil.h"
 // #include "hashTable_Aligned.hpp"
-#include "hashTable_CuckooFilter.hpp"
+#include "../HashTables/hashTable_CuckooFilter.hpp"
 #include "pd512.hpp"
 
 // #include "hash_table.hpp"
@@ -85,9 +85,9 @@ public:
         // size_t spare_max_capacity = res;
         // spare = new CuckooFilter(spare_max_capacity, level2_load_factor);
         size_t log2_size = ceil_log2(max_number_of_elements);
-        size_t temp = ceil(max_number_of_elements / (double) 1.5);
-        auto res = my_ceil(temp, log2_size);
-        size_t spare_max_capacity = res;
+        size_t temp = ceil(1.0 * max_number_of_elements / (1.5 * log2_size));
+        // auto res = ceil(temp, log2_size);
+        size_t spare_max_capacity = temp;
         spare = new hashTable_CuckooFilter(spare_max_capacity, spare_element_length, level2_load_factor);
 
 

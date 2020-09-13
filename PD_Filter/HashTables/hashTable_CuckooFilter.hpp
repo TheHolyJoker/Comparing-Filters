@@ -14,13 +14,18 @@
 
 // #include "../../cuckoofilter/ "
 #include "../../cuckoofilter/src/cuckoofilter.h"
-#include "../basic_function_util.h"
+// #include "../basic_function_util.h"
 
 // #include "../../hashutil.hpp"
-#include "../macros.h"
+// #include "../macros.h"
 // #include "TPD_Filter/basic_function_util.h"
-#include "../../Tests/printutil.hpp"
+// #include "../../Tests/printutil.hpp"
 // #include "printutil.hpp"
+
+#include "../macros.h"
+#include "../basic_function_util.h"
+#include "../../Tests/printutil.hpp"
+#include "../../hashutil.h"
 #include <vector>
 
 
