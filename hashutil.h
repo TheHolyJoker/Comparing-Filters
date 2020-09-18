@@ -9,9 +9,9 @@
 #include <string>
 #include <sys/types.h>
 
+#include "Hash_functions/BobJenkins.h"
 #include "Hash_functions/wyhash.h"
 #include "Hash_functions/xxhash64.h"
-#include "Hash_functions/BobJenkins.h"
 #include <random>
 #include <vector>
 // #include "Hash_functions/woothash.h"
@@ -34,8 +34,25 @@ namespace hashing {
             }
         }
 
+        TwoIndependentMultiplyShift(unsigned __int128 seed1, unsigned __int128 seed2) {
+            multiply_ = seed1;
+            add_ = seed2;
+            // ::std::random_device random;
+            // for (auto v : {&multiply_, &add_}) {
+            //     *v = random();
+            //     for (int i = 1; i <= 4; ++i) {
+            //         *v = *v << 32;
+            //         *v |= random();
+            //     }
+            // }
+        }
+
         inline uint64_t operator()(uint64_t key) const {
             return (add_ + multiply_ * static_cast<decltype(multiply_)>(key)) >> 64;
+        }
+
+        inline uint32_t hash32(uint64_t key) const {
+            return ((uint32_t)(add_ + multiply_ * static_cast<decltype(multiply_)>(key)));
         }
         auto get_name() const -> std::string {
             return "TwoIndependentMultiplyShift";

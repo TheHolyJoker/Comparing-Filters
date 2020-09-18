@@ -3,6 +3,8 @@ project(Comparing_Filters_Simpler)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512dq")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
@@ -43,16 +45,22 @@ set(PROJECT_SOURCES
     Hash_functions/MurmurHash3.cpp
     Hash_functions/BobJenkins.h
     Hash_functions/BobJenkins.cpp
+
+    PD_Filter/HashTables/hashTable64.hpp
     PD_Filter/HashTables/hashTable_Aligned.hpp
     PD_Filter/HashTables/hashTable_Packed.hpp
     PD_Filter/HashTables/hashTable_CuckooFilter.hpp
+    PD_Filter/HashTables/Spare_Low_Load.hpp
     
     PD_Filter/Dict512/pd512.hpp
     PD_Filter/Dict512/pd512.cpp
     PD_Filter/Dict512/Dict512.hpp
     PD_Filter/Dict512/twoChoicer.hpp
     PD_Filter/Dict512/Dict512_With_CF.hpp
+    PD_Filter/Dict512/Dict512_SparseSpare.hpp
     PD_Filter/Dict512/Dict512_Ver2.hpp
+    PD_Filter/Dict512/Dict512_Ver3.hpp
+    
     PD_Filter/Dict320/pd320.hpp
     PD_Filter/Dict320/pd320.cpp
     PD_Filter/Dict320/Dict320.hpp
@@ -69,9 +77,14 @@ add_executable(valid_test main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
 target_compile_options(valid_test PRIVATE -O0)
 
+add_executable(test_o2 main.cpp ${PROJECT_SOURCES})
+# Add the compile options ONLY for valid_test.
+target_compile_options(test_o2 PRIVATE -O2)
+
 
 target_link_libraries(Filters OpenSSL::SSL)
 target_link_libraries(valid_test OpenSSL::SSL)
+target_link_libraries(test_o2 OpenSSL::SSL)
 # add_executable(
 #   Filters
 #   main.cpp

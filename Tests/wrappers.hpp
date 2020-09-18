@@ -20,9 +20,13 @@
 // #include "Dict320/Dict320_v2.hpp"
 #include "Dict320/twoChoicer320.hpp"
 #include "Dict512/Dict512.hpp"
+#include "Dict512/Dict512_SparseSpare.hpp"
 #include "Dict512/Dict512_Ver2.hpp"
+#include "Dict512/Dict512_Ver3.hpp"
 #include "Dict512/Dict512_With_CF.hpp"
 #include "Dict512/twoChoicer.hpp"
+
+// using Dict512_SS = Dict512_SparseSpare<>;
 // #include "../Bloom_Filter/simd-block-fixed-fpp.h"
 // #include "../Bloom_Filter/simd-block.h"
 // #include "../morton/morton_sample_configs.h"
@@ -49,8 +53,10 @@ enum filter_id {
     pd_id,
     tpd_id,
     Dict512_id,
+    Dict512_SS_id,
     d512_WCF,
     d512_ver2,
+    d512_ver3,
     att_d512_id,
     twoChoicer_id,
     twoChoicer320_id,
@@ -142,6 +148,61 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     }
 };
 
+
+template<typename itemType>
+struct FilterAPI<Dict512_SparseSpare<itemType>> {
+    using Table = Dict512_SparseSpare<itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count, .64, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        table->remove(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        return table->get_extended_info();
+    }
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
+        return Dict512_SS_id;
+    }
+};
+
+
 template<
         class TableType, typename spareItemType,
         typename itemType,
@@ -175,15 +236,17 @@ struct FilterAPI<Dict512<TableType, spareItemType, itemType, HashFamily>> {
     }
 
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
-
+        // minimal_body_lookup
+        // return table->minimal_body_lookup(key);
+        return table->lookup_low_load(key);
 
         // return table->lookup(key);
-#ifdef NDEBUG
-        return table->lookup_low_load(key);
-        // return table->minimal_lookup(key);
-#else
-        return table->lookup(key);
-#endif
+        // #ifdef NDEBUG
+        //         return table->lookup_low_load(key);
+        //         // return table->minimal_lookup(key);
+        // #else
+        //         return table->lookup(key);
+        // #endif
         // return table->minimal_lookup(key);
 
         // return table->bitwise_lookup(key);
@@ -381,7 +444,7 @@ struct FilterAPI<Dict512_Ver2<TableType, spareItemType, itemType, HashFamily>> {
     // Todo return const here:
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
-        #ifdef NDEBUG
+#ifdef NDEBUG
         return table->lookup_low_load(key);
         // return table->minimal_lookup(key);
 #else
@@ -413,6 +476,66 @@ struct FilterAPI<Dict512_Ver2<TableType, spareItemType, itemType, HashFamily>> {
     }
 };
 
+
+template<
+        class TableType, typename spareItemType,
+        typename itemType,
+        typename HashFamily>
+struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
+    using Table = Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count, .95, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        throw std::runtime_error("Unsupported");
+        // std::cout << "Remove in Wrapper!" << std::endl;
+        // table->remove(key);
+    }
+
+    // Todo return const here:
+    // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        return table->get_extended_info();
+    }
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 3;
+    }
+    static auto get_ID(Table *table) -> filter_id {
+        return d512_ver3;
+    }
+};
 
 template<typename itemType, typename HashFamily>
 struct FilterAPI<Dict512_With_CF<itemType, HashFamily>> {
@@ -559,7 +682,10 @@ struct FilterAPI<twoChoicer<itemType>> {
     }
 
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
-        return table->lookup(key);
+        // std::cout << "here!!!" << std::endl;
+        return table->lookup_consecutive_only_body(key);
+        // return table->lookup_consecutive(key);
+        // return table->lookup(key);
     }
 
     static string get_name(Table *table) {
@@ -582,6 +708,7 @@ struct FilterAPI<twoChoicer<itemType>> {
         return twoChoicer_id;
     }
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////

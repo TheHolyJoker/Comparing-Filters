@@ -51,6 +51,10 @@ auto print_false_positive_rates_header(size_t width = 12)->std::stringstream;
 auto print_single_round_false_positive_rates(size_t lookups_repetitions, size_t expected_false_positive,
                                              size_t true_positive_counter, size_t false_positive_counter) ->std::stringstream ;
 
+auto print_single_round_false_positive_rates_probabilistic(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
+                                                           size_t true_counter, size_t false_counter, bool is_last_line) -> std::stringstream;
+
+
 auto print_single_round_false_positive_rates(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
                                              size_t true_positive_counter, size_t false_positive_counter, bool is_last_line = false)-> std::stringstream;
 

@@ -33,7 +33,7 @@ namespace v_pd512 {
 
     auto bin_print_header_spaced128(unsigned __int128 header) -> std::string {
         // assert(_mm_popcnt_u64(header) == 32);
-        unsigned __int128 b = ((unsigned __int128) 1 ) << 127ul;
+        unsigned __int128 b = ((unsigned __int128) 1) << 127ul;
         assert(b > 42);
         std::string res = "";
         while (b) {
@@ -45,6 +45,12 @@ namespace v_pd512 {
                 res += ".";
         }
         return res;
+    }
+    auto validate_header(const __m512i *pd) -> bool {
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+        return (pd512::popcount128(header) == 50);
     }
 };// namespace v_pd512
 
@@ -516,6 +522,7 @@ namespace pd512 {
         // return true;
     }
 
+    
     auto get_capacity_old(const __m512i *x) -> size_t {
         validate_number_of_quotient(x);
         // return get_capacity_naive();
@@ -525,6 +532,7 @@ namespace pd512 {
         //
         // memcpy is the only defined punning operation
         memcpy(header, x, 13);
+
         auto old_header = header[1];
         // header[1] = header[1] & ((UINT64_C(1) << (50 + 51 - 64)) - 1);
 
@@ -572,6 +580,31 @@ namespace pd512 {
         }
     }
 
+    auto get_capacity_naive_with_OF_bit(const __m512i *x) -> size_t {
+            uint64_t header[2];
+        memcpy(header, x, 13);
+        header[1] &= ((1ULL << (101 - 64)) - 1);
+        size_t zero_count = 0, one_count = 0;
+        for (size_t j = 0; j < 2; j++) {
+            uint64_t temp = header[j];
+            uint64_t b = 1ULL;
+            for (size_t i = 0; i < 64; i++) {
+                if (b & temp) {
+                    one_count++;
+                    if (one_count == 50)
+                        return zero_count;
+                } else {
+                    zero_count++;
+                }
+                b <<= 1ul;
+            }
+        }
+        std::cout << zero_count << std::endl;
+        std::cout << one_count << std::endl;
+        return -1;
+        assert(false);
+    }
+
     auto get_capacity_naive(const __m512i *x) -> size_t {
         uint64_t header[2];
         memcpy(header, x, 13);
@@ -595,6 +628,69 @@ namespace pd512 {
         return -1;
         assert(false);
     }
+    auto count_ones_up_to_the_kth_zero(const __m512i *x, size_t k) -> size_t {
+        assert(k == 51);
+        
+        uint64_t header[2];
+        memcpy(header, x, 13);
+        uint64_t masked_h1 = (header[1]) & ((1ULL << (101 - 64)) - 1);
+        
+        
+        size_t total_one_count_in_header = _mm_popcnt_u64(header[0]) +_mm_popcnt_u64(masked_h1);
+        assert(total_one_count_in_header == 50);
+        
+        size_t total_one_count = _mm_popcnt_u64(header[0]) +_mm_popcnt_u64(header[1]);
+        size_t zero_count = 0, one_count = 0;
+        for (size_t j = 0; j < 2; j++) {
+            uint64_t temp = header[j];
+            uint64_t b = 1ULL;
+            for (size_t i = 0; i < 64; i++) {
+                if (b & temp) {
+                    one_count++;
+                    // if (one_count == k)
+                    //     return zero_count;
+                } else {
+                    zero_count++;
+                    if (zero_count == k)
+                        return one_count;
+                }
+                b <<= 1ul;
+            }
+        }
+        std::cout << zero_count << std::endl;
+        std::cout << one_count << std::endl;
+        return -1;
+        assert(false);
+    }
+
+
+
+    auto count_zeros_up_to_the_kth_one(const __m512i *x, size_t k) -> size_t {
+        uint64_t header[2];
+        memcpy(header, x, 13);
+        size_t total_one_count = _mm_popcnt_u64(header[0]) +_mm_popcnt_u64(header[1]);
+        assert(total_one_count >= k);
+        size_t zero_count = 0, one_count = 0;
+        for (size_t j = 0; j < 2; j++) {
+            uint64_t temp = header[j];
+            uint64_t b = 1ULL;
+            for (size_t i = 0; i < 64; i++) {
+                if (b & temp) {
+                    one_count++;
+                    if (one_count == k)
+                        return zero_count;
+                } else {
+                    zero_count++;
+                }
+                b <<= 1ul;
+            }
+        }
+        std::cout << zero_count << std::endl;
+        std::cout << one_count << std::endl;
+        return -1;
+        assert(false);
+    }
+
 
     auto get_name() -> std::string {
         return "pd512 ";

@@ -30,7 +30,7 @@ auto xorshf96() -> uint64_t;
 
 template<typename itemType>
 auto rand_item() -> itemType {
-    return (itemType) random();
+    return (itemType) rand();
     //    return (itemType) xorshf96();
 }
 
@@ -47,7 +47,8 @@ auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong unive
     // std::cout << "G3" << std::endl;
     vec->resize(number_of_elements);
     for (int i = 0; i < number_of_elements; ++i)
-        vec->at(i) = rand_item<uint64_t>();
+        vec->at(i) = ((uint64_t)rand());
+        // vec->at(i) = rand_item<uint64_t>();
     /*unordered_set<itemType> temp_set(vec->begin(), vec->end());
     if (temp_set.size() < 0.95 * vec->size()) {
         std::cout << "unique size is: " << temp_set.size() << "( " << temp_set.size() / ((double) vec->size()) << ")"
@@ -112,8 +113,9 @@ auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *e
     for (auto el : *el_set) {
         FilterAPI<Table>::Add(el, wrap_filter);
         if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
+            double ratio = 1.0 * counter /el_set->size();
             cout << "lookup failed." << endl;
-            cout << "counter: " << counter << endl;
+            cout << "counter: " << counter << "/" << el_set->size() << " = " << ratio << endl;
             cout << "element: " << el << endl;
 
             //            wrap_filter->Add(el);
@@ -230,7 +232,7 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     // size_t del_size = filter_max_capacity / 2;
     set_init(filter_max_capacity - del_size, &member_set);
     set_init(lookup_reps, &lookup_set);
-    set_init(del_size, &to_be_deleted_set);
+    // set_init(del_size, &to_be_deleted_set);
 
     size_t counter = 0;
     /**Insertion*/

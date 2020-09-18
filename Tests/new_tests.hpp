@@ -20,7 +20,7 @@ typedef chrono::nanoseconds ns;
 
 ///////Basic functions:
 template<typename itemType>
-auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements, size_t bench_precision = 20);
+auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements, size_t bench_precision = 20, bool with_deletions = false);
 
 
 // template<typename itemType>
@@ -185,6 +185,23 @@ auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *
     return std::make_tuple(fp_counter, tp_counter);
 }
 
+template<class Table, typename itemType>
+auto fp_rates_single_filter_probabilistic(Table *wrap_filter, vector<vector<itemType> *> *elements) -> std::tuple<size_t, size_t> {
+    size_t counter = 0;
+    /**Insertion*/
+    for (auto el : *elements->at(0)) {
+        FilterAPI<Table>::Add(el, wrap_filter);
+        counter++;
+    }
+    // size_t false_counter = 0;
+    // size_t true_counter = 0;
+    size_t counters[2] = {0, 0};
+    for (auto el : *elements->at(1)) {
+        counters[FilterAPI<Table>::Contain(el, wrap_filter)]++;
+    }
+    return std::make_tuple(counters[0], counters[1]);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -192,10 +209,12 @@ auto fp_rates_single_filter(Table *wrap_filter, vector<unordered_set<itemType> *
 
 
 template<typename itemType>
-auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements, size_t bench_precision) {
+auto init_elements(size_t max_filter_capacity, size_t lookup_reps, vector<vector<itemType> *> *elements, size_t bench_precision, bool with_deletions) {
     fill_vec(elements->at(0), max_filter_capacity);
-    // size_t del_size = max_filter_capacity / (double) bench_precision;
-    // fill_vec(elements->at(2), del_size);
+    if (with_deletions) {
+        size_t del_size = max_filter_capacity / (double) bench_precision;
+        fill_vec(elements->at(2), del_size);
+    }
     fill_vec(elements->at(1), lookup_reps);
 }
 
@@ -245,7 +264,8 @@ auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t st
 
 template<class Table, typename itemType>
 auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bench_precision, size_t reps,
-                                       ostream &os = cout) -> ostream & {
+                                       ostream &os = cout)
+        -> ostream & {
 
     assert(filter_max_capacity % bench_precision == 0);
     size_t step_size = filter_max_capacity / bench_precision;

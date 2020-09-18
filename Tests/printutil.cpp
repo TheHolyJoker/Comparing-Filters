@@ -12,9 +12,10 @@ auto print_name(const std::string &filter_name, size_t line_width) -> std::strin
     // if (filter_name.size() >= 10) {}
     std::string line = " |" + std::string(temp_width, '-') + '|';
     std::stringstream ss;
-    ss << line << "\n |" << std::left << std::setw(fixed_width) << filter_name << "|\n" << line << std::endl;
+    ss << line << "\n |" << std::left << std::setw(fixed_width) << filter_name << "|\n"
+       << line << std::endl;
     return ss;
-              //              << " |" << std::left << std::setw(temp_width) << filter_name.size() << "|\n"
+    //              << " |" << std::left << std::setw(temp_width) << filter_name.size() << "|\n"
 }
 
 void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t *divisors) {
@@ -33,7 +34,7 @@ void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t
     const uint32_t total_width = name_width * 2u + int_width * 2u + dbl_width * 3u + sep.size() * num_flds;
 
     const std::string line = sep + std::string(4 * total_width - 1, '-') + '|';
-    std::cout << line << '\n'
+    std::cout << line << "\n"
               << sep << left;
 
     const std::string spacing = std::string(name_width, ' ');
@@ -45,8 +46,8 @@ void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t
         cout << std::setw(name_width) << columns[counter++] << sep;
     }
     cout << std::setw(name_width) << columns[counter] << std::string(4, ' ') << sep;
-    cout << '\n'
-         << line << '\n';
+    cout << "\n"
+         << line << "\n";
 
     //    assert(var_num % column_num == 0);
     for (int i = 0; i < var_num; ++i) {
@@ -57,7 +58,7 @@ void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t
         std::cout << sep << std::setw(name_width) << values[i];
         auto temp_length = total_width - name_width * column_num;
         assert(temp_length > 0);
-        std::cout << std::string(4, ' ') << sep << '\n';
+        std::cout << std::string(4, ' ') << sep << "\n";
     }
     std::cout << line << endl;
 }
@@ -73,7 +74,7 @@ void table_print(size_t var_num, string *var_names, size_t *values, std::strings
     const std::string sep = " |";
     const int total_width = default_line_width;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-    *os << line << '\n'
+    *os << line << "\n"
         << sep << left;
 
     size_t counter = 0;
@@ -81,8 +82,8 @@ void table_print(size_t var_num, string *var_names, size_t *values, std::strings
         cout << std::setw(name_width) << var_names[counter++] << sep;
     }
     *os << std::setw(name_width - 1) << var_names[counter] << sep;
-    *os << '\n'
-        << line << '\n' + sep;
+    *os << "\n"
+        << line << "\n" + sep;
 
 
     counter = 0;
@@ -90,8 +91,8 @@ void table_print(size_t var_num, string *var_names, size_t *values, std::strings
         *os << std::setw(name_width) << values[counter++] << sep;
     }
     *os << std::setw(name_width - 1) << values[counter] << sep;
-    *os << '\n'
-        << line << '\n';
+    *os << "\n"
+        << line << "\n";
 }
 
 
@@ -103,7 +104,7 @@ void print_seperating_line() {
     const std::string sep = " |";
     const uint32_t total_width = name_width * 2u + int_width * 2u + dbl_width * 3u + sep.size() * num_flds;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-    std::cout << line << '\n';
+    std::cout << line << "\n";
 }
 
 auto print_round_header() -> std::stringstream {
@@ -123,12 +124,12 @@ auto print_round_header() -> std::stringstream {
     const std::string sep = " |";
     const uint32_t total_width = (name_width + sep.size()) * var_num;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-    ss << line << '\n';
+    ss << line << "\n";
 
     for (auto &name : names) {
         ss << sep << std::setw(name_width) << name;
     }
-    ss << sep << '\n'
+    ss << sep << "\n"
        << line << endl;
     return ss;
     //    ss << sep << std::setw(name_width) << "Round";
@@ -136,7 +137,7 @@ auto print_round_header() -> std::stringstream {
     //    ss << sep << std::setw(name_width) << "uniform lookup rate (op/sec)";
     //    ss << sep << std::setw(name_width) << "True lookup rate (op/sec)";
     //    ss << sep << std::setw(name_width) << "deletion rate (op/sec)";
-    //    ss << std::string(6, ' ') << sep << '\n' << line << endl;
+    //    ss << std::string(6, ' ') << sep << "\n" << line << endl;
 }
 
 auto print_single_round(size_t var_num, const size_t *values, const size_t *divisors, size_t width) -> std::stringstream {
@@ -153,7 +154,7 @@ auto print_single_round(size_t var_num, const size_t *values, const size_t *divi
     const std::string sep = " |";
     const uint32_t total_width = (name_width + sep.size()) * (var_num - 1);
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-    //    std::cout << line << '\n' << sep << left;
+    //    std::cout << line << "\n" << sep << left;
     ss << sep << left;
 
     std::size_t first_arg_length = 2 + is_round_contain_two_digits;
@@ -174,12 +175,12 @@ auto print_single_round(size_t var_num, const size_t *values, const size_t *divi
     ss << sep << std::setw(name_width) << rate << sep << std::endl;
 
     if (is_last_round)
-        ss << line << '\n';
+        ss << line << "\n";
     return ss;
     //    auto temp_length = total_width - name_width * var_num;
     //    assert(temp_length > 0);
-    //    std::cout  << sep << '\n';
-    //    std::cout << std::string(6, ' ') << sep << '\n';
+    //    std::cout  << sep << "\n";
+    //    std::cout << std::string(6, ' ') << sep << "\n";
 
     //    << line << endl;
 }
@@ -200,14 +201,14 @@ auto print_single_round(size_t var_num, const size_t *values, const size_t *divi
 //     const std::string sep = " |";
 //     const int total_width = default_line_width;
 //     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-//     std::cout << line << '\n' << sep << left;
+//     std::cout << line << "\n" << sep << left;
 //
 //     size_t counter = 0;
 //     while (counter < var_num - 1) {
 //         cout << std::setw(name_width) << names[counter++] << sep;
 //     }
 //     cout << std::setw(name_width - 1) << names[counter] << sep;
-//     cout << '\n' << line << '\n' + sep;
+//     cout << "\n" << line << "\n" + sep;
 //
 //
 //     counter = 0;
@@ -215,7 +216,7 @@ auto print_single_round(size_t var_num, const size_t *values, const size_t *divi
 //         cout << std::setw(name_width) << values[counter++] << sep;
 //     }
 //     cout << std::setw(name_width - 1) << values[counter] << sep;
-//     cout << '\n' << line << '\n';*/
+//     cout << "\n" << line << "\n";*/
 // }
 
 auto att_print_single_round_false_positive_rates(size_t lookups_repetitions, size_t bits_per_item,
@@ -236,15 +237,15 @@ auto att_print_single_round_false_positive_rates(size_t lookups_repetitions, siz
     const std::string sep = " |";
     const uint32_t total_width = (name_width + sep.size()) * var_num;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-    ss << line << '\n'
+    ss << line << "\n"
        << sep << left;
 
     size_t counter = 0;
     while (counter < var_num) {
         ss << std::setw(name_width) << names[counter++] << sep;
     }
-    ss << '\n'
-       << line << '\n' + sep;
+    ss << "\n"
+       << line << "\n" + sep;
 
 
     counter = 0;
@@ -262,8 +263,8 @@ auto att_print_single_round_false_positive_rates(size_t lookups_repetitions, siz
     ss << std::setw(name_width) << expected_fp_prob << sep;
 
     ss << std::setw(name_width) << actual_fp_prob << sep;
-    ss << '\n'
-       << line << '\n';
+    ss << "\n"
+       << line << "\n";
     return ss;
 }
 
@@ -280,7 +281,7 @@ auto print_false_positive_rates_header(size_t width) -> std::stringstream {
     const std::string sep = " |";
     const uint32_t total_width = max((name_width + sep.size()) * var_num, 138ul);
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-    ss << line << '\n'
+    ss << line << "\n"
        << sep << left;
 
     size_t i = 0;
@@ -292,8 +293,8 @@ auto print_false_positive_rates_header(size_t width) -> std::stringstream {
     ss << std::setw(w) << names[i++] << sep;
     ss << std::setw(w) << names[i++] << sep;
     ss << std::setw(w) << names[i++] << sep;
-    ss << '\n'
-       << line << '\n';
+    ss << "\n"
+       << line << "\n";
     return ss;
 
     // for (size_t i = 0; i < var_num; i++)
@@ -341,6 +342,108 @@ auto print_single_round_false_positive_rates(std::string filter_name, size_t loo
     }
     return ss;
 }
+
+auto temp_temp(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
+               size_t true_counter, size_t false_counter) -> void {
+    const size_t var_num = 6;
+    string names[var_num] = {"#reps", "#expected FP", "#False", "#True", "expected FP ratio", "actual True ratio"};
+    size_t bits_per_item = expected_false_positive;
+    expected_false_positive = lookups_repetitions >> bits_per_item;
+    size_t values[var_num - 2] = {lookups_repetitions, expected_false_positive, false_counter, true_counter};
+
+    // std::cout
+    // values for controlling format
+    const uint32_t name_width = 12;
+    const std::string sep = " |";
+    const uint32_t total_width = (24 + sep.size()) * var_num;
+    const std::string line = sep + std::string(total_width - 1, '-') + '|';
+    std::cout << line << "\n"
+              << sep << left;
+
+    size_t i = 0;
+    size_t w = 18u;
+    std::cout << std::setw(16) << names[0] << sep;
+    std::cout << std::setw(w) << names[1] << sep;
+    std::cout << std::setw(w) << names[2] << sep;
+    std::cout << std::setw(w) << names[3] << sep;
+    std::cout << std::setw(w) << names[4] << sep;
+    std::cout << std::setw(w) << names[5] << sep;
+    // std::cout << std::setw(w) << names[2] << sep;
+    std::cout << "\n"
+              << line << "\n";
+
+    size_t width = 18;
+    std::cout << std::setw(16) << filter_name << sep;
+    size_t counter = 0;
+    while (counter < var_num - 2) {
+        std::cout << std::setw(width) << values[counter++] << sep;
+    }
+    //    std::std::cout << values[0] << "/" << std::setw(name_width - is_round_contain_two_digits) << values[1];
+    std::cout << std::setw(width) << 1ULL / ((double) (1ULL << bits_per_item)) << sep;
+    std::cout << std::setw(width) << values[2] / ((double) values[0]) << sep << std::endl;
+
+    // if (is_last_line) {
+    string closing_line = sep + std::string(137, '-') + '|';
+    std::cout << closing_line << std::endl;
+    // }
+}
+
+auto print_single_round_false_positive_rates_probabilistic(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
+                                                           size_t true_counter, size_t false_counter, bool is_last_line) -> std::stringstream {
+    /**every lookup result is one of the following:
+     * FP - False Positive
+     * TP - True Positive
+     * TN - True Negative.
+      */
+    // temp_temp(filter_name, lookups_repetitions, expected_false_positive, true_counter, false_counter);
+    std::stringstream ss;
+    const size_t var_num = 6;
+    string names[var_num] = {"#reps", "#expected FP", "#False", "#True", "expected FP ratio", "actual True ratio"};
+    size_t bits_per_item = expected_false_positive;
+    expected_false_positive = lookups_repetitions >> bits_per_item;
+    size_t values[var_num - 2] = {lookups_repetitions, expected_false_positive, false_counter, true_counter};
+
+    // values for controlling format
+    const uint32_t name_width = 12;
+    const std::string sep = " |";
+    const uint32_t total_width = (24 + sep.size()) * var_num;
+    const std::string line = sep + std::string(total_width - 1, '-') + '|';
+    ss << line << "\n"
+       << sep << left;
+
+    size_t space_left = line.size() - 20 * 7 - 2;
+    std::string close = std::string(space_left,' ') + sep;
+    size_t i = 0;
+    size_t w = 18u;
+    ss << std::setw(w) << "Name" << sep;
+    ss << std::setw(w) << names[i++] << sep;
+    ss << std::setw(w) << names[i++] << sep;
+    ss << std::setw(w) << names[i++] << sep;
+    ss << std::setw(w) << names[i++] << sep;
+    ss << std::setw(w) << names[i++] << sep;
+    ss << std::setw(w) << names[i++] << close;
+    // ss << std::setw(w) << names[i++] << sep;
+    ss << "\n"
+       << line << "\n";
+
+    size_t width = 18;
+    ss << sep << left << std::setw(w) << filter_name << sep;
+    size_t counter = 0;
+    while (counter < var_num - 2) {
+        ss << std::setw(width) << values[counter++] << sep;
+    }
+    //    std::ss << values[0] << "/" << std::setw(name_width - is_round_contain_two_digits) << values[1];
+    ss << std::setw(width) << 1.0 / ((double) (1ULL << bits_per_item)) << sep;
+    ss << std::setw(width) << 1.0 * true_counter / lookups_repetitions << close << std::endl;
+
+    if (is_last_line) {
+        string closing_line = sep + std::string(155, '-') + '|';
+        ss << closing_line << std::endl;
+    }
+    return ss;
+}
+
+
 auto print_single_round_false_positive_rates(size_t lookups_repetitions, size_t expected_false_positive,
                                              size_t true_positive_counter, size_t false_positive_counter) -> std::stringstream {
     /**every lookup result is one of the following:
@@ -364,14 +467,14 @@ auto print_single_round_false_positive_rates(size_t lookups_repetitions, size_t 
     const std::string sep = " |";
     const uint32_t total_width = (name_width + sep.size()) * var_num;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
-    ss << line << '\n'
+    ss << line << "\n"
        << sep << left;
 
     size_t counter = 0;
     // while (counter < var_num) {
     //     cout << std::setw(name_width) << names[counter++] << sep;
     // }
-    // cout << '\n' << line << '\n' + sep;
+    // cout << "\n" << line << "\n" + sep;
 
 
     // counter = 0;
@@ -381,7 +484,7 @@ auto print_single_round_false_positive_rates(size_t lookups_repetitions, size_t 
     //    os << values[0] << "/" << std::setw(name_width - is_round_contain_two_digits) << values[1];
     ss << std::setw(name_width) << values[1] / ((double) values[0]) << sep;
     ss << std::setw(name_width) << values[2] / ((double) values[0]) << sep;
-    ss << '\n'
-       << line << '\n';
+    ss << "\n"
+       << line << "\n";
     return ss;
 }
