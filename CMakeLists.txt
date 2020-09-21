@@ -54,6 +54,8 @@ set(PROJECT_SOURCES
     
     PD_Filter/Dict512/pd512.hpp
     PD_Filter/Dict512/pd512.cpp
+    PD_Filter/Dict512/pd512_plus.hpp
+    PD_Filter/Dict512/pd512_plus.cpp
     PD_Filter/Dict512/Dict512.hpp
     PD_Filter/Dict512/twoChoicer.hpp
     PD_Filter/Dict512/Dict512_With_CF.hpp

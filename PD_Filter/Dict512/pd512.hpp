@@ -1560,6 +1560,14 @@ namespace pd512 {
         return 50 - get_last_quot_in_pd_naive(pd);
     }
 
+    inline uint8_t get_last_qr_in_pd(const __m512i *pd) {
+        uint64_t quot = 50 - get_last_quot_in_pd_naive(pd);
+        constexpr int imm1 = 3;
+        constexpr int imm2 = 15;
+        const uint64_t rem = _mm_extract_epi8(_mm512_extracti64x2_epi64(*pd, imm1), imm2);
+        return (quot << 8ul) | rem;
+    }
+
 
     inline uint64_t pd_add_50_Wed(int64_t quot, char rem, __m512i *pd) {
         assert(quot < 50);
