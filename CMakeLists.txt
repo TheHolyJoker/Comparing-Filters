@@ -46,7 +46,7 @@ set(PROJECT_SOURCES
     Hash_functions/BobJenkins.h
     Hash_functions/BobJenkins.cpp
 
-    PD_Filter/HashTables/hashTable64.hpp
+    # PD_Filter/HashTables/hashTable64.hpp
     PD_Filter/HashTables/hashTable_Aligned.hpp
     PD_Filter/HashTables/hashTable_Packed.hpp
     PD_Filter/HashTables/hashTable_CuckooFilter.hpp

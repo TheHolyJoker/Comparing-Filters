@@ -6,7 +6,7 @@ bool print_pass() {
 }
 
 
-void get_fp_ratios(){
+void get_fp_ratios() {
 
     using itemType = uint64_t;
     using spare_item = uint64_t;
@@ -30,7 +30,7 @@ void get_fp_ratios(){
     const size_t fp_lookups = (1 << 25u);
     const size_t bits_per_element = 8;
 
-    vector<itemType> fp_v_add, fp_v_find;                      //, v_delete;
+    vector<itemType> fp_v_add, fp_v_find;                         //, v_delete;
     vector<vector<itemType> *> fp_elements{&fp_v_add, &fp_v_find};//, &v_delete};
     init_elements(fp_capacity, fp_lookups, &fp_elements, false);
     // return single_fp_rates_probabilistic<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_item, &fp_elements);
@@ -38,8 +38,6 @@ void get_fp_ratios(){
     single_fp_rates_probabilistic<Table_Dict512, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     single_fp_rates_probabilistic<Table_Dict512_SS, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     single_fp_rates_probabilistic<Table_CF, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-
-
 }
 
 int main(int argc, char **argv) {
@@ -68,7 +66,7 @@ int main(int argc, char **argv) {
     // assert((default_validation_test_single<Table_TC, itemType>()));
     assert(print_pass());
 
-    get_fp_ratios();
+    // get_fp_ratios();
 
     const size_t max_filter_capacity = 62411242;
     const size_t lookup_reps = 124822484;
@@ -86,16 +84,18 @@ int main(int argc, char **argv) {
     // single_bench<Table_Dict512_SS, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // return 0;
     while (true) {
+        // single_bench<Table_Dict512_SS, itemType>(max_filter_capacity, bench_precision, false, &elements);
         single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        single_bench<Table_Dict512, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        
-        // single_bench<Table_TC, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        single_bench<Table_Dict512_SS, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        // single_bench<Table_Dict_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        // single_bench<Table_Dict512_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        // single_bench<Table_Dict320, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     }
+    single_bench<Table_Dict512, itemType>(max_filter_capacity, bench_precision, false, &elements);
+
+    // single_bench<Table_TC, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict512_SS, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict512_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict320, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // }
 
 
     return 0;

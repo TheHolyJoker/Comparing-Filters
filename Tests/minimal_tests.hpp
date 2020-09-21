@@ -77,6 +77,7 @@ void single_bench(size_t filter_max_capacity, size_t bench_precision, bool valid
     bool valid = true;
     if (validate_before_benchmarking) {
         valid = default_validation_test_single<Table, itemType>();
+        
     }
     if (valid) {
         std::stringstream ss;

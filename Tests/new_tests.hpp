@@ -112,6 +112,7 @@ auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *el
         benchmark_single_round<Table, itemType>(wrap_filter, elements, round, bench_precision, &flusher);
         std::cout << flusher.str();
         ss << flusher.str();
+
     }
     return ss;
     // *ss << flusher.str();
@@ -153,8 +154,9 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     auto temp = print_single_round(var_num, values, divisors);
     *ss << temp.str();
 
-    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver2)
-        FilterAPI<Table>::get_info(wrap_filter);
+    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3)
+        FilterAPI<Table>::get_functionality(wrap_filter);
+        // FilterAPI<Table>::get_info(wrap_filter);
     // return os;
 }
 

@@ -124,6 +124,7 @@ public:
         max_qr_could_insert.resize(number_of_pd, 0);
         max_qr_did_insert.resize(number_of_pd, 0);
         all_qr.resize(number_of_pd, vector<uint16_t>(51));
+        // v_pd512_plus::decode_by_table_validator();
         // pd_capacity_vec.resize(number_of_pd, 0);
         // pd_simple_filter_vec.resize(number_of_pd, 0);
     }
@@ -155,57 +156,115 @@ public:
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
         const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-        auto lookup_res = pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
-        switch (lookup_res) {
-            case pd512_plus::pd_Status::No:
-                // std::cout << "l1_no" << std::endl;
-                return false;
-            case pd512_plus::pd_Status::Yes:
-                // std::cout << "l1_true" << std::endl;
-                return true;
-            case pd512_plus::pd_Status::look_in_the_next_level:
-                // std::cout << "l1_maybe" << std::endl;
-                return spare->find(spare_element);
-            default:
-                assert(0);
-                break;
-        }
-        assert(0);
-        return false;
+        // return pd512_plus::pd_minimal_find_50(quot, rem, &pd_array[pd_index]);
+        const pd512_plus::pd_Status lookup_res = pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
+        return (lookup_res == pd512_plus::pd_Status::Yes) || ((lookup_res == pd512_plus::pd_Status::look_in_the_next_level) && (spare->find(spare_element)));
+        // switch (pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index])) {
+        //     case pd512_plus::pd_Status::No:
+        // //         // std::cout << "l1_no" << std::endl;
+        //         return false;
+        //     case pd512_plus::pd_Status::Yes:
+        // //         // std::cout << "l1_true" << std::endl;
+        //         return true;
+        //     case pd512_plus::pd_Status::look_in_the_next_level:
+        // //         // std::cout << "l1_maybe" << std::endl;
+        //         return true;
+        //         return spare->find(spare_element);
+        //     default:
+        //         assert(0);
+        //         break;
+        // }
+        // assert(0);
+        // return false;
     }
 
 
-    // auto lookup_count(const itemType s, int case) -> bool {
-    //     uint64_t hash_res = Hasher(s);
-    //     uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-    //     const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-    //     const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-    //     const uint8_t rem = out2 & MASK(bits_per_item);
-    //
-    //     assert(pd_index < number_of_pd);
-    //     assert(quot <= 50);
-    //
-    //     bool is_in_l1 = pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
-    //     if (is_in_l1) {
-    //         searched_on_l1[0]++;
-    //         return true;
-    //     }
-    //
-    //     searched_on_l1[1]++;
-    //     bool c1 = pd_simple_filter_vec[pd_index] & (1ull << quot);
-    //     if (!c1) {
-    //         l2_search_avoided_counter++;
-    //         return false;
-    //     }
-    //     auto spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-    //     bool res = spare->find(spare_element);
-    //     if (!res) {
-    //         l2_search_that_was_not_avoided_but_should_have++;
-    //         searched_on_l2[1]++;
-    //     }
-    //     searched_on_l2[0]++;
-    //     return res;
-    // }
+    auto lookup_count(const itemType s, int caser = 0) -> bool {
+        static size_t l1_lookups[2] = {0, 0};
+        static size_t l2_lookups[2] = {0, 0};
+        static size_t OF_counter = 0;
+        static size_t last_q_counter = 0;
+        static size_t only_OF_counter = 0;
+        static size_t only_last_q_counter = 0;
+        if (caser == 1) {
+            l1_lookups[0] = l1_lookups[1] = l2_lookups[0] = l2_lookups[1] = 0;
+            OF_counter = 0;
+            last_q_counter = 0;
+            only_OF_counter = 0;
+            only_last_q_counter = 0;
+        }
+        if (caser == 2) {
+            auto line = std::string(64, '*');
+            std::cout << line << std::endl;
+            std::cout << "l1_lookups:(         \t" << l1_lookups[0] << ", " << l1_lookups[1] << ")" << std::endl;
+            std::cout << "l2_lookups:(         \t" << l2_lookups[0] << ", " << l2_lookups[1] << ")" << std::endl;
+            std::cout << "OF_counter:          \t" << OF_counter << std::endl;
+            std::cout << "last_q_counter:      \t" << last_q_counter << std::endl;
+            std::cout << "only_OF_counter:     \t" << only_OF_counter << std::endl;
+            std::cout << "only_last_q_counter: \t" << only_last_q_counter << std::endl;
+            std::cout << line << std::endl;
+        }
+
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
+        const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
+        auto res = pd512_plus::pd_find_50_count(quot, rem, &pd_array[pd_index]);
+        l1_lookups[res & 1]++;
+        if (res == 0) {
+            auto l2_res = spare->find(spare_element);
+            l2_lookups[l2_res]++;
+            return l2_res;
+        }
+
+        if (res & 2) {
+            OF_counter++;
+            if ((res & 4) == 0)
+                only_OF_counter++;
+        }
+        if (res & 4) {
+            last_q_counter++;
+            if ((res & 2) == 0)
+                only_last_q_counter++;
+        }
+
+        return res;
+
+        // const pd512_plus::pd_Status lookup_res = pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
+        // return (lookup_res == pd512_plus::pd_Status::Yes) || ((lookup_res == pd512_plus::pd_Status::look_in_the_next_level) && spare->find(spare_element));
+
+        // uint64_t hash_res = Hasher(s);
+        // uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
+
+        // assert(pd_index < number_of_pd);
+        // assert(quot <= 50);
+
+        // bool is_in_l1 = pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
+        // if (is_in_l1) {
+        //     searched_on_l1[0]++;
+        //     return true;
+        // }
+
+        // searched_on_l1[1]++;
+        // bool c1 = pd_simple_filter_vec[pd_index] & (1ull << quot);
+        // if (!c1) {
+        //     l2_search_avoided_counter++;
+        //     return false;
+        // }
+        // auto spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
+        // bool res = spare->find(spare_element);
+        // if (!res) {
+        //     l2_search_that_was_not_avoided_but_should_have++;
+        //     searched_on_l2[1]++;
+        // }
+        // searched_on_l2[0]++;
+        // return res;
+    }
 
     void insert(const itemType s) {
         uint64_t hash_res = Hasher(s);
@@ -236,16 +295,16 @@ public:
             assert(spare->find(spare_val));
             assert(lookup(s));
         } else {
-            if (!pd512_plus::pd_full(&pd_array[pd_index])) {
-                auto capacity = pd512_plus::get_capacity(&pd_array[pd_index]);
-                auto last_quot = pd512_plus::decode_last_quot_wrapper(&pd_array[pd_index]);
-                std::cout << "old_quot: " << last_quot << std::endl;
-                std::cout << "new_quot: " << quot << std::endl;
-                v_pd512_plus::print_headers(&pd_array[pd_index]);
-            }
+            // if (!pd512_plus::pd_full(&pd_array[pd_index])) {
+            //     auto capacity = pd512_plus::get_capacity(&pd_array[pd_index]);
+            //     auto last_quot = pd512_plus::decode_last_quot_wrapper(&pd_array[pd_index]);
+            //     std::cout << "old_quot: " << last_quot << std::endl;
+            //     std::cout << "new_quot: " << quot << std::endl;
+            //     v_pd512_plus::print_headers(&pd_array[pd_index]);
+            // }
             assert(pd512_plus::pd_full(&pd_array[pd_index]));
-            const uint64_t new_quot = res_qr >> 8ul;
-            assert(new_quot < 50);
+            // const uint64_t new_quot = res_qr >> 8ul;
+            assert((res_qr >> 8ul) < 50);
             uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | res_qr;
             insert_to_spare_without_pop(spare_val);
             assert(spare->find(spare_val));

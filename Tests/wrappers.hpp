@@ -513,6 +513,7 @@ struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
     // Todo return const here:
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+        // return table->lookup_count(key);
         return table->lookup(key);
     }
 
@@ -530,6 +531,8 @@ struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
      * 4 is for deletions.
      */
     static auto get_functionality(Table *table) -> uint32_t {
+        // table->lookup_count(0, 2);
+        // table->lookup_count(0, 1);
         return 3;
     }
     static auto get_ID(Table *table) -> filter_id {
