@@ -109,7 +109,7 @@ public:
         assert(sizeof(itemType) <= sizeof(spareItemType));
 
         // spare = new TableType(ceil(1.0 * max_number_of_elements / (1.5 * ceil_log2(max_number_of_elements))),
-        spare = new hashTable_Aligned<uint64_t, 4>(ceil(2.5 * max_number_of_elements / (1.0 * ceil_log2(max_number_of_elements))),
+        spare = new hashTable_Aligned<uint64_t, 4>(ceil(2.5 * max_number_of_elements / (4.0 * ceil_log2(max_number_of_elements))),
                                                    ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)) + 14ul,
                                                    level2_load_factor);
 
@@ -178,6 +178,18 @@ public:
         // return false;
     }
 
+    inline auto lookup_minimal(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
+        // const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
+        return pd512_plus::pd_find_50_v11(quot, rem, &pd_array[pd_index]);
+        // return pd512_plus::pd_find_50_v18(quot, rem, &pd_array[pd_index]);
+        // return pd512_plus::pd_find_50_v21(quot, rem, &pd_array[pd_index]);
+        // return pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
+    }
 
     auto lookup_count(const itemType s, int caser = 0) -> bool {
         static size_t l1_lookups[2] = {0, 0};
@@ -744,7 +756,9 @@ public:
 
 
     auto get_name() -> std::string {
-        return "Dict512_Ver3";
+        // return "Dict512_Ver3 find_21";
+        // return "Dict512_Ver3 find_18";
+        return "Dict512_Ver3 find_21";
         /* string a = "dict512:\t";
             string b = pd512_plus::get_name() + "\t";
             //        string b = pd_vec[0]->get_name() + "\t";

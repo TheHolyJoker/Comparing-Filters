@@ -514,6 +514,7 @@ struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
         // return table->lookup_count(key);
+        // return table->lookup_minimal(key);
         return table->lookup(key);
     }
 

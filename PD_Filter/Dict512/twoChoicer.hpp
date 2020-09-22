@@ -93,7 +93,7 @@ public:
     }
 
     auto lookup(const itemType s) const -> bool {
-        
+
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         // const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
@@ -105,10 +105,9 @@ public:
         assert(quot <= 50);
 
         return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1])) || (pd512::pd_find_50(quot, rem, &pd_array[get_alt_index(pd_index1, rem)]));
-           
     }
     auto lookup_consecutive(const itemType s) const -> bool {
-        
+
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
@@ -120,27 +119,24 @@ public:
         assert(quot <= 50);
 
         return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1])) || (pd512::pd_find_50(quot, rem, &pd_array[(pd_index1 + 1)]));
-           
     }
 
     auto lookup_consecutive_only_body(const itemType s) const -> bool {
-        
         uint64_t hash_res = hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
-        // const uint32_t pd_index1 = out1 % number_of_pd;
-        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = (out2) &MASK(bits_per_item);
         const __m512i target = _mm512_set1_epi8(rem);
+        return (_mm512_cmpeq_epu8_mask(target, pd_array[pd_index1]) >> 13ul) || (_mm512_cmpeq_epu8_mask(target, pd_array[pd_index1 + 1]) >> 13ul);
+        // const uint32_t pd_index1 = out1 % number_of_pd;
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         // const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
         // assert(pd_index1 < number_of_pd);
         // assert(quot <= 50);
 
         // uint64_t v =
-        return  (_mm512_cmpeq_epu8_mask(target, pd_array[pd_index1]) >> 13ul) || (_mm512_cmpeq_epu8_mask(target, pd_array[pd_index1 + 1]) >> 13ul) ;
 
         // return (pd512::pd_find_50(quot, rem, &pd_array[pd_index1])) || (pd512::pd_find_50(quot, rem, &pd_array[(pd_index1 + 1)]));
-           
     }
 
     void insert(const itemType s) {

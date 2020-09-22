@@ -6,6 +6,49 @@
 #include "pd512_plus.hpp"
 
 namespace v_pd512_plus {
+
+    // From CuckooFilter repository, where this following message was written:
+    //
+    // inspired from
+    // http://www-graphics.stanford.edu/~seander/bithacks.html#ZeroInWord
+    uint64_t upperpower2(uint64_t x) {
+        x--;
+        x |= x >> 1;
+        x |= x >> 2;
+        x |= x >> 4;
+        x |= x >> 8;
+        x |= x >> 16;
+        x |= x >> 32;
+        x++;
+        return x;
+    }
+
+
+    auto to_bin(uint64_t x) -> std::string {
+        assert(x);
+        size_t p = upperpower2(x);
+        uint64_t b = p >>1;
+        std::string res = "";
+        while (b) {
+            res += (b & x) ? "1" : "0";
+            b >>= 1ul;
+        }
+        return res;
+    }
+
+    auto to_bin_reversed(uint64_t x) -> std::string {
+        size_t p = upperpower2(x);
+        uint64_t b = 1ULL;
+        // size_t index = 0;
+        std::string res = "";
+        while (b < p) {
+            res += (b & x) ? "1" : "0";
+            b <<= 1ul;
+        }
+        // assert((b << 1) == (1ULL << p));
+        return res;
+    }
+
     void bin_print_header(uint64_t header) {
         // assert(_mm_popcnt_u64(header) == 32);
         uint64_t b = 1ULL << (64ul - 1u);
@@ -15,6 +58,7 @@ namespace v_pd512_plus {
             b >>= 1ul;
         }
     }
+
     auto bin_print_header_spaced(uint64_t header) -> std::string {
         // assert(_mm_popcnt_u64(header) == 32);
         uint64_t b = 1ULL << (64ul - 1u);
@@ -92,6 +136,23 @@ namespace v_pd512_plus {
         }
     }
 
+    auto test_bit(size_t index, const __m512i *pd) -> bool {
+        size_t sixteen_index = index / 16;
+        size_t rel_index = index & 15;
+
+        uint16_t *h_array = ((uint16_t *) pd);
+
+        return h_array[sixteen_index] & (1 << rel_index);
+        // uint64_t res = h_array[7] >> (64 - 8);
+    }
+
+    void print_hlb(const __m512i *pd){
+        uint64_t hlb = _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);
+        std::string s = to_bin_reversed(hlb);
+        std::string final_s = s.substr(0,4) + "." + s.substr(4,1) + "," + s.substr(5,3);
+        std::cout << "lhb:\t" << final_s << std::endl;
+        // std::cout << "hlb: " << (hlb & 15) << "." << (hlb & 16) << (hlb & 16) << std::endl;
+    }
 }// namespace v_pd512_plus
 
 namespace pd512_plus {
@@ -567,6 +628,7 @@ namespace pd512_plus {
         return -42;
     }
 
+
     auto get_capacity_old(const __m512i *x) -> size_t {
         validate_number_of_quotient(x);
         // return get_capacity_naive();
@@ -709,6 +771,9 @@ namespace pd512_plus {
 
 
     auto count_zeros_up_to_the_kth_one(const __m512i *x, size_t k) -> size_t {
+#ifdef NDEBUG
+        std::cout << "called count_zeros_up_to_the_kth_one with -O3" << std::endl;
+#endif// !NDEBUG
         assert(k > 0);
         uint64_t header[2];
         memcpy(header, x, 13);
