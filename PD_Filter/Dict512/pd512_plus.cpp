@@ -630,7 +630,7 @@ namespace pd512_plus {
 
 
     auto get_capacity_old(const __m512i *x) -> size_t {
-        validate_number_of_quotient(x);
+        assert(validate_number_of_quotient(x));
         // return get_capacity_naive();
         uint64_t header[2];
         // We need to copy (50+51) bits, but we copy slightly more and mask out the ones we
@@ -771,9 +771,9 @@ namespace pd512_plus {
 
 
     auto count_zeros_up_to_the_kth_one(const __m512i *x, size_t k) -> size_t {
-#ifdef NDEBUG
-        std::cout << "called count_zeros_up_to_the_kth_one with -O3" << std::endl;
-#endif// !NDEBUG
+// #ifdef NDEBUG
+//         std::cout << "called count_zeros_up_to_the_kth_one with -O3" << std::endl;
+// #endif// !NDEBUG
         assert(k > 0);
         uint64_t header[2];
         memcpy(header, x, 13);
