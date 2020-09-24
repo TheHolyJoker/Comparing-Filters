@@ -90,7 +90,7 @@ target_compile_options(counting PRIVATE -O3 -DCOUNT)
 
 add_executable(profiling main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
-target_compile_options(profiling PRIVATE -O3 -DPROF)
+target_compile_options(profiling PRIVATE -O3 -DNDEBUG -DPROF)
 
 
 target_link_libraries(Filters OpenSSL::SSL)

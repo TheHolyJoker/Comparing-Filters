@@ -83,7 +83,8 @@ int main(int argc, char **argv) {
     /** Single benching  */
     // single_bench<Table_Dict512_SS, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // return 0;
-    single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     return 0;
     while (true) {
         // single_bench<Table_Dict512_SS, itemType>(max_filter_capacity, bench_precision, false, &elements);

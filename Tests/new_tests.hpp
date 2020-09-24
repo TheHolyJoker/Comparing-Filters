@@ -338,9 +338,29 @@ void profile_benchmark(Table *wrap_filter, vector<vector<itemType> *> *elements)
     ulong uniform_lookup_time = 0;
     ulong true_lookup_time = 0;
     // size_t true_lookup_time = 0;
-    char buf[512];
+    char buf[1024];
     // sprintf(buf, "perf record -p %d &", getpid());
-    sprintf(buf, "perf stat -p %d -e cycles -e instructions -e cache-misses -e cache-references -e L1-dcache-load-misses -e L1-dcache-loads -e LLC-load-misses -e LLC-loads -e dTLB-load-misses -e dTLB-loads -e node-load-misses -e node-loads -e branches -e branch-misses &", getpid());
+    // sprintf(buf, "perf stat -p %d -e cycles -e instructions -e cache-misses -e cache-references -e L1-dcache-load-misses -e L1-dcache-loads -e LLC-load-misses -e LLC-loads -e dTLB-load-misses -e dTLB-loads -e node-load-misses -e node-loads -e branches -e branch-misses &", getpid());
+    sprintf(buf, "perf stat -p %d \
+    -e cycles                   \
+    -e instructions             \
+    -e cache-misses             \
+    -e cache-references         \
+    -e L1-dcache-load-misses    \
+    -e L1-dcache-loads          \
+    -e LLC-load-misses          \
+    -e LLC-loads                \
+    -e dTLB-load-misses         \
+    -e dTLB-loads               \
+    -e node-load-misses         \
+    -e node-loads               \
+    -e alignment-faults         \
+    -e branches                 \
+    -e branch-misses            \
+    -e branch-loads             \
+    -e branch-loads-misses      \
+    &",
+    getpid());
     // sprintf(buf, "perf stat -p %d -e cycles -e instructions -e cache-misses -e cache-references -e L1-dcache-load-misses -e L1-dcache-loads -e LLC-load-misses -e LLC-loads -e dTLB-load-misses -e dTLB-loads -e node-load-misses -e node-loads -e branches -e branch-misses -e uops_executed.stall_cycles &", getpid());
     auto junk = system(buf);
     for (int i = 0; i < 16; i++) {
