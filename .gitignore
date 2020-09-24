@@ -18,3 +18,9 @@ Built_and_Run_bench.sh
 PD_Filter/HashTables/hashTable64.hpp
 PD_Filter/Dict512/pd512_plus_old.cpp
 PD_Filter/Dict512/pd512_plus_old.hpp
+
+Tests/profiling_outputs.
+perf-diff.txt
+perf.data
+perf.data.old
+temp.txt

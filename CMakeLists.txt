@@ -84,9 +84,20 @@ add_executable(test_o2 main.cpp ${PROJECT_SOURCES})
 target_compile_options(test_o2 PRIVATE -O2)
 
 
+add_executable(counting main.cpp ${PROJECT_SOURCES})
+# Add the compile options ONLY for valid_test.
+target_compile_options(counting PRIVATE -O3 -DCOUNT)
+
+add_executable(profiling main.cpp ${PROJECT_SOURCES})
+# Add the compile options ONLY for valid_test.
+target_compile_options(profiling PRIVATE -O3 -DPROF)
+
+
 target_link_libraries(Filters OpenSSL::SSL)
 target_link_libraries(valid_test OpenSSL::SSL)
 target_link_libraries(test_o2 OpenSSL::SSL)
+target_link_libraries(counting OpenSSL::SSL)
+target_link_libraries(profiling OpenSSL::SSL)
 # add_executable(
 #   Filters
 #   main.cpp

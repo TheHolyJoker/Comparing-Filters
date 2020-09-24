@@ -14,12 +14,13 @@
 #include <iostream>
 
 #include <immintrin.h>
+#include <x86intrin.h>
 
 #define QUOT_SIZE (50)
 #define MAX(x, y) (((x) < (y)) ? y : x)
 #define MIN(x, y) (((x) > (y)) ? y : x)
 
-static constexpr uint8_t Lookup_Table[128] = {
+static constexpr uint8_t __attribute__((aligned(64))) Lookup_Table[128] = {
         50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50,
         49, 49, 49, 49, 49, 49, 49, 49, 50, 50, 50, 50, 50, 50, 50, 50,
         45, 45, 45, 45, 45, 45, 45, 45, 46, 46, 46, 46, 46, 46, 46, 46,
@@ -29,6 +30,7 @@ static constexpr uint8_t Lookup_Table[128] = {
         31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16,
         15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
+// #define DECODE(pd) (Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)])
 
 namespace v_pd512_plus {
 
@@ -249,15 +251,15 @@ namespace pd512_plus {
         const auto first_one_index_lsb = 63 - _lzcnt_u64(h1_masked);
         assert(first_one_index_lsb < rel_index);
         auto res = rel_index - first_one_index_lsb;
-        #ifndef NDEBUG
-            auto v_res = get_specific_quot_capacity(last_quot, pd);
-            if (v_res != res){
-                v_pd512_plus::print_headers(pd);
-                v_pd512_plus::print_hlb(pd);
-                assert(false);
-            }
-        #endif // DEBUG
-        
+#ifndef NDEBUG
+        auto v_res = get_specific_quot_capacity(last_quot, pd);
+        if (v_res != res) {
+            v_pd512_plus::print_headers(pd);
+            v_pd512_plus::print_hlb(pd);
+            assert(false);
+        }
+#endif// DEBUG
+
         assert(res == get_specific_quot_capacity(last_quot, pd));
         return res;
         return rel_index - first_one_index;
@@ -333,9 +335,9 @@ namespace pd512_plus {
                 // break;
             default:
                 assert(false);
+                return 4242;
         }
         assert(false);
-        return 4242;
 
         // if (hi_meta_bits == 0)
         //     return get_last_quot_in_pd_naive_easy_case(pd);
@@ -766,6 +768,40 @@ namespace pd512_plus {
         // return att;
     }
 
+    inline bool should_look_in_current_level_by_qr_safe(int64_t quot, uint8_t rem, const __m512i *pd) {
+        const int64_t last_q = decode_last_quot_wrapper_db(pd);
+        if (quot < last_q)
+            return true;
+        else if (quot > last_q)
+            return false;
+        else
+            return (get_last_byte(pd) >= rem);
+    }
+
+    inline bool pd_find_50_v0(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return false;
+
+        const uint64_t last_q = decode_last_quot_wrapper_db(pd);
+        if (last_q < quot)
+            return false;
+
+        //v1 code.
+        const unsigned __int128 *h = (const unsigned __int128 *) pd;
+        constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+        const unsigned __int128 header = (*h) & kLeftoverMask;
+        // assert(popcount128(header) == 50);
+        const int64_t pop = _mm_popcnt_u64(header);
+        const uint64_t begin = (quot ? (select128withPop64(header, quot - 1, pop) + 1) : 0) - quot;
+        const uint64_t end = select128withPop64(header, quot, pop) - quot;
+        if (begin == end) return false;
+        assert(begin <= end);
+        assert(end <= 51);
+        return (v & ((UINT64_C(1) << end) - 1)) >> begin;
+    }
 
     inline bool pd_find_50_v1(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
@@ -999,7 +1035,7 @@ namespace pd512_plus {
     }
 
 
-    inline bool pd_find_50_v21(int64_t quot, uint8_t rem, const __m512i *pd) {
+    inline bool pd_find_50_v23(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
         const __m512i target = _mm512_set1_epi8(rem);
@@ -1007,16 +1043,56 @@ namespace pd512_plus {
 
         if (!v) return false;
 
+
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
         const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
         if (_blsr_u64(v) == 0) {
-            if (v << quot) {
-                const uint64_t mask = v << quot;
-                return (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
-            } else {
-                const uint64_t mask = v >> (64 - quot);
-                return (!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot);
-            }
+            const uint64_t mask = _lrotl(v, quot);
+            return (mask > v) ? ((!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot)) : ((!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot));
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+    inline bool pd_find_50_v21_analyse(int64_t quot, uint8_t rem, const __m512i *pd) {
+        static size_t v_count[2] = {0, 0};
+        static size_t blsr_u64_count[4] = {0, 0, 0, 0};
+        static size_t cond_1[2] = {0, 0};
+        static size_t popcnt_cond[2] = {0, 0};
+
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        bool res = true;
+        if (!v) res = false;
+
+        v_count[(v == 0)]++;
+
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (_blsr_u64(v) == 0) {
+            const uint64_t mask = _lrotl(v, quot);
+            return (mask > v) ? ((!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot)) : ((!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot));
         }
 
         const int64_t pop = _mm_popcnt_u64(h0);
@@ -1057,10 +1133,6 @@ namespace pd512_plus {
             } else {
                 const uint64_t mask = v >> (64 - quot);
                 return (!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot);
-                // bool att = (!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot);
-                // assert(att == pd_find_50_v18(quot, rem, pd));
-                // const bool att = (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
-                // assert(att == pd_find_50_v1(quot, rem, pd));
             }
         }
 
@@ -1116,13 +1188,106 @@ namespace pd512_plus {
         return false;
     }
 
-    inline bool pd_find_50_old(int64_t quot, uint8_t rem, const __m512i *pd) {
-        assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v9(quot, rem, pd));
-        assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v11(quot, rem, pd));
-        assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v17(quot, rem, pd));
-        assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v18(quot, rem, pd));
-        assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v22(quot, rem, pd));
-        return pd_find_50_v18(quot, rem, pd);
+    inline bool part2_helper(int64_t quot, uint64_t v, uint64_t h0, uint64_t h1) {
+        if (v << quot) {
+            const uint64_t mask = v << quot;
+            return (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+        } else {
+            const uint64_t mask = v >> (64 - quot);
+            return (!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot);
+        }
+    }
+
+    inline bool pd_find_50_v25(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (v_off == 0) {
+            return part2_helper(quot, v, h0, h1);
+        } else if (_blsr_u64(v_off) == 0) {
+            return part2_helper(quot, v_off, h0, h1) || part2_helper(quot, v ^ v_off, h0, h1);
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+
+    inline bool pd_find_50_v26(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (v_off == 0) {
+            return part2_helper(quot, v, h0, h1);
+        } else if (_blsr_u64(v_off) == 0) {
+            return part2_helper(quot, v_off, h0, h1) || part2_helper(quot, v ^ v_off, h0, h1);
+        } else
+            return (quot != 0) ? (v & (_blsmsk_u64(h0) >> 1ul)) : true;
+
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+    inline bool pd_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
+#ifndef NDEBUG
+        if (should_look_in_current_level_by_qr_safe(quot, rem, pd)) {
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v9(quot, rem, pd));
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v11(quot, rem, pd));
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v17(quot, rem, pd));
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v18(quot, rem, pd));
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v22(quot, rem, pd));
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v25(quot, rem, pd));
+        }
+#endif// !NDEBUG
+
+        // assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v26(quot, rem, pd));
+        // assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v23(quot, rem, pd));
+        return pd_find_50_v25(quot, rem, pd);
     }
 
 
@@ -1336,27 +1501,89 @@ namespace pd512_plus {
         // //std::cout << std::endl;
         return pd_find_50_v18(quot, rem, pd) ? Yes : No;
     }
+
+    // inline bool should_look_in_CURRENT_pd(int64_t quot, uint8_t rem, const __m512i *pd) {
+    //     if (!pd_full(pd))
+    //         return quot <= Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
+
+    //     const uint64_t last_q = decode_last_quot(pd);
+    //     const uint64_t last_rem = get_last_qr_in_pd
+    //     const int64_t last_q = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
+    //     return (last_q < quot) || ((last_q == quot) && (get_last_byte(pd) < rem));
+    // }
+
+
     inline bool should_look_in_next_level_by_qr(int64_t quot, uint8_t rem, const __m512i *pd) {
+#ifndef COUNT
+        assert(pd_full(pd));
+#endif// !COUNT \
         // const uint64_t last_q = decode_last_quot(pd);
-        const uint64_t last_q = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
+        const int64_t last_q = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
         return (last_q < quot) || ((last_q == quot) && (get_last_byte(pd) < rem));
     }
+
+    inline pd_Status cmp_qr_return_pd_status(int64_t quot, uint8_t rem, const __m512i *pd) {
+        // const uint64_t last_q = decode_last_quot(pd);
+        const int64_t last_q = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
+        return ((last_q < quot) || ((last_q == quot) && (get_last_byte(pd) < rem))) ? look_in_the_next_level : No;
+    }
+
+    inline pd_Status call_this_function_after_search_in_pd_failed(int64_t quot, uint8_t rem, const __m512i *pd) {
+        return (did_pd_overflowed(pd) && (decode_by_table2(pd) <= quot)) ? look_in_the_next_level : No;
+    }
+
 
     inline bool pd_minimal_find_50_v2(int64_t quot, uint8_t rem, const __m512i *pd) {
         return should_look_in_next_level_by_qr(quot, rem, pd) || pd_find_50_v18(quot, rem, pd);
     }
 
+    inline bool pd_minimal_find_50_v3(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
 
-    inline bool pd_minimal_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
-        return pd_find_50_v18(quot, rem, pd) || should_look_in_next_level_by_qr(quot, rem, pd);
+        if (!v) return false;
+
+        return quot <= decode_by_table2(pd);
     }
 
-    inline pd_Status pd_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
-        // if (!should_look_in_next_level_by_qr(quot, rem, pd))
-        //     pd_find_50_old(quot, rem, pd);
-        if (pd_find_50_v21(quot, rem, pd))
+    inline bool pd_minimal_find_50_v4(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        return v;
+
+        // return quot <= decode_by_table2(pd);
+    }
+
+    inline bool pd_minimal_find_50_v5(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        return v ^ quot;
+
+        // return quot <= decode_by_table2(pd);
+    }
+
+
+    inline pd_Status pd_find2(int64_t quot, uint8_t rem, const __m512i *pd) {
+        pd_full(pd) ? (should_look_in_next_level_by_qr ? (did_pd_overflowed(pd) && look_in_the_next_level) : pd_find_50(quot, rem, pd)) : pd_find_50(quot, rem, pd);
+        if (pd_find_50(quot, rem, pd))
             return Yes;
         return (should_look_in_next_level_by_qr(quot, rem, pd) && did_pd_overflowed(pd)) ? look_in_the_next_level : No;
+    }
+
+    inline pd_Status pd_find(int64_t quot, uint8_t rem, const __m512i *pd) {
+        // if (!should_look_in_next_level_by_qr(quot, rem, pd))
+        //     pd_find_50_old(quot, rem, pd);
+        if (pd_find_50(quot, rem, pd))
+            return Yes;
+        return (did_pd_overflowed(pd) && (decode_by_table2(pd) <= quot)) ? look_in_the_next_level : No;
         // return should_look_in_next_level_by_qr(quot, rem, pd) ? (did_pd_overflowed(pd) ? look_in_the_next_level : No) : pd_find_50_v18(quot, rem, pd) ? Yes: No;
         // const __m512i target = _mm512_set1_epi8(rem);
         // const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
@@ -1367,7 +1594,6 @@ namespace pd512_plus {
         //     return should_look_in_next_level_by_qr(quot, rem, pd) ? look_in_the_next_level : (pd_find_50_v18(quot, rem, pd) ? Yes : No);
         // }
         // return ((!should_look_in_next_level_by_qr(quot, rem, pd)) && (pd_find_50_v18(quot, rem, pd))) ? Yes: No;
-
         // const uint64_t last_quot = decode_last_quot_wrapper(pd);
         // int cmp = (quot < last_quot) + (quot == last_quot) * 2;
         // switch (cmp) {
@@ -1385,6 +1611,326 @@ namespace pd512_plus {
         // }
         // return Error;
     }
+
+    inline pd_Status pd_find3(int64_t quot, uint8_t rem, const __m512i *pd) {
+        return (pd_find_50(quot, rem, pd)) ? Yes : call_this_function_after_search_in_pd_failed(quot, rem, pd);
+        // return (did_pd_overflowed(pd) && (decode_by_table2(pd) <= quot)) ? look_in_the_next_level : No;
+    }
+
+    inline bool pd_plus_rNs(int64_t quot, uint64_t h0, uint64_t h1, uint64_t v) {
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+    inline pd_Status find_rem_with_last_q(int64_t quot, uint8_t rem, uint64_t h1, uint64_t v, const __m512i *pd) {
+        if (rem > get_last_byte(pd))
+            return (pd_full(pd)) ? look_in_the_next_level : No;
+
+        return (_lzcnt_u64(v) <= get_last_quot_capacity(quot, pd) + 13) ? Yes : No;
+    }
+
+    // inline pd_Status pd_plus_rNs(int64_t quot, uint64_t h0, uint64_t h1, uint64_t v) {
+    //     const int64_t pop = _mm_popcnt_u64(h0);
+    //     if (quot == 0) {
+    //         return (v & (_blsmsk_u64(h0) >> 1ul)) ? Yes : No;
+    //     } else if (quot < pop) {
+    //         const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+    //         const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+    //         return ((((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v) ? Yes : No;
+    //     } else if (quot > pop) {
+    //
+    //         const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+    //         const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+    //         return ((((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop))) ? Yes : No;
+    //     } else {
+    //
+    //         const uint64_t helper = _lzcnt_u64(h0);
+    //         const uint64_t temp = (63 - helper) + 1;
+    //         const uint64_t diff = helper + _tzcnt_u64(h1);
+    //         return (diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1))) ? Yes : No;
+    //     }
+    // }
+
+    inline pd_Status pd_plus_find_v1(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return call_this_function_after_search_in_pd_failed(quot, rem, pd);
+
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (_blsr_u64(v) == 0) {
+            assert(false);
+            const uint64_t mask = _lrotl(v, quot);
+            if (v < mask) {
+                // const uint64_t mask = v << quot;
+                return ((!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot)) ? Yes : call_this_function_after_search_in_pd_failed(quot, rem, pd);
+            } else {
+                // const uint64_t mask = v >> (64 - quot);
+                return ((!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot)) ? Yes : call_this_function_after_search_in_pd_failed(quot, rem, pd);
+            }
+        }
+
+        const int cmp = (decode_by_table2(pd) < quot) + (decode_by_table2(pd) == quot) * 2;
+        switch (cmp) {
+            case 0:
+                return pd_plus_rNs(quot, h0, h1, v) ? Yes : No;
+            case 1:
+                // return look_in_the_next_level;
+                return (pd_full(pd)) ? look_in_the_next_level : No;
+            case 2:
+                return find_rem_with_last_q(quot, rem, h1, v, pd);
+            default:
+                assert(false);
+                return Error;
+                // break;
+        }
+        // if (decode_by_table2(pd) < quot) return pd_full(pd) ? look_in_the_next_level : No;
+
+
+        // const int64_t pop = _mm_popcnt_u64(h0);
+        // if (quot == 0) {
+        //     return (v & (_blsmsk_u64(h0) >> 1ul)) ? Yes : No;
+        // } else if (quot < pop) {
+        //     const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+        //     const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+        //     return ((((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v) ? Yes : No;
+        // } else if (quot > pop) {
+        //     const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+        //     const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+        //     return ((((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop))) ? Yes : No;
+        // } else {
+        //     const uint64_t helper = _lzcnt_u64(h0);
+        //     const uint64_t temp = (63 - helper) + 1;
+        //     const uint64_t diff = helper + _tzcnt_u64(h1);
+        //     return (diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1))) ? Yes : No;
+        // }
+    }
+    inline pd_Status pd_plus_find_v2(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return (pd_full(pd) && should_look_in_next_level_by_qr(quot, rem, pd)) ? look_in_the_next_level : No;
+
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (_blsr_u64(v) == 0) {
+            const uint64_t mask = _lrotl(v, quot);
+            if (v << quot) {
+                // const uint64_t mask = v << quot;
+                return ((!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot)) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+            } else {
+                // const uint64_t mask = v >> (64 - quot);
+                return ((!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot)) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+            }
+        }
+
+        const int cmp = (decode_by_table2(pd) < quot) + (decode_by_table2(pd) == quot) * 2;
+        switch (cmp) {
+            case 0:
+                return pd_plus_rNs(quot, h0, h1, v) ? Yes : No;
+            case 1:
+                // return look_in_the_next_level;
+                return (pd_full(pd)) ? look_in_the_next_level : No;
+            case 2:
+                return find_rem_with_last_q(quot, rem, h1, v, pd);
+            default:
+                assert(false);
+                return Error;
+                // break;
+        }
+    }
+
+    inline pd_Status pd_plus_find_v2_count(int64_t quot, uint8_t rem, const __m512i *pd, int ind = 0) {
+        static size_t total_counter = 0;
+        static size_t not_v = 0;
+        static size_t yes_v = 0;
+        static size_t q_cond0[2] = {0};// {must lookups, redundent lookups}.
+        static size_t q_cond1[2] = {0};
+        static size_t q_cond2[2] = {0};
+        static size_t qq_cond0[2] = {0};// {must lookups, redundent lookups}.
+        static size_t qq_cond1[2] = {0};
+        static size_t qq_cond2[2] = {0};
+        static size_t new_blsr_arr[2] = {0};
+        static size_t blsr_arr[51] = {0};
+        static size_t two_power[2] = {0};
+        static size_t part3 = 0;
+        // memcpy()
+
+        if (ind == 1) {
+            total_counter = 0;
+            not_v = 0;
+            yes_v = 0;
+            q_cond0[0] = q_cond0[1] = 0;
+            q_cond1[0] = q_cond1[1] = 0;
+            q_cond2[0] = q_cond2[1] = 0;
+            qq_cond0[0] = qq_cond0[1] = 0;
+            qq_cond1[0] = qq_cond1[1] = 0;
+            qq_cond2[0] = qq_cond2[1] = 0;
+            new_blsr_arr[0] = new_blsr_arr[1] = 0;
+            std::fill(blsr_arr, blsr_arr + 51, 0);
+            two_power[0] = two_power[1] = 0;
+            part3 = 0;
+        }
+        if (ind == 2) {
+            auto line = std::string(84, '-');
+            std::cout << line << std::endl;
+            std::cout << "total:     \t" << total_counter << std::endl;
+            std::cout << "not_v:     \t" << not_v << std::endl;
+            // std::cout << "yes_v:     \t" << yes_v << std::endl;
+            std::cout << "q_cond0:    \t(" << q_cond0[0] << ", " << q_cond0[1] << ")" << std::endl;
+            std::cout << "q_cond1     \t(" << q_cond1[0] << ", " << q_cond1[1] << ")" << std::endl;
+            std::cout << "q_cond2     \t(" << q_cond2[0] << ", " << q_cond2[1] << ")" << std::endl;
+            std::cout << "qq_cond0:   \t(" << qq_cond0[0] << ", " << qq_cond0[1] << ")" << std::endl;
+            std::cout << "qq_cond1    \t(" << qq_cond1[0] << ", " << qq_cond1[1] << ")" << std::endl;
+            std::cout << "qq_cond2    \t(" << qq_cond2[0] << ", " << qq_cond2[1] << ")" << std::endl;
+
+            std::cout << "newBlsr:    \t(" << new_blsr_arr[0] << ", " << new_blsr_arr[1] << ")" << std::endl;
+            // std::cout << "two_power: \t(" << two_power[0] << ", " << two_power[1] << ")" << std::endl;
+            std::cout << "part3:     \t" << part3 << std::endl;
+            std::cout << "blsr_arr:  \t("
+                      << blsr_arr[0] << ", "
+                      << blsr_arr[1] << ", "
+                      << blsr_arr[2] << ", "
+                      << blsr_arr[3] << ", "
+                      << blsr_arr[4] << ", "
+                      << blsr_arr[5] << ", "
+                      << blsr_arr[6] << ")"
+                      << std::endl;
+            std::cout << line << std::endl;
+        }
+        total_counter++;
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        q_cond0[should_look_in_next_level_by_qr(quot, rem, pd)]++;
+        qq_cond0[decode_last_quot(pd) < quot]++;
+
+
+        if (!v) {
+            not_v++;
+            return (pd_full(pd) && should_look_in_next_level_by_qr(quot, rem, pd)) ? look_in_the_next_level : No;
+        }
+        q_cond1[should_look_in_next_level_by_qr(quot, rem, pd)]++;
+        qq_cond1[decode_last_quot(pd) < quot]++;
+
+        yes_v++;
+        auto blsr_popcount = _mm_popcnt_u64((v));
+        blsr_arr[blsr_popcount]++;
+
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (v_off == 0) {
+            new_blsr_arr[0]++;
+            return part2_helper(quot, v, h0, h1) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+
+        } else if (_blsr_u64(v_off) == 0) {
+            new_blsr_arr[1]++;
+            return (part2_helper(quot, v_off, h0, h1) || part2_helper(quot, v ^ v_off, h0, h1)) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+        }
+
+        // const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        // const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        // if (_blsr_u64(v) == 0) {
+        //     const uint64_t mask = _lrotl(v, quot);
+        //     if (v << quot) {
+        //         two_power[0]++;
+        //         // const uint64_t mask = v << quot;
+        //         return ((!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot)) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+        //     } else {
+        //         two_power[1]++;
+        //         // const uint64_t mask = v >> (64 - quot);
+        //         return ((!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot)) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+        //     }
+        // }
+        q_cond2[should_look_in_next_level_by_qr(quot, rem, pd)]++;
+        qq_cond2[decode_last_quot(pd) < quot]++;
+
+        part3++;
+
+        const int cmp = (decode_by_table2(pd) < quot) + (decode_by_table2(pd) == quot) * 2;
+        switch (cmp) {
+            case 0:
+                return pd_plus_rNs(quot, h0, h1, v) ? Yes : No;
+            case 1:
+                // return look_in_the_next_level;
+                return (pd_full(pd)) ? look_in_the_next_level : No;
+            case 2:
+                return find_rem_with_last_q(quot, rem, h1, v, pd);
+            default:
+                assert(false);
+                return Error;
+                // break;
+        }
+    }
+
+    inline int pd_plus_find_v3(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return (pd_full(pd) && should_look_in_next_level_by_qr(quot, rem, pd)) << 1;
+
+        if (decode_by_table2(pd) < quot) return pd_full(pd) << 1;
+
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (_blsr_u64(v) == 0) {
+            if (v << quot) {
+                const uint64_t mask = v << quot;
+                return ((!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot));
+            } else {
+                const uint64_t mask = v >> (64 - quot);
+                return ((!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot));
+            }
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return (v & (_blsmsk_u64(h0) >> 1ul));
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return ((((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v);
+        } else if (quot > pop) {
+
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return ((((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop)));
+        } else {
+
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return (diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1)));
+        }
+    }
+
 
     inline int pd_find_50_count(int64_t quot, uint8_t rem, const __m512i *pd) {
         if (pd_find_50_v18(quot, rem, pd))

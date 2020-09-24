@@ -211,7 +211,7 @@ struct FilterAPI<Dict512<TableType, spareItemType, itemType, HashFamily>> {
     using Table = Dict512<TableType, spareItemType, itemType, HashFamily>;
 
     static Table ConstructFromAddCount(size_t add_count) {
-        return Table(add_count, .66, .5);
+        return Table(add_count, .95, .5);
     }
 
     static void Add(itemType key, Table *table) {
@@ -238,9 +238,10 @@ struct FilterAPI<Dict512<TableType, spareItemType, itemType, HashFamily>> {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
         // minimal_body_lookup
         // return table->minimal_body_lookup(key);
-        return table->lookup_low_load(key);
+        // return table->minimal_lookup(key);
+        // return table->lookup_low_load(key);
 
-        // return table->lookup(key);
+        return table->lookup(key);
         // #ifdef NDEBUG
         //         return table->lookup_low_load(key);
         //         // return table->minimal_lookup(key);
@@ -344,69 +345,6 @@ struct FilterAPI<Dict320<TableType, spareItemType, itemType, HashFamily>> {
         return att_d320;
     }
 };
-
-// template<
-//         class TableType, typename spareItemType,
-//         typename itemType,
-//         typename HashFamily>
-// struct FilterAPI<Dict320_v2<TableType, spareItemType, itemType, HashFamily>> {
-//     using Table = Dict320_v2<TableType, spareItemType, itemType, HashFamily>;
-
-//     static Table ConstructFromAddCount(size_t add_count) {
-//         return Table(add_count, 21.0 / 32.0, .5);
-//         // return Table(add_count, .8, .5);
-//     }
-
-//     static void Add(itemType key, Table *table) {
-//         table->insert(key);
-//     }
-
-//     static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
-//         for (int i = start; i < end; ++i) {
-//             table->insert(keys[i]);
-//         }
-//     }
-
-//     static void AddAll(const std::vector<itemType> keys, Table *table) {
-//         for (int i = 0; i < keys.size(); ++i) {
-//             table->insert(keys[i]);
-//         }
-//     }
-
-//     static void Remove(itemType key, Table *table) {
-//         throw std::runtime_error("Unsupported");
-//         // std::cout << "Remove in Wrapper!" << std::endl;
-//         // table->remove(key);
-//     }
-
-//     CONTAIN_ATTRIBUTES static bool Contain(itemType key, const Table *table) {
-
-//         // return table->minimal_lookup(key);
-//         return table->lookup(key);
-//         // return table->bitwise_lookup(key);
-//         // std::cout << "tomer!" << std::endl;
-//     }
-
-//     static string get_name(Table *table) {
-//         return table->get_name();
-//     }
-
-//     static auto get_info(Table *table) -> std::stringstream {
-//         return table->get_extended_info();
-//     }
-//     /**
-//      * Returns int indciating which function can the filter do.
-//      * 1 is for lookups.
-//      * 2 is for adds.
-//      * 4 is for deletions.
-//      */
-//     static auto get_functionality(Table *table) -> uint32_t {
-//         return 7;
-//     }
-//     static auto get_ID(Table *table) -> filter_id {
-//         return att_d320_v2;
-//     }
-// };
 
 
 template<
@@ -513,9 +451,13 @@ struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
     // Todo return const here:
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+#ifdef COUNT
+    return table->lookup_count(key);
+#endif// COUNT
+
+                return table->lookup(key);
         // return table->lookup_count(key);
         // return table->lookup_minimal(key);
-        return table->lookup(key);
     }
 
     static string get_name(Table *table) {
@@ -532,9 +474,13 @@ struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
      * 4 is for deletions.
      */
     static auto get_functionality(Table *table) -> uint32_t {
-        // table->lookup_count(0, 2);
-        // table->lookup_count(0, 1);
+#ifdef COUNT
+        table->lookup_count(0, 2);
+        table->lookup_count(0, 1);
+#endif// COUNT
         return 3;
+        // table->lookup_count(0, 2); \
+        // table->lookup_count(0, 1);
     }
     static auto get_ID(Table *table) -> filter_id {
         return d512_ver3;

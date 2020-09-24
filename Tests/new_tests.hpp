@@ -7,6 +7,7 @@
 
 #include "tests.hpp"
 #include "wrappers.hpp"
+#include <unistd.h>
 // #include <Validation/validate_hash_table.hpp>
 #include <chrono>
 #include <set>
@@ -49,6 +50,9 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t bench_pr
 template<typename itemType, template<typename> class hashTable>
 auto benchmark_dict(size_t filter_max_capacity, size_t error_power_inv, size_t bench_precision, vector<vector<itemType> *> *elements, ostream &os) -> std::stringstream;
 
+
+template<class Table, typename itemType>
+void profile_benchmark(Table *wrap_filter, vector<vector<itemType> *> *elements);
 
 template<typename itemType, size_t bits_per_element, size_t CF_ss_bits>
 auto b_all_wrapper(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv, size_t bench_precision, bool validate_before_benchmarking,
@@ -95,6 +99,11 @@ auto benchmark_single_filter_wrapper(size_t filter_max_capacity, size_t bench_pr
 
     std::stringstream ss = print_name(FilterAPI<Table>::get_name(&filter), 134);
     std::cout << ss.str();
+
+#ifdef PROF
+    profile_benchmark(&filter, elements);
+#endif
+
     auto ss2 = benchmark_generic_filter<Table, itemType>(&filter, elements, bench_precision);
     ss << ss2.str();
     return ss;
@@ -112,11 +121,11 @@ auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *el
         benchmark_single_round<Table, itemType>(wrap_filter, elements, round, bench_precision, &flusher);
         std::cout << flusher.str();
         ss << flusher.str();
-
     }
     return ss;
     // *ss << flusher.str();
 }
+
 
 template<class Table, typename itemType>
 void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elements, size_t round_counter,
@@ -130,9 +139,9 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     size_t add_step = add_vec->size() / benchmark_precision;
     size_t find_step = find_vec->size() / benchmark_precision;
     size_t true_find_step = add_step;
-    // size_t delete_step = delete_vec->size() / benchmark_precision;
+// size_t delete_step = delete_vec->size() / benchmark_precision;
 
-    size_t removal_time = 0;
+            size_t removal_time = 0;
     if (delete_vec->size()) {
         auto del_insertion_time = time_insertions(wrap_filter, delete_vec, 0, delete_vec->size());
         removal_time = time_deletions(wrap_filter, delete_vec, 0, delete_vec->size());
@@ -140,8 +149,21 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 
 
     auto insertion_time = time_insertions(wrap_filter, add_vec, round_counter * add_step, (round_counter + 1) * add_step);
-    auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step, (round_counter + 1) * find_step);
     // size_t true_lookup_time = 0;
+#ifdef COUNT
+    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
+        std::cout << "\nUniform" << std::endl;
+        FilterAPI<Table>::get_functionality(wrap_filter);
+    }
+#endif// COUNT
+    auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step, (round_counter + 1) * find_step);
+
+#ifdef COUNT
+    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
+        std::cout << "\nTrue" << std::endl;
+        FilterAPI<Table>::get_functionality(wrap_filter);
+    }
+#endif// COUNT
     auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, true_find_step);
 
 
@@ -154,10 +176,11 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     auto temp = print_single_round(var_num, values, divisors);
     *ss << temp.str();
 
-    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3)
-        FilterAPI<Table>::get_functionality(wrap_filter);
-        // FilterAPI<Table>::get_info(wrap_filter);
-    // return os;
+#ifdef COUNT
+    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
+        std::cout << std::string(88, '=') << std::endl;
+    }
+#endif// COUNT
 }
 
 //////////////////////////////////////////////////////////////
@@ -294,5 +317,42 @@ auto benchmark_single_filter_high_load(size_t filter_max_capacity, size_t bench_
     }
     return os;
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/**Profile benchmarking*/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<class Table, typename itemType>
+void profile_benchmark(Table *wrap_filter, vector<vector<itemType> *> *elements) {
+    auto add_vec = elements->at(0);
+    auto find_vec = elements->at(1);
+    auto delete_vec = elements->at(2);
+
+    auto insertion_time = time_insertions(wrap_filter, add_vec, 0, add_vec->size());
+
+    printf("insertions done\n");
+    fflush(stdout);
+    ulong uniform_lookup_time = 0;
+    ulong true_lookup_time = 0;
+    // size_t true_lookup_time = 0;
+    char buf[512];
+    // sprintf(buf, "perf record -p %d &", getpid());
+    sprintf(buf, "perf stat -p %d -e cycles -e instructions -e cache-misses -e cache-references -e L1-dcache-load-misses -e L1-dcache-loads -e LLC-load-misses -e LLC-loads -e dTLB-load-misses -e dTLB-loads -e node-load-misses -e node-loads -e branches -e branch-misses &", getpid());
+    // sprintf(buf, "perf stat -p %d -e cycles -e instructions -e cache-misses -e cache-references -e L1-dcache-load-misses -e L1-dcache-loads -e LLC-load-misses -e LLC-loads -e dTLB-load-misses -e dTLB-loads -e node-load-misses -e node-loads -e branches -e branch-misses -e uops_executed.stall_cycles &", getpid());
+    auto junk = system(buf);
+    for (int i = 0; i < 16; i++) {
+        // true_lookup_time = time_lookups(wrap_filter, add_vec, 0, add_step);
+        uniform_lookup_time += time_lookups(wrap_filter, find_vec, 0, find_vec->size());
+        // true_lookup_time += time_lookups(wrap_filter, add_vec, 0, true_find_step);
+    }
+    // printf("%zd\n", 500 * add_step);
+    printf("%zd\n", 16 * find_vec->size());
+    // printf("%zd\n", 500 * true_find_step);
+    exit(0);
+}
+
 
 #endif//FILTERS_NEW_TESTS_HPP

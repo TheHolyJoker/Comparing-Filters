@@ -131,6 +131,7 @@ public:
 
     virtual ~Dict512_Ver3() {
         assert(get_capacity() >= 0);
+        // lookup_count(0, 2);
         // auto ss = get_extended_info();
         // std::cout << ss.str();
         // std::cout << "squared chi test: " << squared_chi_test() << std::endl;
@@ -149,16 +150,26 @@ public:
         last_q_vec[pd_index] = new_quot;
     }
 
-    inline auto lookup(const itemType s) const -> bool {
+
+    inline auto lookup(const itemType s) const -> bool {        
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        const uint8_t rem = out2 & MASK(bits_per_item);
+        // __builtin_prefetch(&pd_array[pd_index], 0, 0);
+        // const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) (quot_range << 8ul));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
         const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
+        // return pd512_plus::pd_minimal_find_50_v5(quot, rem, &pd_array[pd_index]);
+        // return pd512_plus::pd_minimal_find_50_v4(quot, rem, &pd_array[pd_index]);
+        // return pd512_plus::pd_minimal_find_50_v5(quot, rem, &pd_array[pd_index]);
         // return pd512_plus::pd_minimal_find_50(quot, rem, &pd_array[pd_index]);
-        const pd512_plus::pd_Status lookup_res = pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
+        const pd512_plus::pd_Status lookup_res = pd512_plus::pd_find3(quot, rem, &pd_array[pd_index]);
         return (lookup_res == pd512_plus::pd_Status::Yes) || ((lookup_res == pd512_plus::pd_Status::look_in_the_next_level) && (spare->find(spare_element)));
+        // const pd512_plus::pd_Status lookup_res = pd512_plus::pd_plus_find(quot, rem, &pd_array[pd_index]);
         // switch (pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index])) {
         //     case pd512_plus::pd_Status::No:
         // //         // std::cout << "l1_no" << std::endl;
@@ -182,10 +193,13 @@ public:
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        const uint8_t rem = out2 & MASK(bits_per_item);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
         // const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-        return pd512_plus::pd_find_50_v11(quot, rem, &pd_array[pd_index]);
+        return pd512_plus::pd_find_50_v18(quot, rem, &pd_array[pd_index]);
         // return pd512_plus::pd_find_50_v18(quot, rem, &pd_array[pd_index]);
         // return pd512_plus::pd_find_50_v21(quot, rem, &pd_array[pd_index]);
         // return pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
@@ -199,6 +213,7 @@ public:
         static size_t only_OF_counter = 0;
         static size_t only_last_q_counter = 0;
         if (caser == 1) {
+            pd512_plus::pd_plus_find_v2_count(0, 0, &pd_array[0], caser);
             l1_lookups[0] = l1_lookups[1] = l2_lookups[0] = l2_lookups[1] = 0;
             OF_counter = 0;
             last_q_counter = 0;
@@ -206,6 +221,7 @@ public:
             only_last_q_counter = 0;
         }
         if (caser == 2) {
+            pd512_plus::pd_plus_find_v2_count(0, 0, &pd_array[0], caser);
             auto line = std::string(64, '*');
             std::cout << line << std::endl;
             std::cout << "l1_lookups:(         \t" << l1_lookups[0] << ", " << l1_lookups[1] << ")" << std::endl;
@@ -220,10 +236,13 @@ public:
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        const uint8_t rem = out2 & MASK(bits_per_item);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
         const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-        auto res = pd512_plus::pd_find_50_count(quot, rem, &pd_array[pd_index]);
+        auto res = pd512_plus::pd_plus_find_v2_count(quot, rem, &pd_array[pd_index]);
         l1_lookups[res & 1]++;
         if (res == 0) {
             auto l2_res = spare->find(spare_element);
@@ -282,8 +301,11 @@ public:
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        const uint8_t rem = out2 & MASK(bits_per_item);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
         assert(pd_index < number_of_pd);
         assert(quot <= 50);
 

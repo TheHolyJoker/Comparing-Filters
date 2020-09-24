@@ -339,7 +339,7 @@ public:
         const uint8_t rem = out2 & MASK(bits_per_item);
         assert(pd_index < number_of_pd);
         assert(quot <= 50);
-        return (pd512::pd_find_50(quot, rem, &pd_array[pd_index]));
+        return (pd512::pd_find_50_v18(quot, rem, &pd_array[pd_index]));
     }
 
     inline auto minimal_body_lookup(const itemType s) const -> bool {
