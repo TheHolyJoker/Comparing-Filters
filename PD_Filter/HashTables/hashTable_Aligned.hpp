@@ -85,12 +85,13 @@ public:
 
         const uint64_t out = hasher(x);
         const uint32_t b1 = reduce32((uint32_t)(out >> 32ul), (uint32_t) num_of_buckets);
-        const uint32_t b2 = reduce32((uint32_t) out & MASK32, (uint32_t) num_of_buckets);
-        assert(b1 < num_of_buckets);
-        assert(b2 < num_of_buckets);
-        assert(does_bucket_contain_valid_elements(b1));
-        assert(does_bucket_contain_valid_elements(b2));
-        return ((find_helper(x, b1)) || find_helper(x, b2));
+        // const uint32_t b2 = reduce32((uint32_t) out & MASK32, (uint32_t) num_of_buckets);
+        // assert(b1 < num_of_buckets);
+        // assert(b2 < num_of_buckets);
+        // assert(does_bucket_contain_valid_elements(b1));
+        // assert(does_bucket_contain_valid_elements(b2));
+        return find_helper(x, b1);
+        // return ((find_helper(x, b1)) || find_helper(x, b2));
     }
 
 

@@ -7,7 +7,7 @@
 #include "HashTables/hashTable_Aligned.hpp"
 // #include "pd512.hpp"
 #include "pd512_plus.hpp"
-
+// #include <immintrin.h>
 
 #define DICT512_VER3_DB1 (true)
 #define DICT512_VER3_DB2 (true & DICT512_VER3_DB1)
@@ -151,43 +151,73 @@ public:
     }
 
 
-    inline auto lookup(const itemType s) const -> bool {        
+    inline auto lookup256(const itemType s) const -> bool {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // __builtin_prefetch(&pd_array[pd_index], 0, 0);
+        const uint32_t pd_index2 = reduce32(out2, (uint32_t) number_of_pd);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+
+
+        __m256i pd1 = _mm512_castsi512_si256(pd_array[pd_index]);
+        __m256i pd2 = _mm512_castsi512_si256(pd_array[pd_index2]);
+
+        // __m512i * pd3 = &pd_array[pd_index2];
+        // const __m512i target = _mm512_set1_epi8(rem);
+        // return _mm512_cmpeq_epu8_mask(target, *pd3);// || _mm256_cmpeq_epu8_mask(target, *pd2);
+
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        return _mm256_cmpeq_epu8_mask(target, pd1) || _mm256_cmpeq_epu8_mask(target, pd2);
+        // return
+        // Simplest find
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index]));
+
+        //One level search
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
+        //        pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]);
+
+        //Two level search
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
+        //        (pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]) && spare->find(((uint64_t) pd_index << (14)) | qr));
+
+        //Continguos TC  search
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) || (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index + 1]));
+        // return (pd512_plus::pd_find_50_v31(quot, rem, &pd_array[pd_index])) || (pd512_plus::pd_find_50_v31(quot, rem, &pd_array[pd_index + 1]));
+    }
+
+    inline auto lookup(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         // const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) (quot_range << 8ul));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
         const int64_t quot = qr >> 8;
         const uint8_t rem = qr;
-        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        // const uint8_t rem = out2 & MASK(bits_per_item);
-        const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-        // return pd512_plus::pd_minimal_find_50_v5(quot, rem, &pd_array[pd_index]);
-        // return pd512_plus::pd_minimal_find_50_v4(quot, rem, &pd_array[pd_index]);
-        // return pd512_plus::pd_minimal_find_50_v5(quot, rem, &pd_array[pd_index]);
-        // return pd512_plus::pd_minimal_find_50(quot, rem, &pd_array[pd_index]);
-        const pd512_plus::pd_Status lookup_res = pd512_plus::pd_find3(quot, rem, &pd_array[pd_index]);
-        return (lookup_res == pd512_plus::pd_Status::Yes) || ((lookup_res == pd512_plus::pd_Status::look_in_the_next_level) && (spare->find(spare_element)));
-        // const pd512_plus::pd_Status lookup_res = pd512_plus::pd_plus_find(quot, rem, &pd_array[pd_index]);
-        // switch (pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index])) {
-        //     case pd512_plus::pd_Status::No:
-        // //         // std::cout << "l1_no" << std::endl;
-        //         return false;
-        //     case pd512_plus::pd_Status::Yes:
-        // //         // std::cout << "l1_true" << std::endl;
-        //         return true;
-        //     case pd512_plus::pd_Status::look_in_the_next_level:
-        // //         // std::cout << "l1_maybe" << std::endl;
-        //         return true;
-        //         return spare->find(spare_element);
-        //     default:
-        //         assert(0);
-        //         break;
-        // }
-        // assert(0);
-        // return false;
+
+        // Simplest find
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index]));
+
+        //One level search
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
+        //    pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]);
+
+        // Two level search
+        return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
+               (pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]) && spare->find(((uint64_t) pd_index << (14)) | qr));
+
+        //Two level search Worst Case
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) || spare->find(((uint64_t) pd_index << (14)) | qr);
+
+        //Continguos TC search
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) || (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index + 1]));
+
+        //Continguos TC search less branchy
+        // return (pd512_plus::pd_find_50_v31(quot, rem, &pd_array[pd_index])) || (pd512_plus::pd_find_50_v31(quot, rem, &pd_array[pd_index + 1]));
     }
+
 
     inline auto lookup_minimal(const itemType s) const -> bool {
         uint64_t hash_res = Hasher(s);
@@ -780,7 +810,7 @@ public:
     auto get_name() -> std::string {
         // return "Dict512_Ver3 find_21";
         // return "Dict512_Ver3 find_18";
-        return "Dict512_Ver3 find_21";
+        return "Dict512_Ver3";
         /* string a = "dict512:\t";
             string b = pd512_plus::get_name() + "\t";
             //        string b = pd_vec[0]->get_name() + "\t";

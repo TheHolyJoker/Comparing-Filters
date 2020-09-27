@@ -3,10 +3,12 @@ project(Comparing_Filters_Simpler)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512vl")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512dq")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -msse2 -msse3 -msse4.1")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
 
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")

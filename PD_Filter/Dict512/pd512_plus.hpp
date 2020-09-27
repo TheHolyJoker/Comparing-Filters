@@ -38,17 +38,13 @@ namespace v_pd512_plus {
 
     auto to_bin_reversed(uint64_t x) -> std::string;
 
+    auto to_bin_reversed(const unsigned __int128 header) -> std::string;
+
     auto bin_print_header_spaced(uint64_t header) -> std::string;
 
     auto bin_print_header_spaced2(uint64_t header) -> std::string;
 
-    inline void print_headers(const __m512i *pd) {
-        // constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
-        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
-        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
-        std::cout << "h0: " << bin_print_header_spaced2(h0) << std::endl;
-        std::cout << "h1: " << bin_print_header_spaced2(h1) << std::endl;
-    }
+    void print_headers(const __m512i *pd);
 
     inline void print_headers_masked(const __m512i *pd) {
         constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
@@ -1198,6 +1194,26 @@ namespace pd512_plus {
         }
     }
 
+    inline bool part2_helper_v2(int64_t quot, uint64_t v, uint64_t h0, uint64_t h1) {
+        if (v << quot) {
+            const uint64_t mask = v << quot;
+            return _mm_popcnt_u64(h0 & (mask - 1)) == quot;
+        } else {
+            const uint64_t mask = v >> (64 - quot);
+            return _mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot;
+        }
+    }
+
+    inline bool part3_helper_v3(int64_t quot, uint64_t v, uint64_t h0, uint64_t h1) {
+        if (v << quot) {
+            const uint64_t mask = v << quot;
+            return _mm_popcnt_u64(h0 & (mask - 1)) == quot;
+        } else {
+            const uint64_t mask = v >> (64 - quot);
+            return _mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot;
+        }
+    }
+
     inline bool pd_find_50_v25(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
@@ -1273,6 +1289,318 @@ namespace pd512_plus {
         }
     }
 
+    inline bool pd_find_50_v27(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return false;
+
+        unsigned __int128 v128 = ((const unsigned __int128) v) << quot;
+        const unsigned __int128 *hp128 = (const unsigned __int128 *) pd;
+        v128 &= ~(*hp128);
+        if (!v128) return false;
+        // assert(v128);
+        // unsigned __int128 h128 = ((unsigned __int128*) pd)[0];
+        // if ((hp128[0] & v128) == v128) {
+        //     if (pd_find_50_v0(quot, rem, pd)) {
+        //         std::cout << v_pd512_plus::to_bin_reversed(hp128[0]) << std::endl;
+        //         std::cout << v_pd512_plus::to_bin_reversed(v128) << std::endl;
+        //         v_pd512_plus::print_headers(pd);
+        //         // v_pd512_plus::to_bin_reversed(hp128[0]);
+        //         // v_pd512_plus::to_bin_reversed(v128);
+        //         assert(0);
+        //     }
+        //     return false;
+        // }
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (v_off == 0) {
+            return part2_helper(quot, v, h0, h1);
+        } else if (_blsr_u64(v_off) == 0) {
+            return part2_helper(quot, v_off, h0, h1) || part2_helper(quot, v ^ v_off, h0, h1);
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+    inline bool pd_find_50_v28(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // if (!v) return false;
+
+        unsigned __int128 v128 = ((const unsigned __int128) v) << quot;
+        const unsigned __int128 *hp128 = (const unsigned __int128 *) pd;
+        v128 &= ~(*hp128);
+        // if (!v128) return false;
+
+        const unsigned __int128 mask0 = v128 - 1;
+        const unsigned __int128 mask1 = (v128 & (v128 - 1)) - 1;
+        const unsigned __int128 mask2 = (mask1 & (mask1 - 1)) - 1;
+        const unsigned __int128 mask3 = (mask2 & (mask2 - 1)) - 1;
+        return (v && v128) && ((popcount128(*hp128 & mask0) == quot) ||
+                               (popcount128(*hp128 & mask1) == quot) ||
+                               (popcount128(*hp128 & mask2) == quot) ||
+                               (popcount128(*hp128 & mask3) == quot) ||
+                               (mask3 & (mask3 - 1)));
+    }
+    inline bool pd_find_50_v29(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // if (!v) return false;
+
+        unsigned __int128 v128 = ((const unsigned __int128) v) << quot;
+        const unsigned __int128 *hp128 = (const unsigned __int128 *) pd;
+        v128 &= ~(*hp128);
+        // if (!v128) return false;
+
+        const unsigned __int128 mask0 = v128 - 1;
+        const unsigned __int128 mask1 = (v128 & (v128 - 1));
+        // const unsigned __int128 mask2 = (v128 & (v128 - 1) & (v128 - 2));
+        // const unsigned __int128 mask3 = (v128 & (v128 - 1) & (v128 - 2) & (v128 - 3));
+        return (v && v128) && ((popcount128(*hp128 & mask0) == quot) ||
+                               ((mask1 != 0) && ((popcount128(*hp128 & (mask1 - 1)) == quot) ||
+                                                 (v128 & (v128 - 1) & (v128 - 2)))));
+    }
+
+    inline bool pd_find_50_v30(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return false;
+
+        unsigned __int128 v128 = ((const unsigned __int128) v) << quot;
+        const unsigned __int128 *hp128 = (const unsigned __int128 *) pd;
+        v128 &= ~(*hp128);
+        if (!v128) return false;
+
+        const unsigned __int128 mask0 = v128 - 1;
+        const unsigned __int128 mask1 = (v128 & (v128 - 1));
+        return (v && v128) && ((popcount128(*hp128 & mask0) == quot) ||
+                               ((mask1 != 0) && ((popcount128(*hp128 & (mask1 - 1)) == quot) ||
+                                                 (v128 & (v128 - 1) & (v128 - 2)))));
+    }
+    inline bool pd_find_50_v31(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return false;
+
+        unsigned __int128 v128 = ((const unsigned __int128) v) << quot;
+        const unsigned __int128 *hp128 = (const unsigned __int128 *) pd;
+        v128 &= ~(*hp128);
+        if (!v128) return false;
+
+        const unsigned __int128 mask0 = v128 - 1;
+        const unsigned __int128 mask1 = (v128 & (v128 - 1));
+        const unsigned __int128 mask2 = (mask1 & (mask1 - 1));
+        const unsigned __int128 mask3 = (mask2 & (mask2 - 1));
+        return (popcount128(*hp128 & mask0) == quot) ||
+               ((mask1 != 0) && ((popcount128(*hp128 & (mask1 - 1)) == quot) ||
+                                 ((mask2 != 0) && ((popcount128(*hp128 & (mask2 - 1)) == quot) || mask3))));
+    }
+
+    inline bool pd_find_50_v32_db(int64_t quot, uint8_t rem, const __m512i *pd) {
+        // debug this.
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return false;
+
+        // uint64_t v_old = v;
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        // const uint64_t a = (h0 >> quot);
+        // const uint64_t b = (h1 & ((1ULL << quot) - 1)) << (64 - quot);
+        // if (a & b) {
+        //     v_pd512_plus::print_headers(pd);
+        //     std::cout << "a:  " << v_pd512_plus::bin_print_header_spaced2(a) << std::endl;
+        //     std::cout << "b:  " << v_pd512_plus::bin_print_header_spaced2(b) << std::endl;
+        //     std::cout << "ab: " << v_pd512_plus::bin_print_header_spaced2(a & b) << std::endl;
+        // }
+        // assert(!(a & b));
+        // assert(!((h0 >> quot) & ((h1 & ((1ULL << quot) - 1)) >> (64 - quot))));
+        // v &= ~((h0 >> quot) | ((h1 & ((1ULL << quot) - 1)) >> (64 - quot)));
+        v &= ~((h0 >> quot) | ((h1 & ((1ULL << quot) - 1)) << (64 - quot)));
+        if (!v)
+            // if (pd_find_50_v1(quot, rem, pd)) {
+            //     v_pd512_plus::print_headers(pd);
+            //     std::cout << "v:  "<< v_pd512_plus::bin_print_header_spaced2(v) << std::endl;
+            //     std::cout << "a:  "<< v_pd512_plus::bin_print_header_spaced2(a) << std::endl;
+            //     std::cout << "b:  "<< v_pd512_plus::bin_print_header_spaced2(b) << std::endl;
+            //     std::cout << "ab: "<< v_pd512_plus::bin_print_header_spaced2(a & b) << std::endl;
+            //     assert(!pd_find_50_v1(quot, rem, pd));
+            // }
+            return false;
+
+
+        const uint64_t v_off = _blsr_u64(v);
+
+        if (v_off == 0) {
+            return part2_helper_v2(quot, v, h0, h1);
+        } else if (_blsr_u64(v_off) == 0) {
+            return part2_helper_v2(quot, v_off, h0, h1) || part2_helper_v2(quot, v ^ v_off, h0, h1);
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+    inline bool pd_find_50_v32(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return false;
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1) & ((1ULL << 37) - 1);
+        v &= ~((h0 >> quot) | ((h1 & ((1ULL << quot) - 1)) << (64 - quot)));
+        if (!v)
+            return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+
+        if (v_off == 0) {
+            return part2_helper_v2(quot, v, h0, h1);
+        } else if (_blsr_u64(v_off) == 0) {
+            return part2_helper_v2(quot, v_off, h0, h1) || part2_helper_v2(quot, v ^ v_off, h0, h1);
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+    inline bool pd_find_50_v33(int64_t quot, uint8_t rem, const __m512i *pd) {
+        //todo.
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) return false;
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1) & ((1ULL << 37) - 1);
+        v &= ~((h0 >> quot) | ((h1 & ((1ULL << quot) - 1)) << (64 - quot)));
+        if (!v)
+            return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+
+        return part2_helper_v2(quot, v, h0, h1) || part2_helper_v2(quot, v_off, h0, h1) || part2_helper_v2(quot, v ^ v_off, h0, h1) || part2_helper_v2(quot, _blsr_u64(v_off), h0, h1);
+        // if (v_off == 0) {
+        //     return part2_helper_v2(quot, v, h0, h1);
+        // } else if (_blsr_u64(v_off) == 0) {
+        //     return part2_helper_v2(quot, v_off, h0, h1) || part2_helper_v2(quot, v ^ v_off, h0, h1);
+        // }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+        if (quot == 0) {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
+
+    inline bool pd_find_50_v28_db(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v) {
+            assert(!pd_find_50_v1(quot, rem, pd));
+            return false;
+        }
+
+        unsigned __int128 v128 = ((const unsigned __int128) v) << quot;
+        const unsigned __int128 *hp128 = (const unsigned __int128 *) pd;
+        v128 &= ~(*hp128);
+        if (!v128) {
+            assert(!pd_find_50_v1(quot, rem, pd));
+            return false;
+        }
+        assert(v && v128);
+        // const uint64_t v_hi = v128 >>64;
+        // const uint64_t v_lo = v128;
+        auto pop = popcount128(v128);
+        const unsigned __int128 mask0 = v128 - 1;
+        const unsigned __int128 mask1 = (v128 & (v128 - 1)) - 1;
+        const unsigned __int128 mask2 = (v128 & (v128 - 1) & (v128 - 2)) - 1;
+        const unsigned __int128 mask3 = (v128 & (v128 - 1) & (v128 - 2) & (v128 - 3)) - 1;
+        return (v && v128) && ((popcount128(*hp128 & mask0) == quot) ||
+                               (popcount128(*hp128 & mask1) == quot) ||
+                               (popcount128(*hp128 & mask2) == quot) ||
+                               (popcount128(*hp128 & mask3) == quot) ||
+                               (v128 & (v128 - 1) & (v128 - 2) & (v128 - 3) & (v128 - 4)));
+    }
+
+
     inline bool pd_find_50(int64_t quot, uint8_t rem, const __m512i *pd) {
 #ifndef NDEBUG
         if (should_look_in_current_level_by_qr_safe(quot, rem, pd)) {
@@ -1282,11 +1610,40 @@ namespace pd512_plus {
             assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v18(quot, rem, pd));
             assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v22(quot, rem, pd));
             assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v25(quot, rem, pd));
+            if (pd_find_50_v1(quot, rem, pd) != pd_find_50_v32(quot, rem, pd)) {
+                pd_find_50_v32(quot, rem, pd);
+                pd_find_50_v32(quot, rem, pd);
+                pd_find_50_v32(quot, rem, pd);
+                assert(0);
+            }
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v32(quot, rem, pd));
+            if (pd_find_50_v1(quot, rem, pd) != pd_find_50_v27(quot, rem, pd)) {
+                pd_find_50_v27(quot, rem, pd);
+                pd_find_50_v27(quot, rem, pd);
+                pd_find_50_v27(quot, rem, pd);
+            }
+            assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v27(quot, rem, pd));
+            if (pd_find_50_v1(quot, rem, pd)) {
+                assert(pd_find_50_v28(quot, rem, pd));
+                assert(pd_find_50_v29(quot, rem, pd));
+                assert(pd_find_50_v30(quot, rem, pd));
+                assert(pd_find_50_v31(quot, rem, pd));
+                // if (!pd_find_50_v28_db(quot, rem, pd)) {
+                //     pd_find_50_v28_db(quot, rem, pd);
+                //     pd_find_50_v28_db(quot, rem, pd);
+                //     assert(0);
+                // }
+            }
         }
+
 #endif// !NDEBUG
 
         // assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v26(quot, rem, pd));
         // assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v23(quot, rem, pd));
+        // return pd_find_50_v25(quot, rem, pd);
+        // return pd_find_50_v27(quot, rem, pd);
+        // return pd_find_50_v28(quot, rem, pd);
+        // return pd_find_50_v29(quot, rem, pd);
         return pd_find_50_v25(quot, rem, pd);
     }
 
@@ -1532,6 +1889,17 @@ namespace pd512_plus {
         return (did_pd_overflowed(pd) && (decode_by_table2(pd) <= quot)) ? look_in_the_next_level : No;
     }
 
+    inline uint16_t get_last_qr_smart(const __m512i *pd) {
+        return (!did_pd_overflowed(pd)) ? 12800 : (decode_by_table2(pd) << 8 | get_last_byte(pd));
+    }
+
+    inline bool cmp_qr_smart(uint16_t qr, const __m512i *pd) {
+        // return ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr) && did_pd_overflowed(pd);
+        return  did_pd_overflowed(pd) && ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr);
+        // const uint16_t last_h = _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);
+        // return (last_h & 128) || ((Lookup_Table[last_h & 127] << 8 | get_last_byte(pd)) < qr);
+    }
+
 
     inline bool pd_minimal_find_50_v2(int64_t quot, uint8_t rem, const __m512i *pd) {
         return should_look_in_next_level_by_qr(quot, rem, pd) || pd_find_50_v18(quot, rem, pd);
@@ -1775,6 +2143,7 @@ namespace pd512_plus {
         static size_t blsr_arr[51] = {0};
         static size_t two_power[2] = {0};
         static size_t part3 = 0;
+        static size_t v128_counter = 0;
         // memcpy()
 
         if (ind == 1) {
@@ -1791,12 +2160,13 @@ namespace pd512_plus {
             std::fill(blsr_arr, blsr_arr + 51, 0);
             two_power[0] = two_power[1] = 0;
             part3 = 0;
+            v128_counter = 0;
         }
         if (ind == 2) {
             auto line = std::string(84, '-');
             std::cout << line << std::endl;
-            std::cout << "total:     \t" << total_counter << std::endl;
-            std::cout << "not_v:     \t" << not_v << std::endl;
+            std::cout << "total:      \t" << total_counter << std::endl;
+            std::cout << "not_v:      \t" << not_v << std::endl;
             // std::cout << "yes_v:     \t" << yes_v << std::endl;
             std::cout << "q_cond0:    \t(" << q_cond0[0] << ", " << q_cond0[1] << ")" << std::endl;
             std::cout << "q_cond1     \t(" << q_cond1[0] << ", " << q_cond1[1] << ")" << std::endl;
@@ -1807,8 +2177,9 @@ namespace pd512_plus {
 
             std::cout << "newBlsr:    \t(" << new_blsr_arr[0] << ", " << new_blsr_arr[1] << ")" << std::endl;
             // std::cout << "two_power: \t(" << two_power[0] << ", " << two_power[1] << ")" << std::endl;
-            std::cout << "part3:     \t" << part3 << std::endl;
-            std::cout << "blsr_arr:  \t("
+            std::cout << "v128:       \t" << v128_counter << std::endl;
+            std::cout << "part3:      \t" << part3 << std::endl;
+            std::cout << "blsr_arr:   \t("
                       << blsr_arr[0] << ", "
                       << blsr_arr[1] << ", "
                       << blsr_arr[2] << ", "
@@ -1840,6 +2211,10 @@ namespace pd512_plus {
         auto blsr_popcount = _mm_popcnt_u64((v));
         blsr_arr[blsr_popcount]++;
 
+        unsigned __int128 v128 = ((const unsigned __int128) v) << quot;
+        const unsigned __int128 *hp128 = (const unsigned __int128 *) pd;
+        v128 &= ~(*hp128);
+        if (!v128) v128_counter++;
         const uint64_t v_off = _blsr_u64(v);
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
         const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);

@@ -23,11 +23,27 @@ namespace v_pd512_plus {
         return x;
     }
 
+    auto space_string(std::string s) -> std::string {
+        std::string new_s = "";
+        for (size_t i = 0; i < s.size(); i+= 4) {
+            if (i) {
+                if (i % 16 == 0) {
+                    new_s += "|";
+                } else if (i % 4 == 0) {
+                    new_s += ".";
+                }
+            }
+            new_s += s.substr(i, 4);
+        }
+        return new_s;
+    }
 
     auto to_bin(uint64_t x) -> std::string {
         assert(x);
         size_t p = upperpower2(x);
-        uint64_t b = p >>1;
+        assert(p);
+        uint64_t b = p >> 1;
+        assert(b);
         std::string res = "";
         while (b) {
             res += (b & x) ? "1" : "0";
@@ -38,6 +54,7 @@ namespace v_pd512_plus {
 
     auto to_bin_reversed(uint64_t x) -> std::string {
         size_t p = upperpower2(x);
+        assert(p);
         uint64_t b = 1ULL;
         // size_t index = 0;
         std::string res = "";
@@ -48,6 +65,33 @@ namespace v_pd512_plus {
         // assert((b << 1) == (1ULL << p));
         return res;
     }
+    auto to_bin_reversed2(uint64_t x) -> std::string {
+        // size_t p = upperpower2(x);
+        // if (!p)
+        // p = 64;
+        size_t index = 0;
+        uint64_t b = 1ULL;
+        // size_t index = 0;
+        std::string res = "";
+        while (b) {
+            res += (b & x) ? "1" : "0";
+            b <<= 1ul;
+        }
+        // assert((b << 1) == (1ULL << p));
+        return res;
+    }
+
+
+    auto to_bin_reversed(const unsigned __int128 header) -> std::string {
+        uint64_t hi = header >> 64;
+        uint64_t lo = header & 0xffff'ffff'ffff'ffff;
+        auto s1 = to_bin_reversed2(hi);
+        s1 = space_string(s1);
+        auto s2 = to_bin_reversed2(lo);
+        s2 = space_string(s2);
+        return s1 + "-" + s2;
+    }
+
 
     void bin_print_header(uint64_t header) {
         // assert(_mm_popcnt_u64(header) == 32);
@@ -146,12 +190,19 @@ namespace v_pd512_plus {
         // uint64_t res = h_array[7] >> (64 - 8);
     }
 
-    void print_hlb(const __m512i *pd){
+    void print_hlb(const __m512i *pd) {
         uint64_t hlb = _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);
         std::string s = to_bin_reversed(hlb);
-        std::string final_s = s.substr(0,4) + "." + s.substr(4,1) + "," + s.substr(5,3);
+        std::string final_s = s.substr(0, 4) + "." + s.substr(4, 1) + "," + s.substr(5, 3);
         std::cout << "lhb:\t" << final_s << std::endl;
         // std::cout << "hlb: " << (hlb & 15) << "." << (hlb & 16) << (hlb & 16) << std::endl;
+    }
+    void print_headers(const __m512i *pd) {
+        // constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        std::cout << "h0: " << bin_print_header_spaced2(h0) << std::endl;
+        std::cout << "h1: " << bin_print_header_spaced2(h1) << std::endl;
     }
 }// namespace v_pd512_plus
 
@@ -771,9 +822,9 @@ namespace pd512_plus {
 
 
     auto count_zeros_up_to_the_kth_one(const __m512i *x, size_t k) -> size_t {
-// #ifdef NDEBUG
-//         std::cout << "called count_zeros_up_to_the_kth_one with -O3" << std::endl;
-// #endif// !NDEBUG
+        // #ifdef NDEBUG
+        //         std::cout << "called count_zeros_up_to_the_kth_one with -O3" << std::endl;
+        // #endif// !NDEBUG
         assert(k > 0);
         uint64_t header[2];
         memcpy(header, x, 13);
