@@ -153,13 +153,18 @@ namespace pd512_plus {
         // return _mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 240;
         // 16 + 32 + 64 + 128 == 240
     }
-
-    inline uint8_t get_hi_meta_bits(const __m512i *pd) {
-        return _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 224;
-    }
-
+    
     inline uint8_t get_last_byte(const __m512i *pd) {
-        return _mm_extract_epi8(_mm512_extracti64x2_epi64(*pd, 3), 15);
+        uint8_t x;
+        memcpy(&x, &((uint8_t *) pd)[63], 1);
+        return x;
+
+        //Old function:
+        // return _mm_extract_epi8(_mm512_extracti64x2_epi64(*pd, 3), 15);
+        
+        
+        
+        
         // constexpr int imm1 = 3;
         // constexpr int imm2 = 15;
         // return _mm_extract_epi8(_mm512_extracti64x2_epi64(*pd, imm1), imm2);
@@ -173,7 +178,23 @@ namespace pd512_plus {
     }
 
     inline uint8_t get_header_last_byte(const __m512i *pd) {
-        return _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);
+        uint8_t x;
+        memcpy(&x, &((uint8_t *) pd)[12], 1);
+        return x;
+        //Old function:
+        // return _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);
+    }
+
+    inline uint64_t decode_by_table2(const __m512i *pd) {
+        // uint8_t x;
+        // memcpy(&x, &((uint8_t *) pd)[12], 1);
+        // return Lookup_Table[x & 127];
+
+        //Old function:
+        return Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
+    }
+    inline uint8_t get_hi_meta_bits(const __m512i *pd) {
+        return _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 224;
     }
 
     inline unsigned __int128 get_header128(const __m512i *pd) {
@@ -227,6 +248,9 @@ namespace pd512_plus {
         //Therefore, the index of the 51th zero is last_quot + 51 (-1 because we are starting to count from zero).
         assert(pd_full(pd));
         auto res = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)] + 50;// starting to count from 0.
+        // uint64_t res2 = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];// starting to count from 0.
+        // uint64_t v_res = get_last_zero_index_naive(pd);
+        // assert(res2 == v_res);
         assert(res == get_last_zero_index_naive(pd));
         return Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)] + 50;
 
@@ -490,7 +514,7 @@ namespace pd512_plus {
         return table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
     }
 
-    inline uint64_t decode_by_table2(const __m512i *pd) {
+    inline uint64_t decode_by_table2_vec(const __m512i *pd) {
         return Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];
     }
 
@@ -1223,8 +1247,11 @@ namespace pd512_plus {
         if (!v) return false;
 
         const uint64_t v_off = _blsr_u64(v);
-        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
-        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        // const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        // const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+
+        const uint64_t h0 = ((uint64_t *)pd)[0];
+        const uint64_t h1 = ((uint64_t *)pd)[1];
         if (v_off == 0) {
             return part2_helper(quot, v, h0, h1);
         } else if (_blsr_u64(v_off) == 0) {
@@ -1647,15 +1674,39 @@ namespace pd512_plus {
         return pd_find_50_v25(quot, rem, pd);
     }
 
+    inline bool did_pd_overflowed_vec(const __m512i *pd) {
+        return (_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 128);
+    }
 
     inline bool did_pd_overflowed(const __m512i *pd) {
+        // uint8_t x;
+        // memcpy(&x, &((uint8_t *) pd)[12], 1);
+        // return x & 128;
         return (_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 128);
-        //224 == 128 + 64 + 32;
     }
+
+    inline bool did_pd_overflowed_att(const __m512i *pd) {
+        uint8_t x;
+        memcpy(&x, &((uint8_t *) pd)[12], 1);
+        return x & 128;
+    }
+
+    inline bool did_pd_overflowed_wrapper(const __m512i *pd) {
+        bool a = did_pd_overflowed_vec(pd);
+        bool b = did_pd_overflowed_att(pd);
+        if (a != b) {
+            v_pd512_plus::print_hlb(pd);
+            did_pd_overflowed_att(pd);
+        }
+        assert(a == b);
+        return true;
+    }
+
     inline void set_overflow_bit(__m512i *pd) {
         uint64_t *h_array = ((uint64_t *) pd);
         h_array[1] |= (1ULL) << (103 - 64);
-        assert(did_pd_overflowed(pd));
+        assert(did_pd_overflowed_vec(pd));
+        assert(did_pd_overflowed_wrapper(pd));
     }
     inline void clear_overflow_bit(__m512i *pd) {
         assert(false);
@@ -1893,11 +1944,69 @@ namespace pd512_plus {
         return (!did_pd_overflowed(pd)) ? 12800 : (decode_by_table2(pd) << 8 | get_last_byte(pd));
     }
 
-    inline bool cmp_qr_smart(uint16_t qr, const __m512i *pd) {
-        // return ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr) && did_pd_overflowed(pd);
-        return  did_pd_overflowed(pd) && ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr);
+    inline bool cmp_qr_smart0(uint16_t qr, const __m512i *pd) {
+        // uint8_t x, y;
+        // memcpy(&x, &((uint8_t *) pd)[12], 1);
+        // memcpy(&y, &((uint8_t *) pd)[63], 1);
+        // return (x & 128) && ((Lookup_Table[x & 127] << 8 | y) < qr);
+        return ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr) && did_pd_overflowed(pd);
+        // return did_pd_overflowed(pd) && ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr);
         // const uint16_t last_h = _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);
         // return (last_h & 128) || ((Lookup_Table[last_h & 127] << 8 | get_last_byte(pd)) < qr);
+    }
+
+    inline bool cmp_qr_smart(uint16_t qr, const __m512i *pd) {
+        uint8_t x, y;
+        memcpy(&x, &((uint8_t *) pd)[12], 1);
+        memcpy(&y, &((uint8_t *) pd)[63], 1);
+        return (x & 128) && ((Lookup_Table[x & 127] << 8 | y) < qr);
+        // return ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr) && did_pd_overflowed(pd);
+        // return did_pd_overflowed(pd) && ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr);
+        // const uint16_t last_h = _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);
+        // return (last_h & 128) || ((Lookup_Table[last_h & 127] << 8 | get_last_byte(pd)) < qr);
+    }
+
+    inline bool cmp_qr_smart2(uint16_t qr, const __m512i *pd) {
+        const uint8_t x = ((uint8_t *) pd)[12];
+        return (x & 128) && ((Lookup_Table[x & 127] << 8 | (((uint8_t *) pd)[63])) < qr);
+    }
+
+    inline bool cmp_qr_smart3(uint16_t qr, const __m512i *pd) {
+        
+        uint8_t x;
+        memcpy(&x, &((uint8_t *) pd)[12], 1);
+        if (!(x & 128))
+            return false;
+        if ((qr >> 8) < Lookup_Table[x & 127])
+            return false;
+        else if ((qr >> 8) > Lookup_Table[x & 127])
+            return true;
+        else
+            return (qr & 255) > get_last_byte(pd);
+        
+    }
+
+    inline bool cmp_qr_smart3(int64_t quot, uint8_t rem, const __m512i *pd) {
+        
+        uint8_t x;
+        memcpy(&x, &((uint8_t *) pd)[12], 1);
+        if (!(x & 128))
+            return false;
+        if (quot < Lookup_Table[x & 127])
+            return false;
+        else if (quot > Lookup_Table[x & 127])
+            return true;
+        else
+            return (rem & 255) > get_last_byte(pd);
+        
+    }
+    inline bool cmp_qr_smart4(int64_t quot, uint8_t rem, const __m512i *pd) {
+        
+        uint8_t x,y;
+        memcpy(&x, &((uint8_t *) pd)[12], 1);
+        memcpy(&y, &((uint8_t *) pd)[63], 1);
+
+        return (x & 128) && ((quot > Lookup_Table[x & 127]) || ((quot == Lookup_Table[x & 127]) && (rem > y)));
     }
 
 
@@ -1946,7 +2055,7 @@ namespace pd512_plus {
         return (should_look_in_next_level_by_qr(quot, rem, pd) && did_pd_overflowed(pd)) ? look_in_the_next_level : No;
     }
 
-    inline pd_Status pd_find(int64_t quot, uint8_t rem, const __m512i *pd) {
+    inline pd_Status pd_find1(int64_t quot, uint8_t rem, const __m512i *pd) {
         // if (!should_look_in_next_level_by_qr(quot, rem, pd))
         //     pd_find_50_old(quot, rem, pd);
         if (pd_find_50(quot, rem, pd))
@@ -1984,6 +2093,12 @@ namespace pd512_plus {
         return (pd_find_50(quot, rem, pd)) ? Yes : call_this_function_after_search_in_pd_failed(quot, rem, pd);
         // return (did_pd_overflowed(pd) && (decode_by_table2(pd) <= quot)) ? look_in_the_next_level : No;
     }
+
+    inline pd_Status pd_find4(int64_t quot, uint8_t rem, const __m512i *pd) {
+        if (pd_find_50(quot, rem, pd))
+            return Yes;
+        return (cmp_qr_smart4(quot, rem, pd)) ? look_in_the_next_level : No;
+     }
 
     inline bool pd_plus_rNs(int64_t quot, uint64_t h0, uint64_t h1, uint64_t v) {
         const int64_t pop = _mm_popcnt_u64(h0);

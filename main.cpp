@@ -56,10 +56,14 @@ int main(int argc, char **argv) {
     using Table_Dict_CF = Dict512_With_CF<itemType>;
     using Table_Dict512_SS = Dict512_SparseSpare<itemType>;
     using Table_Dict512_Ver3 = Dict512_Ver3<temp_hash, spare_item, itemType>;
+    using Table_Dict512_Ver4 = Dict512_Ver4<temp_hash, spare_item, itemType>;
+    using Table_Dict256_Ver4 = Dict256_Ver4<spare_item, itemType>;
 
 
+    assert((default_validation_test_single<Table_Dict256_Ver4, itemType>()));
     assert((default_validation_test_single<Table_Dict512, itemType>()));
     assert((default_validation_test_single<Table_Dict512_Ver3, itemType>()));
+    assert((default_validation_test_single<Table_Dict512_Ver4, itemType>()));
     // assert((validation_test_single<Table_Dict512_Ver3, itemType>(1<<22,1<<22)));
     // assert((default_validation_test_single<Table_Dict512_SS, itemType>()));
     // assert((default_validation_test_single<Table_Dict_CF, itemType>()));
@@ -83,8 +87,12 @@ int main(int argc, char **argv) {
     /** Single benching  */
     // single_bench<Table_Dict512_SS, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // return 0;
-    while (true)
-    {single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements);}
+    // while (true) { 
+        // single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements); 
+    
+    single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements); 
+    // single_bench<Table_Dict512_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements); 
+    // }
     // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     return 0;
     // while (true) {

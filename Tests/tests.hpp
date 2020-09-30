@@ -97,7 +97,7 @@ auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *e
         FilterAPI<Table>::AddAll(vec, wrap_filter);
         for (auto el : vec) {
             if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
-                cout << "lookup failed." << endl;
+                cout << "%%lookup failed.%%" << endl;
                 cout << "counter: " << counter << endl;
                 cout << "element: " << el << endl;
 

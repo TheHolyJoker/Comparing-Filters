@@ -64,10 +64,14 @@ set(PROJECT_SOURCES
     PD_Filter/Dict512/Dict512_SparseSpare.hpp
     PD_Filter/Dict512/Dict512_Ver2.hpp
     PD_Filter/Dict512/Dict512_Ver3.hpp
+    PD_Filter/Dict512/Dict512_Ver4.hpp
     
     PD_Filter/Dict320/pd320.hpp
     PD_Filter/Dict320/pd320.cpp
+    PD_Filter/Dict320/pd256_plus.hpp
+    PD_Filter/Dict320/pd256_plus.cpp
     PD_Filter/Dict320/Dict320.hpp
+    PD_Filter/Dict320/Dict256_Ver4.hpp
     PD_Filter/Dict320/Dict320_v2.hpp
     PD_Filter/Dict320/twoChoicer320.hpp
 

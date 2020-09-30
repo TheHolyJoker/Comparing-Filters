@@ -24,3 +24,7 @@ perf-diff.txt
 perf.data
 perf.data.old
 temp.txt
+
+l1_minimal_search_v25.txt
+cmake-build-debug
+PD_Filter/Dict512/Comparing-searches.txt

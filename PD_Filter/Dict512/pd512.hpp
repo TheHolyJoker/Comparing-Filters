@@ -143,9 +143,9 @@ namespace pd512 {
         constexpr uint64_t h1_mask = ((1ULL << (101 - 64)) - 1);
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
         const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1) & h1_mask;
-        const size_t total_pop = _mm_popcnt_u64(h0) +  _mm_popcnt_u64(h1);
+        const size_t total_pop = _mm_popcnt_u64(h0) + _mm_popcnt_u64(h1);
         assert(total_pop == 50);
-        const int att =(h1 == 0) ? 14ul - _lzcnt_u64(h0) : (128 - 50 - _lzcnt_u64(h1));
+        const int att = (h1 == 0) ? 14ul - _lzcnt_u64(h0) : (128 - 50 - _lzcnt_u64(h1));
         // assert(att == get_capacity_naive_with_OF_bit(pd));
         return (h1 == 0) ? 14ul - _lzcnt_u64(h0) : (128 - 50 - _lzcnt_u64(h1));
         // uint64_t header_end;
@@ -154,7 +154,7 @@ namespace pd512 {
         // header_end &= mask;
         // return (header_end == 0) ? pd_popcount_att_helper_start(pd) : (128 - 51 - _lzcnt_u64(header_end) + 1);
     }
-    
+
     // inline __m128i popcnt8(__m128i n) {
     //     static const __m128i popcount_mask = _mm_set1_epi8(0x0F);
     //     static const __m128i popcount_table = _mm_setr_epi8(0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4);
@@ -170,7 +170,7 @@ namespace pd512 {
         return 1 & (header_end >> (101 - 1 - 64));
     }
     inline bool pd_full(const __m512i *pd) {
-        const bool att =_mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 16;
+        const bool att = _mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 16;
         assert(att == (get_capacity(pd) == 51));
         assert(att == pd_full_naive(pd));
         return (_mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 16);
@@ -1455,7 +1455,8 @@ namespace pd512 {
         // return pd_find_50_v4(quot, rem, pd);
         // return pd_find_50_v11(quot, rem, pd);
         // return pd_find_50_v12(quot, rem, pd);
-        return pd_find_50_v11(quot, rem, pd);
+        // return pd_find_50_v11(quot, rem, pd);
+        return pd_find_50_v18(quot, rem, pd);
         // return pd_find_50_v18(quot, rem, pd);
         // return pd_find_50_v10(quot, rem, pd);
         // return pd_find_body_v2(quot, rem, pd);
@@ -1502,8 +1503,10 @@ namespace pd512 {
         // return pd_find_50_v11(quot, rem, pd) || did_pd_overflowed(pd);
     }
 
-    enum pd_Status{
-        No, Yes, look_in_the_next_level 
+    enum pd_Status {
+        No,
+        Yes,
+        look_in_the_next_level
     };
 
     inline pd_Status pd_find_enums(int64_t quot, uint8_t rem, const __m512i *pd) {
@@ -1697,7 +1700,7 @@ namespace pd512 {
         constexpr int imm2 = 15;
         const uint8_t old_rem = _mm_extract_epi8(_mm512_extracti64x2_epi64(*pd, imm1), imm2);
 
-        
+
         if ((old_quot == quot) && (old_rem <= rem)) {
             // std::cout << "pd_swap 1" << std::endl;
             set_overflow_bit(pd);
@@ -1709,10 +1712,10 @@ namespace pd512 {
             return res;
             // return (quot << 8u) | ((uint8_t)rem);
         }
-        
-        const uint64_t old_qr = (old_quot << 8) | ((uint64_t) old_rem); 
-        const uint64_t new_qr = (quot << 8) | ((uint64_t) rem); 
-        if (old_qr <= new_qr){
+
+        const uint64_t old_qr = (old_quot << 8) | ((uint64_t) old_rem);
+        const uint64_t new_qr = (quot << 8) | ((uint64_t) rem);
+        if (old_qr <= new_qr) {
             v_pd512::bin_print(old_qr);
         }
         assert(old_qr > new_qr);
@@ -2132,7 +2135,6 @@ namespace pd512 {
 
 
     // auto get_capacity(const __m512i *pd) -> int;
-    
 
 
     auto validate_number_of_quotient(const __m512i *pd) -> bool;

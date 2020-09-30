@@ -7,6 +7,8 @@
 
 namespace v_pd512_plus {
 
+    
+
     // From CuckooFilter repository, where this following message was written:
     //
     // inspired from
@@ -51,6 +53,8 @@ namespace v_pd512_plus {
         }
         return res;
     }
+
+    
 
     auto to_bin_reversed(uint64_t x) -> std::string {
         size_t p = upperpower2(x);
