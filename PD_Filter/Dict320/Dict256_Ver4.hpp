@@ -105,9 +105,19 @@ public:
 
         // bool a = pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
 
+        // const __m256i *ppd = &pd_array[pd_index];
+        // if (!(_mm_cvtsi128_si64(_mm256_castsi256_si128(*ppd)) & 32))
+        //     return pd_name::pd_find_25(quot, rem, ppd);
+        // else {
+        //     return (pd_name::pd_find_25(quot, rem, ppd) == pd_name::Yes) ||
+        //             ((((_mm_cvtsi128_si64(_mm256_castsi256_si128(*ppd)) & 31) <= quot)) &&
+        //              (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok));
+        // }
+
+
         const pd_name::pd_Status lookup_res = pd_name::pd_find1(quot, rem, &pd_array[pd_index]);
-        return (lookup_res != pd_name::pd_Status::look_in_the_next_level) ? lookup_res == pd_name::pd_Status::Yes :
-        (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok);
+        // const pd_name::pd_Status lookup_res = pd_name::losse_find(quot, rem, &pd_array[pd_index]);
+        return (lookup_res != pd_name::pd_Status::look_in_the_next_level) ? lookup_res == pd_name::pd_Status::Yes : (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok);
 
 
         // return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index]) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr)) == cuckoofilter::Ok);
@@ -122,7 +132,7 @@ public:
         const int64_t quot = qr >> 8;
         const uint8_t rem = qr;
         const uint64_t spare_val = ((uint64_t) pd_index << (13)) | qr;
-        
+
         bool a = pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
         bool b = spare_filter.Contain(spare_val) == cuckoofilter::Ok;
         bool b2 = spare->find(spare_val);
@@ -146,6 +156,59 @@ public:
         return d;
         //        return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index]) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : spare_filter.Contain(((uint64_t) pd_index << (13)) | qr)) == cuckoofilter::Ok;
     }
+    auto lookup_count(const itemType s, int caser = 0) -> bool {
+        static size_t l1_lookups[2] = {0, 0};
+        static size_t l2_lookups[2] = {0, 0};
+        static size_t OF_counter = 0;
+        static size_t only_OF_counter = 0;
+        // static size_t last_q_counter = 0;
+        // static size_t only_last_q_counter = 0;
+        if (caser == 1) {
+            pd_name::pd256_plus_count(0, 0, &pd_array[0], caser);
+            l1_lookups[0] = l1_lookups[1] = l2_lookups[0] = l2_lookups[1] = 0;
+            OF_counter = 0;
+            only_OF_counter = 0;
+            // last_q_counter = 0;
+            // only_last_q_counter = 0;
+        }
+        if (caser == 2) {
+            pd_name::pd256_plus_count(0, 0, &pd_array[0], caser);
+            auto line = std::string(64, '*');
+            std::cout << line << std::endl;
+            std::cout << "l1_lookups:(         \t" << l1_lookups[0] << ", " << l1_lookups[1] << ")" << std::endl;
+            std::cout << "l2_lookups:(         \t" << l2_lookups[0] << ", " << l2_lookups[1] << ")" << std::endl;
+            std::cout << "OF_counter:          \t" << OF_counter << std::endl;
+            std::cout << "only_OF_counter:     \t" << only_OF_counter << std::endl;
+            // std::cout << "last_q_counter:      \t" << last_q_counter << std::endl;
+            // std::cout << "only_last_q_counter: \t" << only_last_q_counter << std::endl;
+            std::cout << line << std::endl;
+        }
+
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
+        const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
+        auto res = pd_name::pd256_plus_count(quot, rem, &pd_array[pd_index]);
+        if (res == pd_name::look_in_the_next_level)
+            OF_counter++;
+        else {
+            l1_lookups[res == pd_name::Yes]++;
+        }
+
+        // l1_lookups[res & 1]++;
+        if (res == pd_name::look_in_the_next_level) {
+            auto l2_res = spare->find(spare_element);
+            l2_lookups[l2_res]++;
+            return l2_res;
+        }
+        return res == pd_name::Yes;
+    }
+
 
     void insert(const itemType s) {
         // static int counter = 0;

@@ -508,10 +508,197 @@ namespace pd256_plus {
         }
     }
 
+    inline bool pd_find_25_ver9(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = get_clean_header(pd);
+
+        if (v_off == 0) {
+            const uint64_t mask = v << quot;
+            return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
+        }
+        
+        if (quot == 0)
+            return v & (_blsmsk_u64(h0) >> 1ul);
+
+        uint64_t new_v = (v << quot) & ~h0;
+        const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+        const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+        const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+        const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+        // bool att = v_mask & new_v;
+        return v_mask & new_v;
+    }
+
+    inline bool pd_find_25_ver10(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = get_clean_header(pd);
+
+        if (v_off == 0) {
+            const uint64_t mask = v << quot;
+            return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
+        }
+        
+        if (quot) {
+            uint64_t new_v = (v << quot) & ~h0;
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+            const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+            // bool att = v_mask & new_v;
+            return v_mask & new_v;
+        } else {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        }
+    }
+
+    inline bool pd_find_25_ver11(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = get_clean_header(pd);
+
+        if (v_off == 0) {
+            const uint64_t mask = v << quot;
+            return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
+        }
+        else if (_blsr_u64(v_off) == 0) {
+            // const uint64_t new_v = v & ~(h0 >> quot);
+            const uint64_t mask1 = (v_off << quot) & (~h0);
+            const uint64_t mask2 = ((v ^ v_off) << quot)& (~h0);
+            const bool res = ((_mm_popcnt_u64(h0 & (mask1 - 1)) == quot) || (_mm_popcnt_u64(h0 & (mask2 - 1)) == quot));
+            assert(res == pd_find_25_ver0(quot, rem, pd));
+            return ((_mm_popcnt_u64(h0 & (mask1 - 1)) == quot) || (_mm_popcnt_u64(h0 & (mask2 - 1)) == quot));
+        }
+
+        if (quot) {
+            uint64_t new_v = (v << quot) & ~h0;
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+            const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+            // bool att = v_mask & new_v;
+            return v_mask & new_v;
+        } else {
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        }
+    }
+
+    inline bool pd_find_25_ver12(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+
+        const int64_t h0 = get_clean_header(pd);
+        uint64_t new_v = (v << quot) & ~h0;
+        uint64_t new_v_off = _blsr_u64(new_v);
+
+        if (new_v_off == 0) 
+            return _mm_popcnt_u64(h0 & (new_v - 1)) == quot;
+        else if (_blsr_u64(new_v_off) == 0)
+        {
+            bool res = (_mm_popcnt_u64(h0 & ((new_v_off) - 1)) == quot) || (_mm_popcnt_u64(h0 & ((new_v ^ new_v_off) - 1)) == quot);
+            assert(res == pd_find_25_ver0(quot, rem, pd));
+            return res;
+            // return _mm_popcnt_u64(h0 & (new_v - 1)) == quot;
+        } else {
+            if (quot) {
+                const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+                const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+                const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+                const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+                // bool att = v_mask & new_v;
+                return v_mask & new_v;
+            } else {
+                return v & (_blsmsk_u64(h0) >> 1ul);
+            }
+        }
+    }
+
+    inline bool pd_losse_find_ver1(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+
+        const int64_t h0 = get_clean_header(pd);
+        // uint64_t new_v = (v << quot) & ~h0;
+
+        if (_blsr_u64(v) == 0) {
+            const int64_t mask = v << quot;
+            return (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+        } else {
+            return true;
+        }
+    }
+
+    inline bool pd_losse_find_ver2(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const int64_t h0 = get_clean_header(pd);
+        uint64_t new_v = (v << quot) & ~h0;
+
+        if (_blsr_u64(new_v) == 0) {
+            return (_mm_popcnt_u64(h0 & (new_v - 1)) == quot);
+        } else {
+            return true;
+        }
+    }
+    
+    inline bool pd_losse_find_ver3(int64_t quot, uint8_t rem, const __m256i *pd) {
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = get_clean_header(pd);
+
+        if (v_off == 0) {
+            const uint64_t mask = v << quot;
+            return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
+        } else
+            return true;
+    }
+
+
     inline bool pd_find_25(int64_t quot, uint8_t rem, const __m256i *pd) {
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver7(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver8(quot, rem, pd));
-        return pd_find_25_ver7(quot, rem, pd);
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver9(quot, rem, pd));
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver10(quot, rem, pd));
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver12(quot, rem, pd));
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver11(quot, rem, pd));
+        return pd_find_25_ver9(quot, rem, pd);
     }
 
     enum pd_Status {
@@ -521,21 +708,6 @@ namespace pd256_plus {
         Error = -1
     };
 
-    inline pd_Status pd_find1(int64_t quot, uint8_t rem, const __m256i *pd) {
-        if (pd_find_25(quot, rem, pd))
-            return Yes;
-
-        const uint64_t first_byte = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
-        return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
-    }
-
-    inline pd_Status pd_find2(int64_t quot, uint8_t rem, const __m256i *pd) {
-        if (!pd_find_25(quot, rem, pd)) {
-            const uint64_t first_byte = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
-            return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
-        }
-        return Yes;
-    }
 
     inline bool did_pd_overflowed(const __m256i *pd) {
         return _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32;
@@ -614,6 +786,47 @@ namespace pd256_plus {
             return get_last_byte(pd) < (qr & 255);
         }
     }
+    inline bool cmp_qr_naive(int64_t quot, uint8_t rem, const __m256i *pd) {
+        return cmp_qr_naive((quot << 8) | rem, pd);
+    }
+
+    inline pd_Status get_status_after_l1_failed(uint16_t qr, const __m256i *pd) {
+        // static int counter = 0;
+        // counter++;
+        // static int c1 = 0;
+        // static int c2 = 0;
+        // static int c3 = 0;
+        // static int c4 = 0;
+        bool of_res = did_pd_overflowed(pd);
+        size_t r_counter = 0;
+        const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
+        if (!(hfb & 32)) {
+            // c1++;
+            // std::cout << "s0" << std::endl;
+            return No;
+        }
+        assert(did_pd_overflowed(pd));
+        uint16_t old_q = (hfb & 31);
+        if (old_q < (qr >> 8)) {
+            // c2++;
+            // std::cout << "s1" << std::endl;
+            return look_in_the_next_level;
+        } else if (old_q > (qr >> 8)) {
+            // c3++;
+            // std::cout << "s2" << std::endl;
+            return No;
+        } else {
+            // assert(qr >>);
+            // c4++;
+            // std::cout << "s3" << std::endl;
+            //Fix this: should not be equality.
+            return (get_last_byte(pd) <= (qr & 255)) ? look_in_the_next_level : No;
+        }
+    }
+    inline pd_Status get_status_after_l1_failed(int64_t quot, uint8_t rem, const __m256i *pd) {
+        return get_status_after_l1_failed((quot << 8) | ((uint64_t) rem), pd);
+    }
+
 
     inline bool cmp_qr_smart0(uint16_t qr, const __m256i *pd) {
         assert(0);
@@ -635,6 +848,48 @@ namespace pd256_plus {
         // memcpy(&x, &((uint8_t *) pd)[12], 1);
         // memcpy(&y, &((uint8_t *) pd)[63], 1);
         // return (x & 128) && ((Lookup_Table[x & 127] << 8 | y) < qr);
+    }
+
+    inline pd_Status pd_find0(int64_t quot, uint8_t rem, const __m256i *pd) {
+        if (pd_find_25(quot, rem, pd))
+            return Yes;
+
+        return get_status_after_l1_failed(quot, rem, pd);
+    }
+
+    inline pd_Status pd_find1(int64_t quot, uint8_t rem, const __m256i *pd) {
+        if (pd_find_25(quot, rem, pd))
+            return Yes;
+
+        const uint64_t first_byte = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
+        return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
+    }
+
+    // inline pd_Status pd_find3(int64_t quot, uint8_t rem, const __m256i *pd) {
+
+    //     if (!(_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32))
+    //         return (pd_find_25(quot, rem, pd))
+    //     if (pd_find_25(quot, rem, pd))
+    //         return Yes;
+
+    //     const uint64_t first_byte = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
+    //     return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
+    // }
+
+    inline pd_Status pd_find2(int64_t quot, uint8_t rem, const __m256i *pd) {
+        if (!pd_find_25(quot, rem, pd)) {
+            const uint64_t first_byte = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
+            return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
+        }
+        return Yes;
+    }
+
+    inline pd_Status losse_find(int64_t quot, uint8_t rem, const __m256i *pd) {
+        if (pd_losse_find_ver3(quot, rem, pd))
+            return Yes;
+
+        const uint64_t first_byte = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
+        return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
     }
 
 
@@ -1064,6 +1319,182 @@ namespace pd256_plus {
     void print512(const __m256i *var);
 
     auto get_name() -> std::string;
+
+
+    inline pd_Status pd256_plus_count_core(int64_t quot, uint8_t rem, const __m256i *pd, int ind = 0) {
+        static size_t total_counter = 0;
+        static size_t not_v = 0;
+        static size_t yes_v = 0;
+        static size_t q_cond0[2] = {0};// {must lookups, redundent lookups}.
+        static size_t q_cond1[2] = {0};
+        static size_t q_cond2[2] = {0};
+        static size_t qq_cond0[2] = {0};// {must lookups, redundent lookups}.
+        static size_t qq_cond1[2] = {0};
+        static size_t qq_cond2[2] = {0};
+        static size_t blsr_arr[51] = {0};
+        static size_t new_blsr_arr[51] = {0};
+        static size_t two_power[2] = {0};
+        static size_t part3 = 0;
+        static size_t new_v_redundant = 0;
+        static size_t new_v_mask_counter = 0;
+        static size_t new_v_changed = 0;
+        // memcpy()
+
+        if (ind == 1) {
+            total_counter = 0;
+            not_v = 0;
+            yes_v = 0;
+            q_cond0[0] = q_cond0[1] = 0;
+            q_cond1[0] = q_cond1[1] = 0;
+            q_cond2[0] = q_cond2[1] = 0;
+            qq_cond0[0] = qq_cond0[1] = 0;
+            qq_cond1[0] = qq_cond1[1] = 0;
+            qq_cond2[0] = qq_cond2[1] = 0;
+            new_blsr_arr[0] = new_blsr_arr[1] = 0;
+            std::fill(blsr_arr, blsr_arr + 51, 0);
+            std::fill(new_blsr_arr, new_blsr_arr + 51, 0);
+            two_power[0] = two_power[1] = 0;
+            part3 = 0;
+            new_v_redundant = 0;
+            new_v_mask_counter = 0;
+            new_v_changed = 0;
+        }
+        if (ind == 2) {
+            auto line = std::string(84, '-');
+            std::cout << line << std::endl;
+            std::cout << "total:      \t" << total_counter << std::endl;
+            std::cout << "not_v:      \t" << not_v << std::endl;
+            // std::cout << "yes_v:     \t" << yes_v << std::endl;
+            std::cout << "q_cond0:   \t(" << q_cond0[0] << ", " << q_cond0[1] << ")" << std::endl;
+            std::cout << "q_cond1    \t(" << q_cond1[0] << ", " << q_cond1[1] << ")" << std::endl;
+            std::cout << "q_cond2    \t(" << q_cond2[0] << ", " << q_cond2[1] << ")" << std::endl;
+            std::cout << "qq_cond0:  \t(" << qq_cond0[0] << ", " << qq_cond0[1] << ")" << std::endl;
+            std::cout << "qq_cond1   \t(" << qq_cond1[0] << ", " << qq_cond1[1] << ")" << std::endl;
+            std::cout << "qq_cond2   \t(" << qq_cond2[0] << ", " << qq_cond2[1] << ")" << std::endl;
+
+            std::cout << "newBlsr:   \t(" << new_blsr_arr[0] << ", " << new_blsr_arr[1] << ")" << std::endl;
+            // std::cout << "two_power: \t(" << two_power[0] << ", " << two_power[1] << ")" << std::endl;
+            std::cout << "newVredund: \t" << new_v_redundant << std::endl;
+            std::cout << "new_v_mask: \t" << new_v_mask_counter << std::endl;
+            std::cout << "newVchange: \t" << new_v_changed << std::endl;
+            std::cout << "part3:      \t" << part3 << std::endl;
+            std::cout << "blsr_arr:  \t("
+                      << blsr_arr[0] << ", "
+                      << blsr_arr[1] << ", "
+                      << blsr_arr[2] << ", "
+                      << blsr_arr[3] << ", "
+                      << blsr_arr[4] << ", "
+                      << blsr_arr[5] << ", "
+                      << blsr_arr[6] << ")"
+                      << std::endl;
+            std::cout << "nBlsrArr:  \t("
+                      << new_blsr_arr[0] << ", "
+                      << new_blsr_arr[1] << ", "
+                      << new_blsr_arr[2] << ", "
+                      << new_blsr_arr[3] << ", "
+                      << new_blsr_arr[4] << ", "
+                      << new_blsr_arr[5] << ", "
+                      << new_blsr_arr[6] << ")"
+                      << std::endl;
+            std::cout << line << std::endl;
+        }
+        total_counter++;
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < 50);
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+
+        q_cond0[cmp_qr_naive(quot, rem, pd)]++;
+        qq_cond0[decode_last_quot(pd) < quot]++;
+
+        size_t r_counter = 0;
+        if (!v) {
+            // std::cout << "r0" << std::endl;
+            not_v++;
+            return get_status_after_l1_failed(quot, rem, pd);
+            // return (pd_full(pd) && cmp_qr_naive(quot, rem, pd)) ? look_in_the_next_level : No;
+        }
+
+        q_cond1[cmp_qr_naive(quot, rem, pd)]++;
+        qq_cond1[decode_last_quot(pd) < quot]++;
+
+        yes_v++;
+        auto blsr_popcount = _mm_popcnt_u64(v);
+        blsr_arr[blsr_popcount]++;
+
+        const int64_t h0 = get_clean_header(pd);
+        uint64_t new_v = (v << quot) & ~h0;
+        auto new_blsr_popcount = _mm_popcnt_u64(new_v);
+        new_blsr_arr[new_blsr_popcount]++;
+
+        if ((v << quot) != new_v) new_v_changed++;
+        if (!new_v) new_v_mask_counter++;
+
+        const uint64_t v_off = _blsr_u64(new_v);
+        if (v_off == 0) {
+            if (_blsr_u64(v) == 0) new_v_redundant++;
+            // std::cout << "r1" << std::endl;
+            // new_blsr_arr[1]++;
+            auto temp = (_mm_popcnt_u64(h0 & (new_v - 1)) == quot);
+            assert(temp == pd_find_25_ver0(quot, rem, pd));
+            auto temp2 = get_status_after_l1_failed(quot, rem, pd);
+            return (_mm_popcnt_u64(h0 & (new_v - 1)) == quot) ? Yes : get_status_after_l1_failed(quot, rem, pd);
+        } else if (_blsr_u64(v_off) == 0) {
+            if (_blsr_u64(_blsr_u64(v)) == 0) new_v_redundant++;
+            // std::cout << "r2" << std::endl;
+            // new_blsr_arr[2]++;
+            const bool res = (_mm_popcnt_u64(h0 & (v_off - 1)) == quot) || (_mm_popcnt_u64(h0 & ((v_off ^ new_v) - 1)) == quot);
+            assert(res == pd_find_25_ver0(quot, rem, pd));
+            return res ? Yes : get_status_after_l1_failed(quot, rem, pd);
+        }
+        new_v_redundant++;
+        // const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        // const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        // if (_blsr_u64(v) == 0) {
+        //     const uint64_t mask = _lrotl(v, quot);
+        //     if (v << quot) {
+        //         two_power[0]++;
+        //         // const uint64_t mask = v << quot;
+        //         return ((!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot)) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+        //     } else {
+        //         two_power[1]++;
+        //         // const uint64_t mask = v >> (64 - quot);
+        //         return ((!(h1 & mask)) && (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot)) ? Yes : cmp_qr_return_pd_status(quot, rem, pd);
+        //     }
+        // }
+        q_cond2[cmp_qr_naive(quot, rem, pd)]++;
+        qq_cond2[decode_last_quot(pd) < quot]++;
+
+        part3++;
+
+        if (quot) {
+            // std::cout << "r3" << std::endl;
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+            const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+            // bool att = v_mask & new_v;
+            return (v_mask & new_v) ? Yes : get_status_after_l1_failed(quot, rem, pd);
+        } else {
+            // std::cout << "r4" << std::endl;
+            return (v & (_blsmsk_u64(h0) >> 1ul)) ? Yes : get_status_after_l1_failed(quot, rem, pd);
+        }
+    }
+
+    inline pd_Status pd256_plus_count(int64_t quot, uint8_t rem, const __m256i *pd, int ind = 0) {
+        pd_Status res = pd256_plus_count_core(quot, rem, pd, ind);
+        pd_Status v_res0 = pd_find0(quot, rem, pd);
+        assert(v_res0 == res);
+        // // pd_Status v_res1 = pd_find1(quot, rem, pd);
+        // if (res != v_res0) {
+        //     std::cout << "res: " << res << std::endl;
+        //     std::cout << "v_res0: " << v_res0 << std::endl;
+        //     std::cout << "v_res1: " << v_res1 << std::endl;
+        //     pd256_plus_count_core(quot, rem, pd);
+        //     assert(0);
+        // }
+        return res;
+    }
 
 }// namespace pd256_plus
 

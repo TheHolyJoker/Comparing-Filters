@@ -591,6 +591,10 @@ struct FilterAPI<Dict256_Ver4<spareItemType, itemType>> {
     // Todo return const here:
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+#ifdef COUNT
+        return table->lookup_count(key);
+#endif// COUNT \
+
         return table->lookup(key);
         // return table->lookup_count(key);
         // return table->lookup_minimal(key);
@@ -610,9 +614,12 @@ struct FilterAPI<Dict256_Ver4<spareItemType, itemType>> {
      * 4 is for deletions.
      */
     static auto get_functionality(Table *table) -> uint32_t {
+#ifdef COUNT
+        table->lookup_count(0, 2);
+        table->lookup_count(0, 1);
+#endif// COUNT \
+
         return 3;
-        // table->lookup_count(0, 2); \
-        // table->lookup_count(0, 1);
     }
     static auto get_ID(Table *table) -> filter_id {
         return d256_ver4;

@@ -20,7 +20,9 @@ void get_fp_ratios() {
     using Table_Dict_CF = Dict512_With_CF<itemType>;
     using Table_Dict512_SS = Dict512_SparseSpare<itemType>;
     using Table_Dict512_Ver3 = Dict512_Ver3<temp_hash, spare_item, itemType>;
+    using Table_Dict256_Ver4 = Dict256_Ver4<spare_item, itemType>;
 
+    assert((default_validation_test_single<Table_Dict256_Ver4, itemType>()));
     assert((default_validation_test_single<Table_Dict512, itemType>()));
     assert((default_validation_test_single<Table_Dict512_SS, itemType>()));
     assert((default_validation_test_single<Table_Dict_CF, itemType>()));
@@ -34,6 +36,7 @@ void get_fp_ratios() {
     vector<vector<itemType> *> fp_elements{&fp_v_add, &fp_v_find};//, &v_delete};
     init_elements(fp_capacity, fp_lookups, &fp_elements, false);
     // return single_fp_rates_probabilistic<Table, itemType>(filter_max_capacity, lookup_reps, bits_per_item, &fp_elements);
+    single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     single_fp_rates_probabilistic<Table_Dict512_Ver3, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     single_fp_rates_probabilistic<Table_Dict512, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     single_fp_rates_probabilistic<Table_Dict512_SS, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
@@ -70,7 +73,7 @@ int main(int argc, char **argv) {
     // assert((default_validation_test_single<Table_TC, itemType>()));
     assert(print_pass());
 
-    // get_fp_ratios();
+    get_fp_ratios();
 
     const size_t max_filter_capacity = 62411242;
     const size_t lookup_reps = 124822484;

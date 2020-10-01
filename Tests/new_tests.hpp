@@ -115,6 +115,11 @@ auto benchmark_generic_filter(Table *wrap_filter, vector<vector<itemType> *> *el
     std::stringstream ss = print_round_header();
     std::cout << ss.str();
 
+#ifdef COUNT
+    static volatile int res = FilterAPI<Table>::get_functionality(wrap_filter);
+#endif// COUNT
+
+
     // *ss << temp_ss.rdbuf();
     for (int round = 0; round < bench_precision; ++round) {
         std::stringstream flusher;
@@ -139,9 +144,9 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     size_t add_step = add_vec->size() / benchmark_precision;
     size_t find_step = find_vec->size() / benchmark_precision;
     size_t true_find_step = add_step;
-// size_t delete_step = delete_vec->size() / benchmark_precision;
+    // size_t delete_step = delete_vec->size() / benchmark_precision;
 
-            size_t removal_time = 0;
+    size_t removal_time = 0;
     if (delete_vec->size()) {
         auto del_insertion_time = time_insertions(wrap_filter, delete_vec, 0, delete_vec->size());
         removal_time = time_deletions(wrap_filter, delete_vec, 0, delete_vec->size());
@@ -150,21 +155,33 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 
     auto insertion_time = time_insertions(wrap_filter, add_vec, round_counter * add_step, (round_counter + 1) * add_step);
     // size_t true_lookup_time = 0;
-#ifdef COUNT
-    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
-        std::cout << "\nUniform" << std::endl;
-        FilterAPI<Table>::get_functionality(wrap_filter);
-    }
-#endif// COUNT
+    //Zeroing out stuff.
+    // #ifdef COUNT
+    //     FilterAPI<Table>::get_functionality(wrap_filter);
+    // #endif// COUNT
+
     auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step, (round_counter + 1) * find_step);
 
 #ifdef COUNT
     if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
+        std::cout << "\nUniform" << std::endl;
+        FilterAPI<Table>::get_functionality(wrap_filter);
+    } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
+        std::cout << "\nUniform" << std::endl;
+        FilterAPI<Table>::get_functionality(wrap_filter);
+    }
+#endif// COUNT
+
+    auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, true_find_step);
+#ifdef COUNT
+    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
+        std::cout << "\nTrue" << std::endl;
+        FilterAPI<Table>::get_functionality(wrap_filter);
+    } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
         std::cout << "\nTrue" << std::endl;
         FilterAPI<Table>::get_functionality(wrap_filter);
     }
 #endif// COUNT
-    auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, true_find_step);
 
 
     const size_t var_num = 6;
@@ -179,7 +196,10 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 #ifdef COUNT
     if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
         std::cout << std::string(88, '=') << std::endl;
+    } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
+        std::cout << std::string(88, '=') << std::endl;
     }
+
 #endif// COUNT
 }
 
@@ -360,7 +380,7 @@ void profile_benchmark(Table *wrap_filter, vector<vector<itemType> *> *elements)
     -e branch-loads             \
     -e branch-loads-misses      \
     &",
-    getpid());
+            getpid());
     // sprintf(buf, "perf stat -p %d -e cycles -e instructions -e cache-misses -e cache-references -e L1-dcache-load-misses -e L1-dcache-loads -e LLC-load-misses -e LLC-loads -e dTLB-load-misses -e dTLB-loads -e node-load-misses -e node-loads -e branches -e branch-misses -e uops_executed.stall_cycles &", getpid());
     auto junk = system(buf);
     for (int i = 0; i < 16; i++) {
@@ -373,6 +393,12 @@ void profile_benchmark(Table *wrap_filter, vector<vector<itemType> *> *elements)
     // printf("%zd\n", 500 * true_find_step);
     exit(0);
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/**Counting benchmarking*/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 #endif//FILTERS_NEW_TESTS_HPP

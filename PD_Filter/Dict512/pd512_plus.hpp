@@ -1238,6 +1238,15 @@ namespace pd512_plus {
         }
     }
 
+    inline bool part2_helper_v4(int64_t quot, uint64_t v, uint64_t h0, uint64_t h1) {
+        if (v << quot) {
+            const uint64_t mask = v << quot;
+            return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
+        } else {
+            const uint64_t mask = v >> (64 - quot);
+            return (_mm_popcnt_u64(h0) + _mm_popcnt_u64(h1 & (mask - 1)) == quot) && (!(h1 & mask)) ;
+        }
+    }
     inline bool pd_find_50_v25(int64_t quot, uint8_t rem, const __m512i *pd) {
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
         assert(quot < 50);
@@ -1254,8 +1263,10 @@ namespace pd512_plus {
         const uint64_t h1 = ((uint64_t *)pd)[1];
         if (v_off == 0) {
             return part2_helper(quot, v, h0, h1);
+            // return part2_helper_v4(quot, v, h0, h1);
         } else if (_blsr_u64(v_off) == 0) {
             return part2_helper(quot, v_off, h0, h1) || part2_helper(quot, v ^ v_off, h0, h1);
+            // return part2_helper_v4(quot, v_off, h0, h1) || part2_helper_v4(quot, v ^ v_off, h0, h1);
         }
 
         const int64_t pop = _mm_popcnt_u64(h0);
