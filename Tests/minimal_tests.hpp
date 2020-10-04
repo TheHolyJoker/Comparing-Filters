@@ -6,6 +6,7 @@
 template<typename Table, typename itemType>
 auto default_validation_test_single() -> bool {
     std::stringstream ss;
+    // return w_validate_filter<Table, itemType>(1000ul, 2000ul, 8ul, 42.0, 42.0, &ss);
     return w_validate_filter<Table, itemType>(100000ul, 200000ul, 8ul, 42.0, 42.0, &ss);
 }
 

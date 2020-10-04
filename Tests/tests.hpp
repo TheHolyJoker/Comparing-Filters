@@ -139,6 +139,7 @@ auto v_true_positive_elements(Table *wrap_filter, unordered_set<itemType> *el_se
             cout << "counter: " << counter << "/" << el_set->size() << endl;
             cout << "element: " << el << endl;
 
+            FilterAPI<Table>::Contain(el, wrap_filter);
             assert(FilterAPI<Table>::Contain(el, wrap_filter));
             return false;
         }

@@ -114,10 +114,11 @@ public:
         //              (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok));
         // }
 
-
-        const pd_name::pd_Status lookup_res = pd_name::pd_find1(quot, rem, &pd_array[pd_index]);
-        // const pd_name::pd_Status lookup_res = pd_name::losse_find(quot, rem, &pd_array[pd_index]);
-        return (lookup_res != pd_name::pd_Status::look_in_the_next_level) ? lookup_res == pd_name::pd_Status::Yes : (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok);
+        return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : (spare->find(((uint64_t) pd_index << (14)) | qr));
+        
+        // const pd_name::pd_Status lookup_res = pd_name::pd_find1(quot, rem, &pd_array[pd_index]);
+        // // const pd_name::pd_Status lookup_res = pd_name::losse_find(quot, rem, &pd_array[pd_index]);
+        // return (lookup_res != pd_name::pd_Status::look_in_the_next_level) ? lookup_res == pd_name::pd_Status::Yes : (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok);
 
 
         // return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index]) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr)) == cuckoofilter::Ok);

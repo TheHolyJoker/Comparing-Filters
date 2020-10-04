@@ -205,8 +205,10 @@ public:
         //    pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]);
 
         // Two level search
-        return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
-               (pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]) && spare->find(((uint64_t) pd_index << (14)) | qr));
+        return (!pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index]) : (spare->find(((uint64_t) pd_index << (14)) | qr));
+        
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
+        //        (pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]) && spare->find(((uint64_t) pd_index << (14)) | qr));
 
         //Two level search Worst Case
         // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) || spare->find(((uint64_t) pd_index << (14)) | qr);
@@ -1010,6 +1012,7 @@ private:
 
 
     auto unSplit(uint32_t r, uint32_t quot, size_t pd_index) const -> spareItemType {
+        static bool flip = false;
         assert(false);
         assert(quot_range == 50);
         spareItemType res = pd_index;

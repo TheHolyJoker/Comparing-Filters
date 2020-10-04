@@ -1263,10 +1263,8 @@ namespace pd512_plus {
         const uint64_t h1 = ((uint64_t *)pd)[1];
         if (v_off == 0) {
             return part2_helper(quot, v, h0, h1);
-            // return part2_helper_v4(quot, v, h0, h1);
         } else if (_blsr_u64(v_off) == 0) {
             return part2_helper(quot, v_off, h0, h1) || part2_helper(quot, v ^ v_off, h0, h1);
-            // return part2_helper_v4(quot, v_off, h0, h1) || part2_helper_v4(quot, v ^ v_off, h0, h1);
         }
 
         const int64_t pop = _mm_popcnt_u64(h0);
@@ -1970,7 +1968,7 @@ namespace pd512_plus {
         uint8_t x, y;
         memcpy(&x, &((uint8_t *) pd)[12], 1);
         memcpy(&y, &((uint8_t *) pd)[63], 1);
-        return (x & 128) && ((Lookup_Table[x & 127] << 8 | y) < qr);
+        return (x & 128) && (((Lookup_Table[x & 127] << 8) | y) < qr);
         // return ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr) && did_pd_overflowed(pd);
         // return did_pd_overflowed(pd) && ((decode_by_table2(pd) << 8 | get_last_byte(pd)) < qr);
         // const uint16_t last_h = _mm_extract_epi8(_mm512_castsi512_si128(*pd), 12);

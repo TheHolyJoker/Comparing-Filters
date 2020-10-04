@@ -22,6 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
 
 # include_directories(Bloom_Filter)
 include_directories(PD_Filter)
+# include_directories(PD_Filter/Fixed_PD)
 include_directories(Tests)
 include_directories(morton)
 # include_directories(xorfilter)
@@ -63,7 +64,7 @@ set(PROJECT_SOURCES
     PD_Filter/Dict512/Dict512_With_CF.hpp
     PD_Filter/Dict512/Dict512_SparseSpare.hpp
     PD_Filter/Dict512/Dict512_Ver2.hpp
-    PD_Filter/Dict512/Dict512_Ver3.hpp
+    # PD_Filter/Dict512/Dict512_Ver3.hpp
     PD_Filter/Dict512/Dict512_Ver4.hpp
     
     PD_Filter/Dict320/pd320.hpp
@@ -76,6 +77,10 @@ set(PROJECT_SOURCES
     PD_Filter/Dict320/twoChoicer320.hpp
 
     PD_Filter/basic_function_util.h PD_Filter/basic_function_util.cpp
+
+    PD_Filter/Fixed_PD/fpd.hpp PD_Filter/Fixed_PD/fpd.cpp
+    PD_Filter/Fixed_PD/wrap_fpd.hpp PD_Filter/Fixed_PD/wrap_fpd.cpp
+    PD_Filter/Fixed_PD/Fixed_Dict.hpp
 )
 
 add_executable(Filters main.cpp ${PROJECT_SOURCES})

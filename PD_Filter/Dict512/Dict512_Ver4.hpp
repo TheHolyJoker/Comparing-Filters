@@ -159,12 +159,16 @@ public:
 
         
         // 2nd place in this category.
-        const pd512_plus::pd_Status lookup_res = pd512_plus::pd_find1(quot, rem, &pd_array[pd_index]);
-        return (lookup_res != pd512_plus::pd_Status::look_in_the_next_level) ? lookup_res == pd512_plus::pd_Status::Yes :
-        (spare_filter.Contain(((uint64_t) pd_index << (14)) | qr) == cuckoofilter::Ok);
+        // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
+        //        (pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]) && spare->find(((uint64_t) pd_index << (14)) | qr));
+
+
+        // const pd512_plus::pd_Status lookup_res = pd512_plus::pd_find1(quot, rem, &pd_array[pd_index]);
+        // return (lookup_res != pd512_plus::pd_Status::look_in_the_next_level) ? lookup_res == pd512_plus::pd_Status::Yes :
+        // (spare_filter.Contain(((uint64_t) pd_index << (14)) | qr) == cuckoofilter::Ok);
 
         // Fastest in this category.
-        // return (!pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index]) ? pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index]) : (spare_filter.Contain(((uint64_t) pd_index << (14)) | qr)) == cuckoofilter::Ok);
+        return (!pd512_plus::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index]) : (spare->find(((uint64_t) pd_index << (14)) | qr));
         
         // Two level search
         // return (pd512_plus::pd_find_50_v25(quot, rem, &pd_array[pd_index])) ||
@@ -872,6 +876,7 @@ private:
 
 
     auto unSplit(uint32_t r, uint32_t quot, size_t pd_index) const -> spareItemType {
+        static bool flip = false;
         assert(false);
         assert(quot_range == 50);
         spareItemType res = pd_index;

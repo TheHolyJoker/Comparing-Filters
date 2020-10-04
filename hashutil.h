@@ -14,6 +14,8 @@
 #include "Hash_functions/xxhash64.h"
 #include <random>
 #include <vector>
+#include <assert.h>
+
 // #include "Hash_functions/woothash.h"
 
 namespace hashing {
@@ -34,17 +36,25 @@ namespace hashing {
             }
         }
 
+        /**
+         * @brief Construct a new Two Independent Multiply Shift object
+         * Disable the randomness for debugging.
+         * 
+         * @param seed1 Garbage
+         * @param seed2 Garbage
+         */
         TwoIndependentMultiplyShift(unsigned __int128 seed1, unsigned __int128 seed2) {
-            multiply_ = seed1;
-            add_ = seed2;
-            // ::std::random_device random;
-            // for (auto v : {&multiply_, &add_}) {
-            //     *v = random();
-            //     for (int i = 1; i <= 4; ++i) {
-            //         *v = *v << 32;
-            //         *v |= random();
-            //     }
-            // }
+            std::cout << "hash function is pseudo random" << std::endl;
+            
+            multiply_ = 0xaaaa'bbbb'cccc'dddd;
+            multiply_ <<= 64;
+            multiply_ |= 0xeeee'ffff'1111'0000;
+            add_ = 0xaaaa'aaaa'bbbb'bbbb;
+            add_ <<= 64;
+            add_ |= 0xcccc'cccc'dddd'dddd;
+
+            assert(multiply_ > 18446744073709551615ULL);
+            assert(add_ > 18446744073709551615ULL);
         }
 
         inline uint64_t operator()(uint64_t key) const {
