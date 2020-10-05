@@ -8,12 +8,12 @@
 #include <climits>
 #include <iomanip>
 #include <iostream>
-#include <map>
 #include <random>
-#include <set>
 #include <stdexcept>
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
+#include <map>
+#include <set>
 
 #include "../cuckoofilter/src/cuckoofilter.h"
 #include "Dict320/Dict320.hpp"
@@ -26,6 +26,7 @@
 #include "Dict512/Dict512_Ver3.hpp"
 #include "Dict512/Dict512_Ver4.hpp"
 #include "Fixed_PD/Fixed_Dict.hpp"
+#include "Fixed_PD/Fixed_Dict_Ver2.hpp"
 // #include "Dict512/Dict512_With_CF.hpp"
 // #include "Dict512/twoChoicer.hpp"
 
@@ -64,6 +65,7 @@ enum filter_id {
     d256_ver4,
     att_d512_id,
     fixed_dict_id,
+    fixed_dict_v2,
     twoChoicer_id,
     twoChoicer320_id,
     att_d320,
@@ -140,6 +142,7 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
         return ss;
         // std::cout << state << std::endl;
     }
+
     /**
      * Returns int indciating which function can the filter do.
      * 1 is for lookups.
@@ -149,6 +152,7 @@ struct FilterAPI<cuckoofilter::CuckooFilter<ItemType, bits_per_item, TableType, 
     static auto get_functionality(Table *table) -> uint32_t {
         return 7;
     }
+
     static auto get_ID(Table *table) -> filter_id {
         return CF;
     }
@@ -206,6 +210,7 @@ struct FilterAPI<Fixed_Dict<spareItemType, itemType>> {
     static auto get_info(Table *table) -> std::stringstream {
         return table->get_extended_info();
     }
+
     /**
      * Returns int indciating which function can the filter do.
      * 1 is for lookups.
@@ -220,11 +225,84 @@ struct FilterAPI<Fixed_Dict<spareItemType, itemType>> {
 
         return 3;
     }
+
     static auto get_ID(Table *table) -> filter_id {
         return fixed_dict_id;
     }
 };
 
+
+template<
+        typename spareItemType,
+        typename itemType>
+struct FilterAPI<Fixed_Dict_Ver2<spareItemType, itemType>> {
+    using Table = Fixed_Dict_Ver2<spareItemType, itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count, .95, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        throw std::runtime_error("Unsupported");
+        // std::cout << "Remove in Wrapper!" << std::endl;
+        // table->remove(key);
+    }
+
+    // Todo return const here:
+    // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+// #ifdef COUNT
+//         return table->lookup_count(key);
+// #endif// COUNT \
+
+        return table->lookup(key);
+        // return table->lookup_count(key);
+        // return table->lookup_minimal(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        return table->get_extended_info();
+    }
+
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+// #ifdef COUNT
+//         table->lookup_count(0, 2);
+//         table->lookup_count(0, 1);
+// #endif// COUNT \
+
+        return 3;
+    }
+
+    static auto get_ID(Table *table) -> filter_id {
+        return fixed_dict_v2;
+    }
+};
 
 
 template<
@@ -279,6 +357,7 @@ struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
     static auto get_info(Table *table) -> std::stringstream {
         return table->get_extended_info();
     }
+
     /**
      * Returns int indciating which function can the filter do.
      * 1 is for lookups.
@@ -294,6 +373,7 @@ struct FilterAPI<Dict512_Ver3<TableType, spareItemType, itemType, HashFamily>> {
         // table->lookup_count(0, 2); \
         // table->lookup_count(0, 1);
     }
+
     static auto get_ID(Table *table) -> filter_id {
         return d512_ver3;
     }
@@ -348,6 +428,7 @@ struct FilterAPI<Dict512_Ver4<TableType, spareItemType, itemType, HashFamily>> {
     static auto get_info(Table *table) -> std::stringstream {
         return table->get_extended_info();
     }
+
     /**
      * Returns int indciating which function can the filter do.
      * 1 is for lookups.
@@ -359,6 +440,7 @@ struct FilterAPI<Dict512_Ver4<TableType, spareItemType, itemType, HashFamily>> {
         // table->lookup_count(0, 2); \
         // table->lookup_count(0, 1);
     }
+
     static auto get_ID(Table *table) -> filter_id {
         return d512_ver4;
     }
@@ -415,6 +497,7 @@ struct FilterAPI<Dict256_Ver4<spareItemType, itemType>> {
     static auto get_info(Table *table) -> std::stringstream {
         return table->get_extended_info();
     }
+
     /**
      * Returns int indciating which function can the filter do.
      * 1 is for lookups.
@@ -429,6 +512,7 @@ struct FilterAPI<Dict256_Ver4<spareItemType, itemType>> {
 
         return 3;
     }
+
     static auto get_ID(Table *table) -> filter_id {
         return d256_ver4;
     }

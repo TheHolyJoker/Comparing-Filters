@@ -1,26 +1,29 @@
+//
+// Created by tomer on 05/10/2020.
+//
 
-#ifndef FILTERS_FIXED_DICT_HPP
-#define FILTERS_FIXED_DICT_HPP
+#ifndef COMPARING_FILTERS_SIMPLER_FIXED_DICT_VER2_HPP
+#define COMPARING_FILTERS_SIMPLER_FIXED_DICT_VER2_HPP
 
 
-#include "../../cuckoofilter/src/cuckoofilter.h"
+//#include "../../cuckoofilter/src/cuckoofilter.h"
 #include "../hashutil.h"
 #include "HashTables/hashTable_Aligned.hpp"
-#include "wrap_fpd.hpp"
-#include <unordered_map>
+#include "fixed_pd_45.hpp"
+//#include <unordered_map>
 
-#define FIXED_DICT_DB1 (true)
-#define FIXED_DICT_DB2 (true & FIXED_DICT_DB1)
-#define FIXED_DICT_DB3 (true & FIXED_DICT_DB2)
+#define FIXED_DICT_VER2_DB1 (true)
+#define FIXED_DICT_VER2_DB2 (true & FIXED_DICT_VER2_DB1)
+#define FIXED_DICT_VER2_DB3 (true & FIXED_DICT_VER2_DB2)
 
 
 template<
         typename spareItemType,
         typename itemType>
-class Fixed_Dict {
+class Fixed_Dict_Ver2 {
     static constexpr size_t bits_per_item = 8;
-    static constexpr size_t max_capacity = Fixed_pd::CAPACITY;
-    static constexpr size_t quot_range = Fixed_pd::QUOT_RANGE;
+    static constexpr size_t max_capacity = Fixed_pd45::CAPACITY;
+    static constexpr size_t quot_range = Fixed_pd45::QUOT_RANGE;
 
 
     hashTable_Aligned<uint64_t, 4> *spare;
@@ -36,48 +39,48 @@ class Fixed_Dict {
     const size_t spare_element_length;
     double expected_pd_capacity;
 
-    Wrap_Fixed_pd::packed_fpd *packed_fpd_array;
+    __m512i *pd_array;
+
     // unordered_map<itemType, uint64_t> map_db;
     // vector<size_t> capacity_vec;
     // vector<bool> rand_vec;
 
 public:
-    Fixed_Dict(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
+    Fixed_Dict_Ver2(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
             : filter_max_capacity(max_number_of_elements),
-              number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity * 2, level1_load_factor)),
+              number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
               pd_index_length(
-                      ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity * 2, level1_load_factor))),
+                      ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
               spare_element_length(pd_index_length + quotient_length + remainder_length),
-            //   Hasher(0,0)
+//               Hasher(0,0){
               Hasher() {
 
         expected_pd_capacity = max_capacity * level1_load_factor;
         spare = new hashTable_Aligned<uint64_t, 4>(
-                ceil(1.0 * max_number_of_elements / (1.4 * ceil_log2(max_number_of_elements))),
+                ceil(1.0 * max_number_of_elements / (1.0 * ceil_log2(max_number_of_elements))),
                 ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)) +
                 quotient_length + bits_per_item,
                 level2_load_factor);
 
-        int ok = posix_memalign((void **) &packed_fpd_array, 64, 64 * 3 * number_of_pd);
+        int ok = posix_memalign((void **) &pd_array, 64, 64 * number_of_pd);
+//        int ok = posix_memalign((void **) &packed_fpd_array, 64, 64 * 3 * number_of_pd);
         if (ok != 0) {
             cout << "Failed!!!" << endl;
             assert(false);
             return;
         }
-        for (size_t i = 0; i < number_of_pd; i++) {
-            packed_fpd_array[i] = {};
-            assert(Wrap_Fixed_pd::validate_init_packed_fpd(&packed_fpd_array[i]));
-            // assert(packed_fpd_array[i].);
-        }
+        std::fill(pd_array, pd_array + number_of_pd, __m512i{0, 0, 0, 0, 0, 0, 0, 0});
 
-        // std::fill(pd_array, pd_array + number_of_pd, __m256i{((INT64_C(1) << 25) - 1) << 6, 0, 0, 0});
+//        for (int i = 0; i < number_of_pd; ++i) {
+//            assert(Fixed_pd45::Header::get_capacity(&pd_array[i]) == 0);
+//        }
     }
 
-    virtual ~Fixed_Dict() {
+    virtual ~Fixed_Dict_Ver2() {
         assert(get_capacity() >= 0);
         auto ss = get_extended_info();
         std::cout << ss.str();
-        free(packed_fpd_array);
+        free(pd_array);
         delete spare;
     }
 
@@ -88,7 +91,7 @@ public:
         return lookup_ver3(s);
     }
 
-    inline auto lookup_ver1(const itemType s) const -> bool {
+    /*inline auto lookup_ver1(const itemType s) const -> bool {
         uint64_t hash_res = Hasher(s);
         // uint64_t hash_res = s;
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
@@ -107,6 +110,7 @@ public:
                (spare->find(
                        ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem));
     }
+*/
 
     /* inline auto lookup_safe(const itemType s, int result_value) const -> bool {
         uint64_t hash_res = Hasher(s);
@@ -142,7 +146,7 @@ public:
     }
  */
 
-    inline auto lookup_ver2(const itemType s) const -> bool {
+    /*inline auto lookup_ver2(const itemType s) const -> bool {
         uint64_t hash_res = Hasher(s);
         // uint64_t hash_res = s;
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
@@ -151,77 +155,80 @@ public:
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
 
         uint64_t *header = (ind) ? packed_fpd_array[pd_index].header2 : packed_fpd_array[pd_index].header1;
-        size_t counter = Fixed_pd::Header::read_counter(quot, header);
+        size_t counter = Fixed_pd45::Header::read_counter(quot, header);
         // size_t counter = (ind) ?
-        //     Fixed_pd::Header::read_counter(quot, packed_fpd_array[pd_index].header2):
-        //     Fixed_pd::Header::read_counter(quot, packed_fpd_array[pd_index].header1);
+        //     Fixed_pd45::Header::read_counter(quot, packed_fpd_array[pd_index].header2):
+        //     Fixed_pd45::Header::read_counter(quot, packed_fpd_array[pd_index].header1);
         if (!counter) {
             return false;
-        } else if (counter == Fixed_pd::counter_overflowed_val) {
+        } else if (counter == Fixed_pd45::counter_overflowed_val) {
             const uint8_t rem = out2 & MASK(bits_per_item);
             return spare->find(
                     ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
         }
-        uint64_t start = Fixed_pd::Header::get_start(quot, header);
+        uint64_t start = Fixed_pd45::Header::get_start(quot, header);
 
         const uint8_t rem = out2 & MASK(bits_per_item);
-        uint64_t v = (ind) ? Fixed_pd::Body::get_v(rem, &packed_fpd_array[pd_index].body2) : Fixed_pd::Body::get_v(rem,
-                                                                                                                   &packed_fpd_array[pd_index].body1);
+        uint64_t v = (ind) ? Fixed_pd45::Body::get_v(rem, &packed_fpd_array[pd_index].body2) : Fixed_pd45::Body::get_v(
+                rem,
+                &packed_fpd_array[pd_index].body1);
 
         v >>= start;
         if (!v)
             return false;
         return (v) & MASK(counter);
     }
-
+*/
     inline auto lookup_ver3(const itemType s) const -> bool {
         uint64_t hash_res = Hasher(s);
-        // uint64_t hash_res = s;
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        const bool ind = out2 & (1 << 16);
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
 
-        uint64_t *header = (ind) ? packed_fpd_array[pd_index].header2 : packed_fpd_array[pd_index].header1;
-        size_t counter = Fixed_pd::Header::read_counter(quot, header);
-        // size_t counter = (ind) ?
-        //     Fixed_pd::Header::read_counter(quot, packed_fpd_array[pd_index].header2):
-        //     Fixed_pd::Header::read_counter(quot, packed_fpd_array[pd_index].header1);
+
+//        uint64_t *header = (ind) ? packed_fpd_array[pd_index].header2 : packed_fpd_array[pd_index].header1;
+        size_t counter = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
         if (!counter) {
             return false;
-        } else if (counter == Fixed_pd::counter_overflowed_val) {
+        } else if (counter == Fixed_pd45::counter_overflowed_val) {
             const uint8_t rem = out2 & MASK(bits_per_item);
             return spare->find(
                     ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
+        } else {
+            const uint8_t rem = out2 & MASK(bits_per_item);
+            uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]);
+            if (!v)
+                return false;
+            uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
+            return (v >> start) & MASK(counter);
         }
 
-        const uint8_t rem = out2 & MASK(bits_per_item);
-        uint64_t v = (ind) ? Fixed_pd::Body::get_v(rem, &packed_fpd_array[pd_index].body2) : Fixed_pd::Body::get_v(rem,
-                                                                                                                   &packed_fpd_array[pd_index].body1);
-
-        if (!v)
-            return false;
-        uint64_t start = Fixed_pd::Header::get_start(quot, header);
-        return (v >> start) & MASK(counter);
     }
 
     void insert(const itemType s) {
+//        static int counter = 0;
+//        counter++;
+//        static int bad_val_c = 0;
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        const bool ind = out2 & (1 << 16);
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+//        bool BPC = (pd_index == 2026);
+//        if (BPC)
+//            bad_val_c++;
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
 
 
-        Wrap_Fixed_pd::packed_fpd *temp_packed_fpd = &packed_fpd_array[pd_index];
-        uint64_t *header = (ind) ? temp_packed_fpd->header2 : temp_packed_fpd->header1;
-        __m512i *body = (ind) ? &temp_packed_fpd->body2 : &temp_packed_fpd->body1;
-
-        auto res = Wrap_Fixed_pd::add(quot, rem, header, body);
+//        Wrap_Fixed_pd::packed_fpd *temp_packed_fpd = &packed_fpd_array[pd_index];
+//        uint64_t *header = (ind) ? temp_packed_fpd->header2 : temp_packed_fpd->header1;
+//        __m512i *body = (ind) ? &temp_packed_fpd->body2 : &temp_packed_fpd->body1;
+//        std::cout << "bad_val_c: " << bad_val_c << std::endl;
+//        assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
+        auto res = Fixed_pd45::add(quot, rem, &pd_array[pd_index]);
+//        assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
         if (res == -1) {
             assert(lookup(s));
-            // std::cout << "AA 1" << std::endl;
+//             std::cout << "AA 1" << std::endl;
             return;
         } else if (res == -2) {
             uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) |
@@ -230,77 +237,90 @@ public:
 
             assert(spare->find(spare_val));
             assert(lookup(s));
-            // std::cout << "AA 2" << std::endl;
+//             std::cout << "AA 2" << std::endl;
             return;
         } else if (res == -3) {
             const uint64_t partial_spare_item =
                     ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item);
-            promote_quot_and_remove_from_body(quot, Fixed_pd::max_valide_counter_value, partial_spare_item, header,
-                                              body);
+            promote_quot_and_remove_from_body(quot, Fixed_pd45::max_valid_counter_value, partial_spare_item,
+                                              &pd_array[pd_index]);
+//            assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
 
             const uint64_t spare_val = partial_spare_item | ((uint64_t) rem);
             insert_to_spare_without_pop(spare_val);
 
             assert(spare->find(spare_val));
-            assert(Fixed_pd::Header::did_quot_overflowed(quot, header));
+            assert(Fixed_pd45::Header::did_quot_overflowed(quot, &pd_array[pd_index]));
             assert(lookup(s));
-            // std::cout << "AA 3" << std::endl;
+//             std::cout << "AA 3" << std::endl;
             return;
         } else if (res == -4) {
 
-            size_t max_quot = Fixed_pd::Header::get_max_quot(header);
-            auto temp_val = Fixed_pd::Header::read_counter(max_quot, header);
-            assert(temp_val < Fixed_pd::counter_overflowed_val);
+            size_t max_quot = Fixed_pd45::Header::get_max_quot(&pd_array[pd_index]);
+            auto temp_val = Fixed_pd45::Header::read_counter(max_quot, &pd_array[pd_index]);
+            assert(temp_val < Fixed_pd45::counter_overflowed_val);
             assert(temp_val);
 
             uint64_t partial_spare_item =
                     ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (max_quot << bits_per_item);
-            promote_quot_and_remove_from_body(max_quot, temp_val, partial_spare_item, header, body);
+//            assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
+            promote_quot_and_remove_from_body(max_quot, temp_val, partial_spare_item, &pd_array[pd_index]);
+//            assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
 
-            Fixed_pd::Header::set_quot_as_overflow(max_quot, header);
+//            assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
+            Fixed_pd45::Header::set_quot_as_overflow(max_quot, &pd_array[pd_index]);
+//            assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
             if (max_quot == quot) {
                 uint64_t spare_val = partial_spare_item | ((uint64_t) rem);
 
                 insert_to_spare_without_pop(spare_val);
                 assert(lookup(s));
-                // std::cout << "AA 4" << std::endl;
+//                 std::cout << "AA 4" << std::endl;
                 return;
             } else {
                 //necessary for increasing relevent counter.
-                int new_header_add_res = Fixed_pd::Header::add(quot, header);
+//                assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
+                int new_header_add_res = Fixed_pd45::Header::add(quot, &pd_array[pd_index]);
+//                assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
                 assert(new_header_add_res == -1);
-                uint64_t start = Fixed_pd::Header::get_start(quot, header);
-                uint64_t end = Fixed_pd::Header::read_counter(quot, header);
-                assert(end != Fixed_pd::counter_overflowed_val);
-                Fixed_pd::Body::add(start, start + end - 1, rem, body);
+//                assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
+                uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
+                uint64_t end = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
+//                assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
+                assert(end != Fixed_pd45::counter_overflowed_val);
+//                assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
+                Fixed_pd45::Body::add(start, start + end - 1, rem, &pd_array[pd_index]);
+//                assert(Fixed_pd45::Header::validate_capacity(&pd_array[pd_index]));
                 assert(lookup(s));
-                // std::cout << "AA 4.2" << std::endl;
+//                 std::cout << "AA 4.2" << std::endl;
             }
         }
     }
 
 
     void promote_quot_and_remove_from_body(uint64_t quot, size_t curr_counter_val, uint64_t partial_spare_item,
-                                           uint64_t *header, __m512i *body) {
-
-        size_t begin_fingerprint = Fixed_pd::Header::get_start(quot, header);
+                                           __m512i *pd) {
+        size_t begin_fingerprint = Fixed_pd45::Header::get_start(quot, pd);
         for (size_t i = 0; i < curr_counter_val; i++) {
             //todo: Error could be here.
-            uint8_t temp_rem = ((uint8_t *) (body))[begin_fingerprint + i];
+            uint8_t temp_rem = ((uint8_t *) (pd))[Fixed_pd45::bodyStartIndex + begin_fingerprint + i];
             uint64_t spare_val = partial_spare_item | ((uint64_t) temp_rem);
             insert_to_spare_without_pop(spare_val);
             assert(spare->find(spare_val));
         }
-        Fixed_pd::Body::remove_quot(begin_fingerprint, begin_fingerprint + curr_counter_val, body);
+//        assert(Fixed_pd45::Header::validate_capacity(pd));
+        Fixed_pd45::Body::remove_quot(begin_fingerprint, begin_fingerprint + curr_counter_val, pd);
+//        assert(Fixed_pd45::Header::validate_capacity(pd));
+
     }
 
-    void
-    promote_quot_and_remove_from_body(uint64_t quot, uint64_t partial_spare_item, uint64_t *header, __m512i *body) {
-        size_t counter_size = Fixed_pd::Header::read_counter(quot, header);
-        assert(counter_size < Fixed_pd::counter_overflowed_val);
+    void promote_quot_and_remove_from_body(uint64_t quot, uint64_t partial_spare_item, __m512i *pd) {
+        size_t counter_size = Fixed_pd45::Header::read_counter(quot, pd);
+        assert(counter_size < Fixed_pd45::counter_overflowed_val);
         assert(0 < counter_size);
-
-        promote_quot_and_remove_from_body(quot, counter_size, partial_spare_item, header, body);
+//        assert(Fixed_pd45::Header::validate_capacity(pd));
+        promote_quot_and_remove_from_body(quot, counter_size, partial_spare_item, pd);
+//        assert(Fixed_pd45::Header::validate_capacity(pd));
     }
 
     inline void remove(const itemType s) {
@@ -420,10 +440,8 @@ public:
 
         double res = 0;
         for (size_t i = 0; i < number_of_pd; i++) {
-            auto temp1 = Fixed_pd::Header::get_capacity(packed_fpd_array[i].header1) - expected_pd_capacity;
-            auto temp2 = Fixed_pd::Header::get_capacity(packed_fpd_array[i].header2) - expected_pd_capacity;
+            auto temp1 = Fixed_pd45::Header::get_capacity(&pd_array[i]) - expected_pd_capacity;
             res += temp1 * temp1;
-            res += temp2 * temp2;
         }
         return res / (filter_max_capacity * expected_pd_capacity);
     }
@@ -440,12 +458,10 @@ public:
         std::stringstream ss;
         size_t temp_capacity = 0;
         for (size_t i = 0; i < number_of_pd; i++) {
-            size_t cap_a = Fixed_pd::Header::get_capacity(packed_fpd_array[i].header1);
-            size_t cap_b = Fixed_pd::Header::get_capacity(packed_fpd_array[i].header2);
-            assert(cap_a <= Fixed_pd::CAPACITY);
-            assert(cap_b <= Fixed_pd::CAPACITY);
-            temp_capacity += (cap_a + cap_b);
-            // temp_capacity += Fixed_pd::Header::get_capacity(packed_fpd_array[i].header1) + Fixed_pd::Header::get_capacity(packed_fpd_array[i].header2);
+            size_t cap_a = Fixed_pd45::Header::get_capacity(&pd_array[i]);
+            assert(cap_a <= Fixed_pd45::CAPACITY);
+            temp_capacity += cap_a;
+            // temp_capacity += Fixed_pd45::Header::get_capacity(packed_fpd_array[i].header1) + Fixed_pd45::Header::get_capacity(packed_fpd_array[i].header2);
         }
 
         // std::sum(pd_capacity_vec);
@@ -558,8 +574,7 @@ public:
         // size_t validate_res = l1_capacity;
         // __m512i *ppd = &(pd_array[0]);
         for (int i = 0; i < number_of_pd; ++i) {
-            res += Fixed_pd::Header::get_capacity(packed_fpd_array[i].header1) +
-                   Fixed_pd::Header::get_capacity(packed_fpd_array[i].header2);
+            res += Fixed_pd45::Header::get_capacity(&pd_array[i]);
             //  pd_name::get_capacity(&pd_array[i]);
         }
         // if (res != validate_res) {
@@ -575,7 +590,7 @@ public:
 
 
     auto get_name() -> std::string {
-        return "Fixed_Dict";
+        return "Fixed_Dict_Ver2";
     }
 
     // auto count_overflowing_PDs() -> size_t {
@@ -708,4 +723,5 @@ public:
         */
 };
 
-#endif//FILTERS_FIXED_DICT_HPP
+
+#endif //COMPARING_FILTERS_SIMPLER_FIXED_DICT_VER2_HPP

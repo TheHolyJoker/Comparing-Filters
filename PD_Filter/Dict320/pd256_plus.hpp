@@ -27,40 +27,265 @@
 
 // #define DECODE(pd) (Lookup_Table[(_mm_extract_epi8(_mm256_castsi256_si128(*pd), 12) & 127)])
 
-static constexpr uint8_t Table3_8[256] = 
-{
-    0, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8,
-    2, 3, 4, 5, 6, 7, 8, 9,
-    3, 4, 5, 6, 7, 8, 9, 10,
-    4, 5, 6, 7, 8, 9, 10, 11,
-    5, 6, 7, 8, 9, 10, 11, 12,
-    6, 7, 8, 9, 10, 11, 12, 13,
-    7, 8, 9, 10, 11, 12, 13, 14,
-    1, 2, 3, 4, 5, 6, 7, 8,
-    2, 3, 4, 5, 6, 7, 8, 9,
-    3, 4, 5, 6, 7, 8, 9, 10,
-    4, 5, 6, 7, 8, 9, 10, 11,
-    5, 6, 7, 8, 9, 10, 11, 12,
-    6, 7, 8, 9, 10, 11, 12, 13,
-    7, 8, 9, 10, 11, 12, 13, 14,
-    8, 9, 10, 11, 12, 13, 14, 15,
-    2, 3, 4, 5, 6, 7, 8, 9,
-    3, 4, 5, 6, 7, 8, 9, 10,
-    4, 5, 6, 7, 8, 9, 10, 11,
-    5, 6, 7, 8, 9, 10, 11, 12,
-    6, 7, 8, 9, 10, 11, 12, 13,
-    7, 8, 9, 10, 11, 12, 13, 14,
-    8, 9, 10, 11, 12, 13, 14, 15,
-    9, 10, 11, 12, 13, 14, 15, 16,
-    3, 4, 5, 6, 7, 8, 9, 10,
-    4, 5, 6, 7, 8, 9, 10, 11,
-    5, 6, 7, 8, 9, 10, 11, 12,
-    6, 7, 8, 9, 10, 11, 12, 13,
-    7, 8, 9, 10, 11, 12, 13, 14,
-    8, 9, 10, 11, 12, 13, 14, 15,
-    9, 10, 11, 12, 13, 14, 15, 16,
-    10, 11, 12, 13, 14, 15, 16, 17,
-};
+static constexpr uint8_t Table3_8[256] =
+        {
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                17,
+        };
 
 
 namespace v_pd256_plus {
@@ -129,6 +354,7 @@ namespace pd256_plus {
     auto validate_number_of_quotient(uint64_t header) -> bool;
 
     auto validate_number_of_quotient_from_clean_header(uint64_t c_header) -> bool;
+
     // returns the position (starting from 0) of the jth set bit of x.
     inline uint64_t select64(uint64_t x, int64_t j) {
         assert(j < 64);
@@ -225,6 +451,7 @@ namespace pd256_plus {
         // assert(_mm_popcnt_u64(res) == QUOT_SIZE25);
         return res;
     }
+
     inline uint64_t decode_last_quot_naivest(const __m256i *pd) {
         uint64_t c_header = get_clean_header(pd);
         size_t capacity = count_zeros_up_to_the_kth_one(c_header, QUOT_SIZE25);
@@ -234,6 +461,7 @@ namespace pd256_plus {
             return 0;
         return count_ones_up_to_the_kth_zero(c_header, capacity);
     }
+
     inline uint64_t decode_last_quot_safe(const __m256i *pd) {
         return decode_last_quot_naivest(pd);
         // if (!pd_full(pd)) {
@@ -318,6 +546,7 @@ namespace pd256_plus {
     auto get_specific_quot_capacity_naive(int64_t quot, const __m256i *pd) -> int;
 
     auto get_specific_quot_capacity_naive2(int64_t quot, const __m256i *pd) -> int;
+
     /**
      * @brief Get the last quot capacity object
      * returns the capacity of the highest non empty quot.
@@ -559,7 +788,7 @@ namespace pd256_plus {
             const uint64_t mask = v << quot;
             return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
         }
-        
+
         if (quot == 0)
             return v & (_blsmsk_u64(h0) >> 1ul);
 
@@ -587,7 +816,7 @@ namespace pd256_plus {
             const uint64_t mask = v << quot;
             return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
         }
-        
+
         if (quot) {
             uint64_t new_v = (v << quot) & ~h0;
             const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
@@ -615,11 +844,10 @@ namespace pd256_plus {
         if (v_off == 0) {
             const uint64_t mask = v << quot;
             return (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
-        }
-        else if (_blsr_u64(v_off) == 0) {
+        } else if (_blsr_u64(v_off) == 0) {
             // const uint64_t new_v = v & ~(h0 >> quot);
             const uint64_t mask1 = (v_off << quot) & (~h0);
-            const uint64_t mask2 = ((v ^ v_off) << quot)& (~h0);
+            const uint64_t mask2 = ((v ^ v_off) << quot) & (~h0);
             const bool res = ((_mm_popcnt_u64(h0 & (mask1 - 1)) == quot) || (_mm_popcnt_u64(h0 & (mask2 - 1)) == quot));
             assert(res == pd_find_25_ver0(quot, rem, pd));
             return ((_mm_popcnt_u64(h0 & (mask1 - 1)) == quot) || (_mm_popcnt_u64(h0 & (mask2 - 1)) == quot));
@@ -651,11 +879,11 @@ namespace pd256_plus {
         uint64_t new_v = (v << quot) & ~h0;
         uint64_t new_v_off = _blsr_u64(new_v);
 
-        if (new_v_off == 0) 
+        if (new_v_off == 0)
             return _mm_popcnt_u64(h0 & (new_v - 1)) == quot;
-        else if (_blsr_u64(new_v_off) == 0)
-        {
-            bool res = (_mm_popcnt_u64(h0 & ((new_v_off) - 1)) == quot) || (_mm_popcnt_u64(h0 & ((new_v ^ new_v_off) - 1)) == quot);
+        else if (_blsr_u64(new_v_off) == 0) {
+            bool res = (_mm_popcnt_u64(h0 & ((new_v_off) - 1)) == quot) ||
+                       (_mm_popcnt_u64(h0 & ((new_v ^ new_v_off) - 1)) == quot);
             assert(res == pd_find_25_ver0(quot, rem, pd));
             return res;
             // return _mm_popcnt_u64(h0 & (new_v - 1)) == quot;
@@ -664,13 +892,98 @@ namespace pd256_plus {
                 const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
                 const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
                 const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
-                const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+                const uint64_t v_mask = (
+                        (_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
                 // bool att = v_mask & new_v;
                 return v_mask & new_v;
             } else {
                 return v & (_blsmsk_u64(h0) >> 1ul);
             }
         }
+    }
+
+    inline bool pd_find_25_ver13_db(uint64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ul);
+        const uint64_t v2 = ((uint64_t) (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ULL)) << quot;
+        // // const uint64_t v3 = (_mm256_cmpeq_epu8_mask(target, *pd) << quot) >> 7ul;
+        // // if ((v << quot) != v2) {
+        // //     std::cout << std::string(80, '*') << std::endl;
+        // //     v_pd256_plus::p_format_word(v);
+        // //     v_pd256_plus::p_format_word(v << quot);
+        // //     v_pd256_plus::p_format_word(v2);
+        // //     v_pd256_plus::p_format_word(v3);
+        // //     std::cout << std::string(80, '-') << std::endl;
+        // //     std::cout << "v        : \t" << v << std::endl;
+        // //     std::cout << "v << quot: \t" << (v << quot) << std::endl;
+        // //     std::cout << "v2:      : \t" << v2 << std::endl;
+        // //     std::cout << "v3:      : \t" << v3 << std::endl;
+        // //     std::cout << "quot:    : \t" << quot << std::endl;
+        // //     std::cout << std::string(80, '*') << std::endl;
+        // // }
+        // assert((v << quot) == v2);
+        if (!v) return false;
+
+        // if (!v2) {
+        //     std::cout << "here" << std::endl;
+        // }
+        const uint64_t v_off = _blsr_u64(v);
+        const uint64_t h0 = get_clean_header(pd);
+
+        if (v_off == 0) {
+            const uint64_t mask = v << quot;
+            auto res = (_mm_popcnt_u64(h0 & (v2 - 1)) == quot) && (!(h0 & v2));
+            auto v_res = (_mm_popcnt_u64(h0 & (mask - 1)) == quot) && (!(h0 & mask));
+            assert(res == v_res);
+            return (_mm_popcnt_u64(h0 & (v2 - 1)) == quot) && (!(h0 & v2));
+        }
+
+        if (quot == 0) {
+            assert(v == v2);
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        }
+        uint64_t new_v = (v << quot) & ~h0;
+        uint64_t new_v2 = v2;
+        const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+        const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+        const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+        const uint64_t v_mask = (
+                (_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+        auto res = v_mask & new_v2;
+        auto v_res = v_mask & new_v;
+        assert(res == v_res);
+        return v_mask & v2;
+    }
+
+    inline bool pd_find_25_ver13(uint64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        // const uint64_t v = (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ul);
+        const uint64_t v2 = ((uint64_t) (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ULL)) << quot;
+
+        if (!v2) return false;
+
+        const uint64_t v_off = _blsr_u64(v2);
+        const uint64_t h0 = get_clean_header(pd);
+
+        if (v_off == 0) {
+            return (_mm_popcnt_u64(h0 & (v2 - 1)) == quot) && (!(h0 & v2));
+        }
+
+        if (quot == 0) {
+            return v2 & (_blsmsk_u64(h0) >> 1ul);
+        }
+        const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+        const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+        const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+        const uint64_t v_mask = (
+                (_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+        return v_mask & v2;
     }
 
     inline bool pd_losse_find_ver1(int64_t quot, uint8_t rem, const __m256i *pd) {
@@ -710,7 +1023,7 @@ namespace pd256_plus {
             return true;
         }
     }
-    
+
     inline bool pd_losse_find_ver3(int64_t quot, uint8_t rem, const __m256i *pd) {
         const __m256i target = _mm256_set1_epi8(rem);
         const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
@@ -728,13 +1041,22 @@ namespace pd256_plus {
 
 
     inline bool pd_find_25(int64_t quot, uint8_t rem, const __m256i *pd) {
+// #ifndef NDEBUG
+//         if (pd_find_25_ver0(quot, rem, pd) != pd_find_25_ver13(quot, rem, pd)) {
+//             pd_find_25_ver13(quot, rem, pd);
+//             pd_find_25_ver13(quot, rem, pd);
+//         }
+// #endif// NDEBUG
+
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver7(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver8(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver9(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver10(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver12(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver11(quot, rem, pd));
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver13(quot, rem, pd));
         return pd_find_25_ver9(quot, rem, pd);
+        // return pd_find_25_ver13(quot, rem, pd);
     }
 
     enum pd_Status {
@@ -822,6 +1144,7 @@ namespace pd256_plus {
             return get_last_byte(pd) < (qr & 255);
         }
     }
+
     inline bool cmp_qr_naive(int64_t quot, uint8_t rem, const __m256i *pd) {
         return cmp_qr_naive((quot << 8) | rem, pd);
     }
@@ -859,6 +1182,7 @@ namespace pd256_plus {
             return (get_last_byte(pd) <= (qr & 255)) ? look_in_the_next_level : No;
         }
     }
+
     inline pd_Status get_status_after_l1_failed(int64_t quot, uint8_t rem, const __m256i *pd) {
         return get_status_after_l1_failed((quot << 8) | ((uint64_t) rem), pd);
     }
@@ -871,7 +1195,10 @@ namespace pd256_plus {
         return (hfb && 64) && (old_qr < qr);
     }
 
-    inline bool cmp_qr_smart(uint16_t qr, const __m256i *pd) {
+    inline bool cmp_qr_smart_slow(uint16_t qr, const __m256i *pd) {
+        // if (!(_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32)){
+        //     return false;
+        // }
 
         const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
         uint16_t old_qr = ((hfb & 31) << 8ul) | get_last_byte(pd);
@@ -884,6 +1211,16 @@ namespace pd256_plus {
         // memcpy(&x, &((uint8_t *) pd)[12], 1);
         // memcpy(&y, &((uint8_t *) pd)[63], 1);
         // return (x & 128) && ((Lookup_Table[x & 127] << 8 | y) < qr);
+    }
+
+    inline bool cmp_qr_smart(uint16_t qr, const __m256i *pd) {
+        if (!(_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32)) {
+            return false;
+        }
+        const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 31;
+        const uint16_t old_qr = (hfb << 8ul) | get_last_byte(pd);
+        assert((old_qr < qr) == cmp_qr_naive(qr, pd));
+        return old_qr < qr;
     }
 
     inline pd_Status pd_find0(int64_t quot, uint8_t rem, const __m256i *pd) {
@@ -1479,7 +1816,8 @@ namespace pd256_plus {
             if (_blsr_u64(_blsr_u64(v)) == 0) new_v_redundant++;
             // std::cout << "r2" << std::endl;
             // new_blsr_arr[2]++;
-            const bool res = (_mm_popcnt_u64(h0 & (v_off - 1)) == quot) || (_mm_popcnt_u64(h0 & ((v_off ^ new_v) - 1)) == quot);
+            const bool res =
+                    (_mm_popcnt_u64(h0 & (v_off - 1)) == quot) || (_mm_popcnt_u64(h0 & ((v_off ^ new_v) - 1)) == quot);
             assert(res == pd_find_25_ver0(quot, rem, pd));
             return res ? Yes : get_status_after_l1_failed(quot, rem, pd);
         }

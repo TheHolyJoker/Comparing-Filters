@@ -1,6 +1,6 @@
 #include "fpd.hpp"
 
-namespace fixed_pd {
+namespace Fixed_pd {
     namespace Header {
         namespace v_fixed_pd {
             void header_to_array(const header_type *header, uint64_t *a) {
@@ -8,6 +8,7 @@ namespace fixed_pd {
                     a[i] = read_counter(i, header);
                 }
             }
+
             auto array_to_header_word(const uint64_t *a, size_t a_size) -> uint64_t {
                 assert(a_size == word_capacity);// zero last words.
                 uint64_t shift = 0;
@@ -171,19 +172,7 @@ namespace fixed_pd {
 
         }// namespace tests
 
-        void set_quot_as_overflow(uint64_t quot, header_type *header) {
-            constexpr uint64_t mask = MASK(counter_size);
-            const size_t w_index = quot / word_capacity;
-            const size_t rel_index = quot % word_capacity;
 
-            // assert(curr_val < last_val);
-            // header[w_index] += (last_val - curr_val) << (rel_index * counter_size);
-
-            uint64_t temp_mask = mask << (rel_index * counter_size);
-            header[w_index] |= temp_mask;
-            bool cond = ((header[w_index] & temp_mask) == temp_mask);
-            assert(cond);
-        }
         // auto read_counter(uint64_t quot, const header_type *header) -> size_t {
         //     const size_t w_index = quot / word_capacity;
         //     const size_t rel_index = quot % word_capacity;
@@ -243,4 +232,4 @@ namespace fixed_pd {
     // }
 
 
-}// namespace fixed_pd
+}// namespace Fixed_pd

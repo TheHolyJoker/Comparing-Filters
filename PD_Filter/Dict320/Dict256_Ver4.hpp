@@ -10,6 +10,9 @@
 #include "pd256_plus.hpp"
 // #include <immintrin.h>
 
+//#include <compare>
+//#include "compare"
+
 #define DICT256_VER4_DB1 (true)
 #define DICT256_VER4_DB2 (true & DICT256_VER4_DB1)
 #define DICT256_VER4_DB3 (true & DICT256_VER4_DB2)
@@ -52,7 +55,8 @@ public:
     Dict256_Ver4(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
         : filter_max_capacity(max_number_of_elements),
           number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
-          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
+          pd_index_length(
+                  ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
           spare_element_length(pd_index_length + quotient_length + remainder_length),
           Hasher(),
           spare_filter(max_number_of_elements) {
@@ -64,9 +68,10 @@ public:
         // assert(sizeof(itemType) <= sizeof(spareItemType));
 
         // spare = new TableType(ceil(1.0 * max_number_of_elements / (1.5 * ceil_log2(max_number_of_elements))),
-        spare = new hashTable_Aligned<uint64_t, 4>(ceil(2.5 * max_number_of_elements / (1.0 * ceil_log2(max_number_of_elements))),
-                                                   ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)) + 13ul,
-                                                   level2_load_factor);
+        spare = new hashTable_Aligned<uint64_t, 4>(
+                ceil(2.5 * max_number_of_elements / (1.0 * ceil_log2(max_number_of_elements))),
+                ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)) + 13ul,
+                level2_load_factor);
 
         int ok = posix_memalign((void **) &pd_array, 32, 32 * number_of_pd);
         if (ok != 0) {
@@ -98,10 +103,12 @@ public:
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) (quot_range << 8ul));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
         const int64_t quot = qr >> 8;
         const uint8_t rem = qr;
+
+        return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index])
+                                                                 : (spare->find(((uint64_t) pd_index << (13)) | qr));
 
         // bool a = pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
 
@@ -114,8 +121,7 @@ public:
         //              (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok));
         // }
 
-        return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : (spare->find(((uint64_t) pd_index << (14)) | qr));
-        
+
         // const pd_name::pd_Status lookup_res = pd_name::pd_find1(quot, rem, &pd_array[pd_index]);
         // // const pd_name::pd_Status lookup_res = pd_name::losse_find(quot, rem, &pd_array[pd_index]);
         // return (lookup_res != pd_name::pd_Status::look_in_the_next_level) ? lookup_res == pd_name::pd_Status::Yes : (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr) == cuckoofilter::Ok);
@@ -123,6 +129,75 @@ public:
 
         // return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index]) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : (spare_filter.Contain(((uint64_t) pd_index << (13)) | qr)) == cuckoofilter::Ok);
     }
+
+    inline auto lookup_branch(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const int64_t w0 = _mm_cvtsi128_si64(_mm256_castsi256_si128(pd_array[pd_index]));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const uint8_t rem = qr;
+
+
+        // const __m256i *ppd = &pd_array[pd_index];
+        // int comparign_res = ((w0 & 31) < (qr >> 8)) + ((w0 & 31) == (qr >> 8)) * 2;
+        // switch (comparign_res) {
+        //     case 0:
+        //         return pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]);
+        //     case 1:
+        //         spare->find(((uint64_t) pd_index << (13)) | qr);
+        //     case 2:
+        //         return (pd_name::get_last_byte(&pd_array[pd_index]) >= rem) ?
+        //            pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]) :
+        //            spare->find(((uint64_t) pd_index << (13)) | qr);
+        //     default:
+        //         assert(0);
+        //         return false;
+        //         break;
+        // }
+
+        if (!(w0 & 32))
+            return pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]);
+        if ((w0 & 31) > (qr >> 8)) {
+            return pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]);
+        } else if ((w0 & 31) < (qr >> 8)) {
+            return spare->find(((uint64_t) pd_index << (13)) | qr);
+        } else {
+            return (pd_name::get_last_byte(&pd_array[pd_index]) >= rem) ?
+                   pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]) :
+                   spare->find(((uint64_t) pd_index << (13)) | qr);
+        }
+    }
+
+    inline auto lookup_branch2(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const int64_t w0 = _mm_cvtsi128_si64(_mm256_castsi256_si128(pd_array[pd_index]));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const uint8_t rem = qr;
+
+
+        if (!(w0 & 32))
+            return pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]);
+
+        int comparign_res = ((w0 & 31) < (qr >> 8)) + ((w0 & 31) == (qr >> 8)) * 2;
+        switch (comparign_res) {
+            case 0:
+                return pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]);
+            case 1:
+                return spare->find(((uint64_t) pd_index << (13)) | qr);
+            case 2:
+                return (pd_name::get_last_byte(&pd_array[pd_index]) >= rem) ?
+                       pd_name::pd_find_25(qr >> 8, rem, &pd_array[pd_index]) :
+                       spare->find(((uint64_t) pd_index << (13)) | qr);
+            default:
+                break;
+        }
+        assert(0);
+        return false;
+    }
+
 
     inline auto lookup_safe(const itemType s, int result_value) const -> bool {
         uint64_t hash_res = Hasher(s);
@@ -138,8 +213,11 @@ public:
         bool b = spare_filter.Contain(spare_val) == cuckoofilter::Ok;
         bool b2 = spare->find(spare_val);
         bool c = pd_name::cmp_qr_smart(qr, &pd_array[pd_index]);
-        bool d = (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : (spare_filter.Contain(spare_val) == cuckoofilter::Ok);
-        bool e = pd_name::cmp_qr_smart(qr, &pd_array[pd_index]) ? (spare_filter.Contain(spare_val) == cuckoofilter::Ok) : pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
+        bool d = (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index])
+                                                                   : (spare_filter.Contain(spare_val) ==
+                                                                      cuckoofilter::Ok);
+        bool e = pd_name::cmp_qr_smart(qr, &pd_array[pd_index]) ? (spare_filter.Contain(spare_val) == cuckoofilter::Ok)
+                                                                : pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
 
         assert(e == d);
         if (result_value == 1) {
@@ -157,6 +235,7 @@ public:
         return d;
         //        return (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index]) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) : spare_filter.Contain(((uint64_t) pd_index << (13)) | qr)) == cuckoofilter::Ok;
     }
+
     auto lookup_count(const itemType s, int caser = 0) -> bool {
         static size_t l1_lookups[2] = {0, 0};
         static size_t l2_lookups[2] = {0, 0};
@@ -193,7 +272,8 @@ public:
         const uint8_t rem = qr;
         // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         // const uint8_t rem = out2 & MASK(bits_per_item);
-        const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
+        const uint64_t spare_element =
+                ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
         auto res = pd_name::pd256_plus_count(quot, rem, &pd_array[pd_index]);
         if (res == pd_name::look_in_the_next_level)
             OF_counter++;
@@ -246,7 +326,8 @@ public:
             // c2++;
             // assert(pd_last_qr );
             assert(pd_name::pd_full(&pd_array[pd_index]));
-            uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | ((uint64_t) rem);
+            uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) |
+                                 ((uint64_t) rem);
             assert((res_qr & spare_val) == res_qr);
             insert_to_spare_without_pop(spare_val);
             auto res = spare_filter.Add(spare_val);
@@ -444,6 +525,7 @@ public:
         // bool c = (pd_name::get_capacity(&pd_array[pd_index]) == (pd_name::get_capacity_naive(&pd_array[pd_index])));
         // return c & pd_name::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
     }
+
     auto get_extended_info() -> std::stringstream {
         // print_search_counters();
         std::stringstream ss;

@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace Wrap_Fixed_pd {
-    // using namespace fixed_pd;
+    // using namespace Fixed_pd;
 
     // typedef std::tuple<uint64_t, uint16_t> vec_key;
 
@@ -43,28 +43,81 @@ namespace Wrap_Fixed_pd {
     auto validate_init_packed_fpd(packed_fpd *pd) -> bool;
 
 
-    auto add(uint64_t quot, uint8_t rem, uint64_t *header, __m512i *body) -> int;
+    /*     auto add(uint64_t quot, uint8_t rem, uint64_t *header, __m512i *body) -> int;
 
     auto find(uint64_t quot, uint8_t rem, const uint64_t *header, const __m512i *body) -> int;
 
-    // auto find(uint64_t quot, uint8_t rem, packed_fpd * pd) -> int;
-    // auto add(uint64_t quot, packed_fpd * pd) -> int;
-
-    // auto vector_find(uint64_t quot, uint8_t rem, packed_fpd *pd) -> bool;
-
-    // void vector_add(uint64_t quot, uint8_t rem, packed_fpd *pd);
-    // void vector_promote_quot(uint64_t quot, packed_fpd *pd) {
-    //     size_t begin_fingerprint = Header::get_start(quot, pd->header);
-    //     for (size_t i = 0; i < last_val - 1; i++) {
-    //         uint8_t temp_rem = ((uint8_t *) (&pd->body))[begin_fingerprint + i];
-    //         vector_add(quot, temp_rem, promote_quot_and_remove_from_bodyd);
-    //     }
-    // }
-
-    // void promote_quot_and_remove_from_body(uint64_t quot, size_t counter_size,uint64_t *header, __m512i* body);
-
-    // void promote_quot_and_remove_from_body(uint64_t quot, uint64_t *header, __m512i* body);
-
     auto get_capacity(uint64_t *header, __m512i *body) -> size_t;
+ */
+
+    inline auto find(uint64_t quot, uint8_t rem, const uint64_t *header, const __m512i *body) -> int {
+        auto counter = Fixed_pd::Header::read_counter(quot, header);
+        if (counter == 0) {
+            return 0;
+        } else if (counter == Fixed_pd::counter_overflowed_val) {
+            return -1;
+        }
+
+        uint64_t v = Fixed_pd::Body::get_v(rem, body);
+        if (!v) {
+            return 0;
+        }
+
+        uint64_t start = Fixed_pd::Header::get_start(quot, header);
+        return (v >> start) & MASK(counter);
+    }
+
+    inline auto find2(uint64_t quot, uint8_t rem, const uint64_t *header, const __m512i *body) -> int {
+        const size_t counter = Fixed_pd::Header::read_counter(quot, header);
+        if (counter != Fixed_pd::counter_overflowed_val) {
+            if (!counter)
+                return 0;
+            uint64_t v = Fixed_pd::Body::get_v(rem, body);
+            if (!v)
+                return 0;
+
+            uint64_t start = Fixed_pd::Header::get_start(quot, header);
+            return (v >> start) & MASK(counter);
+        }
+        return -1;
+    }
+
+    inline auto find3(uint64_t quot, uint8_t rem, const uint64_t *header, const __m512i *body) -> int {
+        const size_t counter = Fixed_pd::Header::read_counter(quot, header);
+        switch (counter) {
+            case 0:
+                return 0;
+
+            case Fixed_pd::counter_overflowed_val:
+                return -1;
+
+            default:
+                break;
+        }
+        uint64_t v = Fixed_pd::Body::get_v(rem, body);
+        if (!v)
+            return 0;
+
+        uint64_t start = Fixed_pd::Header::get_start(quot, header);
+        return (v >> start) & MASK(counter);
+    }
+
+    inline auto add(uint64_t quot, uint8_t rem, uint64_t *header, __m512i *body) -> int {
+        assert(quot < Fixed_pd::QUOT_RANGE);
+        int header_add_res = Fixed_pd::Header::add(quot, header);
+        if (header_add_res == -1) {
+            uint64_t start = Fixed_pd::Header::get_start(quot, header);
+            assert(start <= Fixed_pd::CAPACITY);
+            uint64_t end = Fixed_pd::Header::read_counter(quot, header);
+            Fixed_pd::Body::add(start, start + end - 1, rem, body);
+            return -1;
+        }
+        return header_add_res;
+    }
+
+
+    inline auto get_capacity(uint64_t *header, __m512i *body) -> size_t {
+        return Fixed_pd::Header::get_capacity(header);
+    }
 }// namespace Wrap_Fixed_pd
 #endif// FILTERS_WRAP_FIXED_PD_HPP
