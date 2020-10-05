@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     // assert((default_validation_test_single<Table_TC, itemType>()));
     assert(print_pass());
 
-    get_fp_ratios();
+//    get_fp_ratios();
 
     const size_t max_filter_capacity = 62411242;
     const size_t lookup_reps = 124822484;
@@ -106,22 +106,26 @@ int main(int argc, char **argv) {
     // size_t del_size = 1.0 * max_filter_capacity / (double) bench_precision;
     fill_vec(elements.at(2), del_size);
 
+    single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
+
     /** Single benching  */
     //    single_bench<Table_Fixed_Dict, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // return 0;
-    int c = 3;
-    while (c--) {
+    // int c = 3;
+    // while (c--) {
 //        single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        single_bench<Table_Fixed_Dict, itemType>(max_filter_capacity, bench_precision, false, &elements);
-        single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//        single_bench<Table_Fixed_Dict, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//        single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
 //        single_bench<Table_Dict512_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
 //        single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
 //        single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
 //        single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
 
-        // single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    }
+    // single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // }
     // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict512_Ver3, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);

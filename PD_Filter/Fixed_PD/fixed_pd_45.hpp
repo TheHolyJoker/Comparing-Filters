@@ -21,27 +21,37 @@
 namespace Fixed_pd45 {
 
     static constexpr uint8_t Table3_9[512] =
-            {0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 1,
-             2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9, 3,
-             4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5,
-             6, 7, 8, 9, 10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0,
-             1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8, 2,
-             3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9, 10, 4,
-             5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6,
-             7, 8, 9, 10, 11, 12, 13, 7, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9,
-             3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13,
-             7, 8, 9, 10, 11, 12, 13, 14, 8, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9, 10, 4, 5,
-             6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8,
-             9, 10, 11, 12, 13, 14, 15, 9, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6,
-             7, 8, 9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 9, 10, 11, 12, 13, 14, 15,
-             9, 10, 11, 12, 13, 14, 15, 16, 10, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11,
-             12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 9, 10, 11, 12, 13, 14, 15, 9, 10, 11, 12,
-             13, 14, 15, 16, 10, 11, 12, 13, 14, 15, 16, 17, 11, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 7,
-             8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 9, 10, 11, 12, 13, 14, 15, 9, 10, 11, 12, 13, 14, 15,
-             16, 10, 11, 12, 13, 14, 15, 16, 17, 11, 12, 13, 14, 15, 16, 17, 18, 12, 6, 7, 8, 9, 10, 11, 12, 6, 0, 1, 2,
-             3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9,
-             10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0
+            {0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7,
+             8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6,
+             7, 1, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6,
+             7, 8, 9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4,
+             5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 7, 8, 9,
+             10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7,
+             8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11,
+             12, 13, 14, 8, 9, 10, 11, 12, 13, 14, 15, 9, 3, 4, 5, 6, 7, 8, 9, 3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8,
+             9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 9, 10,
+             11, 12, 13, 14, 15, 9, 10, 11, 12, 13, 14, 15, 16, 10, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5,
+             6, 7, 8, 9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 9, 10, 11, 12, 13, 14,
+             15, 9, 10, 11, 12, 13, 14, 15, 16, 10, 11, 12, 13, 14, 15, 16, 17, 11, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8,
+             9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 9, 10, 11, 12, 13, 14, 15, 9,
+             10, 11, 12, 13, 14, 15, 16, 10, 11, 12, 13, 14, 15, 16, 17, 11, 12, 13, 14, 15, 16, 17, 18, 12, 6, 7, 8, 9,
+             10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9,
+             3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0
             };
+
+    static constexpr uint16_t div_mod_Table[100] = {0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0, 9, 0, 10,
+                                                    0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16, 0, 17, 0, 18, 0, 19, 0,
+                                                    20, 1, 0, 1, 1, 1, 2, 1, 3, 1, 4, 1, 5, 1, 6, 1, 7, 1, 8, 1, 9, 1,
+                                                    10, 1, 11, 1, 12, 1, 13, 1, 14, 1, 15, 1, 16, 1, 17, 1, 18, 1, 19,
+                                                    1, 20, 2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 2, 6, 2, 7};
+
+
+    static constexpr uint16_t div_mod_Table2[100] = {0, 0, 0, 3, 0, 6, 0, 9, 0, 12, 0, 15, 0, 18, 0, 21, 0, 24, 0, 27,
+                                                     0, 30, 0, 33, 0, 36, 0, 39, 0, 42, 0, 45, 0, 48, 0, 51, 0, 54, 0,
+                                                     57, 0, 60, 1, 0, 1, 3, 1, 6, 1, 9, 1, 12, 1, 15, 1, 18, 1, 21, 1,
+                                                     24, 1, 27, 1, 30, 1, 33, 1, 36, 1, 39, 1, 42, 1, 45, 1, 48, 1, 51,
+                                                     1, 54, 1, 57, 1, 60, 2, 0, 2, 3, 2, 6, 2, 9, 2, 12, 2, 15, 2, 18,
+                                                     2, 21};
 
 
     typedef uint64_t header_type;
@@ -99,10 +109,20 @@ namespace Fixed_pd45 {
         void set_quot_as_overflow(uint64_t quot, header_type *header);
 
         inline auto read_counter(uint64_t quot, const __m512i *pd) -> size_t {
-            const size_t w_index = quot / word_capacity;
-            const size_t rel_index = quot % word_capacity;
-            return (((uint64_t *) pd)[w_index] >> (rel_index * counter_size)) & MASK(counter_size);
+            return (((uint64_t *) pd)[div_mod_Table2[quot << 1u]] >> (div_mod_Table2[(quot << 1u) | 1u])) &
+                   counter_overflowed_val;
+
+//            const uint16_t temp = quot << 1ul;
+//            const size_t w_index = div_mod_Table2[temp];
+//            const size_t rel_index = div_mod_Table2[temp | 1u];
+//            return (((uint64_t *) pd)[w_index] >> (rel_index)) & counter_overflowed_val;
+//            return (((uint64_t *) pd)[w_index] >> (rel_index * counter_size)) & MASK(counter_size);
         }
+
+        // auto read_counter(uint64_t quot, const __m512i *pd) -> size_t;
+
+
+
 
         auto sum_words_naive(size_t w_end_index, const header_type *header) -> size_t;
 
@@ -125,19 +145,20 @@ namespace Fixed_pd45 {
      *         int -4 - the pd overflowed, and the fullest quot should be promoted (moved to the next level).
      */
         inline auto add(uint64_t quot, __m512i *pd) -> int {
+            const uint16_t temp = quot << 1ul;
+            const size_t w_index = div_mod_Table2[temp];
+            const size_t rel_index = div_mod_Table2[temp | 1u];
 
-            const size_t w_index = quot / word_capacity;
-            const size_t rel_index = quot % word_capacity;
 
             const size_t res = read_counter(quot, pd);
             if (res < max_valid_counter_value) {
                 if (get_capacity(pd) == CAPACITY) {
                     return -4;
                 }
-                ((uint64_t *) pd)[w_index] += 1ULL << (rel_index * counter_size);
+                ((uint64_t *) pd)[w_index] += 1ULL << rel_index;
                 return -1;
             } else if (res == max_valid_counter_value) {
-                ((uint64_t *) pd)[w_index] += 1ULL << (rel_index * counter_size);
+                ((uint64_t *) pd)[w_index] += 1ULL << rel_index;
                 return -3; // or quot.
             } else
                 return -2;
@@ -156,11 +177,6 @@ namespace Fixed_pd45 {
                 assert(temp + 1 == temp2);
             }
             return res;
-        }
-
-
-        inline auto find(uint64_t quot, const __m512i *pd) -> int {
-            return read_counter(quot, pd);
         }
 
 
@@ -280,8 +296,9 @@ namespace Fixed_pd45 {
         }
 
         inline auto get_start(uint64_t quot, const __m512i *pd) -> size_t {
-            const size_t w_index = quot / word_capacity;
-            const size_t rel_index = quot % word_capacity;
+            const uint16_t temp = quot << 1ul;
+            const size_t w_index = div_mod_Table2[temp];
+            const size_t rel_index = div_mod_Table2[temp | 1u] / 3;
 
             switch (w_index) {
                 case 0:
@@ -385,9 +402,10 @@ namespace Fixed_pd45 {
 
         inline void set_quot_as_overflow(uint64_t quot, __m512i *pd) {
             constexpr uint64_t mask = MASK(counter_size);
-            const size_t rel_index = quot % word_capacity;
-            const size_t w_index = quot / word_capacity;
-            const uint64_t temp_mask = mask << (rel_index * counter_size);
+            const uint16_t temp = quot << 1ul;
+            const size_t w_index = div_mod_Table2[temp];
+            const size_t rel_index = div_mod_Table2[temp | 1u];
+            const uint64_t temp_mask = mask << rel_index;
             ((uint64_t *) pd)[w_index] |= temp_mask;
         }
 
@@ -452,6 +470,23 @@ namespace Fixed_pd45 {
             Body::add(start, start + end - 1, rem, pd);
         }
         return header_add_res;
+    }
+
+
+    inline auto find(uint64_t quot, uint8_t rem, const __m512i *pd) -> int {
+        const size_t counter = Header::read_counter(quot, pd);
+
+        if (counter == 0)
+            return 0;
+
+        if (counter == max_valid_counter_value)
+            return -1;
+
+        uint64_t v = Body::get_v(rem, pd);
+        if (!v)
+            return 0;
+
+
     }
 
 
