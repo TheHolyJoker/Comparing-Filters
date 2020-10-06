@@ -578,7 +578,7 @@ private:
     inline auto find_helper(bucket_type x, size_t bucket_index) const -> bool {
         //        auto table_index = bucket_index * bucket_size;
         auto *bp = Table[bucket_index].bits_;
-        return ((bp[0] == x) | (bp[1] == x) | (bp[2] == x) | (bp[3] == x));
+        return ((bp[0] == x) || (bp[1] == x) || (bp[2] == x) || (bp[3] == x));
         // for (int i = 0; i < bucket_size; ++i) {
         //     if (bp[i] == x)
         //         //            if (is_equal(table[table_index + i], x))

@@ -10,8 +10,8 @@
 #include <climits>
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <immintrin.h>
+#include <iostream>
 #include <x86intrin.h>
 
 
@@ -36,8 +36,7 @@ namespace Fixed_pd45 {
              9, 10, 11, 12, 6, 7, 8, 9, 10, 11, 12, 13, 7, 8, 9, 10, 11, 12, 13, 14, 8, 9, 10, 11, 12, 13, 14, 15, 9,
              10, 11, 12, 13, 14, 15, 16, 10, 11, 12, 13, 14, 15, 16, 17, 11, 12, 13, 14, 15, 16, 17, 18, 12, 6, 7, 8, 9,
              10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 4, 5, 6, 7, 1, 2, 3, 4, 5, 6, 7, 8, 2, 3, 4, 5, 6, 7, 8, 9,
-             3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0
-            };
+             3, 4, 5, 6, 7, 8, 9, 10, 4, 5, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8, 9, 10, 11, 12, 6, 0, 1, 2, 3, 4, 5, 6, 0};
 
     static constexpr uint16_t div_mod_Table[100] = {0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0, 8, 0, 9, 0, 10,
                                                     0, 11, 0, 12, 0, 13, 0, 14, 0, 15, 0, 16, 0, 17, 0, 18, 0, 19, 0,
@@ -46,12 +45,16 @@ namespace Fixed_pd45 {
                                                     1, 20, 2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 2, 6, 2, 7};
 
 
-    static constexpr uint16_t div_mod_Table2[100] = {0, 0, 0, 3, 0, 6, 0, 9, 0, 12, 0, 15, 0, 18, 0, 21, 0, 24, 0, 27,
-                                                     0, 30, 0, 33, 0, 36, 0, 39, 0, 42, 0, 45, 0, 48, 0, 51, 0, 54, 0,
-                                                     57, 0, 60, 1, 0, 1, 3, 1, 6, 1, 9, 1, 12, 1, 15, 1, 18, 1, 21, 1,
-                                                     24, 1, 27, 1, 30, 1, 33, 1, 36, 1, 39, 1, 42, 1, 45, 1, 48, 1, 51,
-                                                     1, 54, 1, 57, 1, 60, 2, 0, 2, 3, 2, 6, 2, 9, 2, 12, 2, 15, 2, 18,
-                                                     2, 21};
+    static constexpr uint8_t div_mod_Table2[100] = {0, 0, 0, 3, 0, 6, 0, 9, 0, 12, 0, 15, 0, 18, 0, 21, 0, 24, 0, 27,
+                                                    0, 30, 0, 33, 0, 36, 0, 39, 0, 42, 0, 45, 0, 48, 0, 51, 0, 54, 0,
+                                                    57, 0, 60, 1, 0, 1, 3, 1, 6, 1, 9, 1, 12, 1, 15, 1, 18, 1, 21, 1,
+                                                    24, 1, 27, 1, 30, 1, 33, 1, 36, 1, 39, 1, 42, 1, 45, 1, 48, 1, 51,
+                                                    1, 54, 1, 57, 1, 60, 2, 0, 2, 3, 2, 6, 2, 9, 2, 12, 2, 15, 2, 18,
+                                                    2, 21};
+
+    static constexpr uint8_t word_index_Table[50] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                                     2, 2, 2, 2, 2, 2, 2, 2};
 
 
     typedef uint64_t header_type;
@@ -108,20 +111,21 @@ namespace Fixed_pd45 {
 
         void set_quot_as_overflow(uint64_t quot, header_type *header);
 
-        inline auto read_counter(uint64_t quot, const __m512i *pd) -> size_t {
+        inline auto read_counter1(uint64_t quot, const __m512i *pd) -> size_t {
+            constexpr size_t counter = 3;
+            assert(quot < 50);
+            const size_t w_index = quot / 21;
+            const size_t rel_index = quot % 21;
+            return (((uint64_t *) pd)[w_index] >> (rel_index * counter)) & 7u;
+            return (((uint64_t *) pd)[w_index] >> (rel_index * counter_size)) & MASK(counter_size);
+        }
+
+        inline auto read_counter(uint64_t quot, const __m512i *pd) -> uint8_t {
             return (((uint64_t *) pd)[div_mod_Table2[quot << 1u]] >> (div_mod_Table2[(quot << 1u) | 1u])) &
                    counter_overflowed_val;
-
-//            const uint16_t temp = quot << 1ul;
-//            const size_t w_index = div_mod_Table2[temp];
-//            const size_t rel_index = div_mod_Table2[temp | 1u];
-//            return (((uint64_t *) pd)[w_index] >> (rel_index)) & counter_overflowed_val;
-//            return (((uint64_t *) pd)[w_index] >> (rel_index * counter_size)) & MASK(counter_size);
         }
 
         // auto read_counter(uint64_t quot, const __m512i *pd) -> size_t;
-
-
 
 
         auto sum_words_naive(size_t w_end_index, const header_type *header) -> size_t;
@@ -159,7 +163,7 @@ namespace Fixed_pd45 {
                 return -1;
             } else if (res == max_valid_counter_value) {
                 ((uint64_t *) pd)[w_index] += 1ULL << rel_index;
-                return -3; // or quot.
+                return -3;// or quot.
             } else
                 return -2;
         }
@@ -219,14 +223,40 @@ namespace Fixed_pd45 {
             uint16_t f = Table3_9[(word >> 45ul) & mask];
             uint16_t g = Table3_9[(word >> 54ul) & mask];
             size_t res = a + b + c + d + e + f + g;
-//            size_t v_res = sum_word_v11(word);
-//            assert(res == v_res);
+            //            size_t v_res = sum_word_v11(word);
+            //            assert(res == v_res);
             return res;
+        }
+
+        inline auto clear_OF_counters(uint64_t word) -> uint64_t {
+            const uint64_t temp = (word & ((word & (word >> 1ul)) >> 1ul)) & 1317624576693539401ULL;
+            const uint64_t res_mask = temp * 7;
+            return res_mask ^ word;
+        }
+
+        inline auto octal_digit_sum(uint64_t word) -> uint64_t {
+            constexpr uint64_t m1 = 1317624576693539401ULL;
+            size_t a = _mm_popcnt_u64(word & m1);
+            size_t b = _mm_popcnt_u64(word & (m1 << 1));
+            size_t c = _mm_popcnt_u64(word & (m1 << 2));
+            return a + b * 2 + c * 4;
+        }
+
+        inline auto sum_word_v2(uint64_t word) -> size_t {
+            auto res = octal_digit_sum(clear_OF_counters(word));
+            assert(res == sum_word_v1(word));
+            return res;
+        }
+
+        inline auto sum_single_word(uint64_t word) -> size_t {
+            //     assert(sum_word_v0(word) == sum_word_v1(word));
+            //     assert(sum_word_v0(word) == sum_word_v2(word));
+            return sum_word_v2(word);
         }
 
         inline auto sum_last_word_naive(uint64_t word) -> size_t {
             uint64_t masked_word = word & MASK(8 * counter_size);
-            return sum_word_v1(masked_word);
+            return sum_single_word(masked_word);
         }
 
 
@@ -238,27 +268,23 @@ namespace Fixed_pd45 {
             uint16_t a = Table3_9[word & mask];
             uint16_t b = Table3_9[(word >> 9ul) & mask];
             uint16_t c = Table3_9[(word >> 18ul) & last_mask];
-//            auto res = a + b + c;
-//            auto v_res = sum_last_word_naive(word);
-//            assert(res == v_res);
             return a + b + c;
         }
 
-//        inline auto sum_words(size_t w_end_index, const header_type *header) -> size_t {
-//            size_t res = 0;
-//            for (size_t i = 0; i < w_end_index; i++) {
-//                res += sum_word_v1(header[i]);
-//            }
-//            return res;
-//        }
+        //        inline auto sum_words(size_t w_end_index, const header_type *header) -> size_t {
+        //            size_t res = 0;
+        //            for (size_t i = 0; i < w_end_index; i++) {
+        //                res += sum_single_word(header[i]);
+        //            }
+        //            return res;
+        //        }
 
         inline auto sum_words(const __m512i *pd) -> size_t {
-            return sum_word_v1(((uint64_t *) pd)[0]) + sum_word_v1(((uint64_t *) pd)[1]) +
+            return sum_single_word(((uint64_t *) pd)[0]) + sum_single_word(((uint64_t *) pd)[1]) +
                    sum_last_word(((uint64_t *) pd)[2]);
-
         }
 
-/*
+        /*
         inline auto sum_word_lim_v0(size_t rel_index, header_type word) -> size_t {
             constexpr uint64_t mask = MASK(counter_size);
             assert(rel_index <= (slot_size / counter_size));
@@ -274,8 +300,8 @@ namespace Fixed_pd45 {
 
         inline auto sum_word_lim_v2(size_t rel_index, header_type word) -> size_t {
             uint64_t masked_word = word & MASK(rel_index * counter_size);
-            return sum_word_v1(masked_word);
-            /*// auto res = sum_word_v1(masked_word);
+            return sum_single_word(masked_word);
+            /*// auto res = sum_single_word(masked_word);
             // auto v_res = sum_word_lim_v0(rel_index, word);
             // if (res != v_res) {
             //     spaced_bin(word);
@@ -283,7 +309,7 @@ namespace Fixed_pd45 {
             // }
             // assert(res == v_res);
             // return res;
-            // return sum_word_v1(word) - sum_word_v1(masked_word);*/
+            // return sum_single_word(word) - sum_single_word(masked_word);*/
         }
 
         inline auto sum_last_word_lim_v2(size_t rel_index, header_type word) -> size_t {
@@ -298,17 +324,17 @@ namespace Fixed_pd45 {
         inline auto get_start(uint64_t quot, const __m512i *pd) -> size_t {
             const uint16_t temp = quot << 1ul;
             const size_t w_index = div_mod_Table2[temp];
-            const size_t rel_index = div_mod_Table2[temp | 1u] / 3;
+            const size_t rel_index = div_mod_Table2[temp | 1u];
+            const uint64_t mask = MASK(div_mod_Table2[temp | 1u]);
 
             switch (w_index) {
                 case 0:
-                    return sum_word_lim_v2(rel_index, ((uint64_t *) pd)[0]);
+                    return sum_single_word(((uint64_t *) pd)[0] & mask);
                 case 1:
-                    return sum_word_v1(((uint64_t *) pd)[0]) +
-                           sum_word_lim_v2(rel_index, ((uint64_t *) pd)[1]);
+                    return sum_single_word(((uint64_t *) pd)[0]) + sum_single_word(((uint64_t *) pd)[1] & mask);
                 case 2:
-                    return sum_word_v1(((uint64_t *) pd)[0]) + sum_word_v1(((uint64_t *) pd)[1]) +
-                           sum_last_word_lim_v2(rel_index, ((uint64_t *) pd)[2]);
+                    return sum_single_word(((uint64_t *) pd)[0]) + sum_single_word(((uint64_t *) pd)[1]) +
+                           sum_last_word(((uint64_t *) pd)[2] & mask);
                 default:
                     assert(false);
                     return -1;
@@ -463,7 +489,8 @@ namespace Fixed_pd45 {
     inline auto add(uint64_t quot, uint8_t rem, __m512i *pd) -> int {
         assert(quot < QUOT_RANGE);
         int header_add_res = Header::add(quot, pd);
-        if (header_add_res == -1) { ;
+        if (header_add_res == -1) {
+            ;
             uint64_t start = Header::get_start(quot, pd);
             assert(start <= CAPACITY);
             uint64_t end = Header::read_counter(quot, pd);
@@ -485,12 +512,10 @@ namespace Fixed_pd45 {
         uint64_t v = Body::get_v(rem, pd);
         if (!v)
             return 0;
-
-
     }
 
 
-}// namespace Fixed_pd
+}// namespace Fixed_pd45
 
 
-#endif //COMPARING_FILTERS_SIMPLER_FIXED_PD_45_HPP
+#endif//COMPARING_FILTERS_SIMPLER_FIXED_PD_45_HPP

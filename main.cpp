@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     // assert((default_validation_test_single<Table_TC, itemType>()));
     assert(print_pass());
 
-//    get_fp_ratios();
+   get_fp_ratios();
 
     const size_t max_filter_capacity = 62411242;
     const size_t lookup_reps = 124822484;
