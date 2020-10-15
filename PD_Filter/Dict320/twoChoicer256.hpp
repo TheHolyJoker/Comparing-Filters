@@ -1,15 +1,15 @@
 
-#ifndef TWOCHOICER320_HEADER
-#define TWOCHOICER320_HEADER
+#ifndef TWOCHOICER256_HEADER
+#define TWOCHOICER256_HEADER
 
 #include "../HashTables/hashTable_Aligned.hpp"
 #include "../hashutil.h"
 // #include "Analyse/analyse.hpp"
-#include "pd320.hpp"
+#include "pd256.hpp"
 
 
-#define TWOCHOICER320_HEADER_DB1 (true)
-#define TWOCHOICER320_HEADER_DB2 (true & TWOCHOICER320_HEADER_DB1)
+#define TWOCHOICER256_HEADER_DB1 (false)
+#define TWOCHOICER256_HEADER_DB2 (true & TWOCHOICER256_HEADER_DB1)
 
 // static size_t insert_counter = 0;
 // static size_t lookup_counter = 0;
@@ -22,51 +22,47 @@
 //int case, size_t pd_index, uint64_t quot, uint64_t rem,size_t insert_counter
 typedef std::tuple<int, size_t, uint64_t, uint64_t, size_t> db_key;
 
-template<
-        typename itemType,
-        size_t bits_per_item = 8,
-        size_t max_capacity = 32,
-        size_t quot_range = 32>
-class twoChoicer320 {
+template<typename itemType>
+class twoChoicer256 {
     hashing::TwoIndependentMultiplyShift hasher;
     // size_t capacity{0};
     const size_t filter_max_capacity;
-    const size_t remainder_length{bits_per_item},
-            quotient_range{quot_range},
-            quotient_length{ceil_log2(quot_range)},
-            single_pd_capacity{max_capacity};
+    const size_t remainder_length{8},
+            quotient_range{QUOT_SIZE22},
+            quotient_length{ceil_log2(quotient_range)},
+            single_pd_capacity{CAPACITY26};
     const uint32_t seed{12345};
 
     const size_t pd_index_length, number_of_pd;
     // const size_t spare_element_length;
     //    bool hashing_test;
-    __m512i *pd_array;
+    __m256i *pd_array;
 
     // size_t insert_existing_counter = 0;
 
 public:
-    twoChoicer320(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
+    twoChoicer256(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
         : filter_max_capacity(max_number_of_elements),
-          number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 1)),
-          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor, 1))) {
+          number_of_pd(compute_number_of_PD(max_number_of_elements, CAPACITY26, level1_load_factor, 1)),
+          pd_index_length(ceil_log2(compute_number_of_PD(max_number_of_elements, CAPACITY26, level1_load_factor, 1))) {
         //        hashing_test = false;
 
-        int ok = posix_memalign((void **) &pd_array, 64, 64 * number_of_pd);
+        int ok = posix_memalign((void **) &pd_array, 32, 32 * number_of_pd);
 
         if (ok != 0) {
             cout << "Failed!!!" << endl;
             assert(false);
             return;
         }
-        std::fill(pd_array, pd_array + number_of_pd, __m512i{(INT64_C(1) << 32) - 1, 0, 0, 0, 0, 0, 0, 0});
+        std::fill(pd_array, pd_array + number_of_pd, __m256i{(INT64_C(1) << QUOT_SIZE22) - 1, 0, 0, 0});
     }
 
-    virtual ~twoChoicer320() {
+    virtual ~twoChoicer256() {
         free(pd_array);
     }
 
     auto get_alt_index(uint32_t index, uint32_t rem) const -> uint32_t {
-        if (TWOCHOICER320_HEADER_DB1) {
+        if (TWOCHOICER256_HEADER_DB1) {
             auto temp_res = index ^ (rem * 0x5bd1e995);
             // auto index_to_validate = (temp_res ^ (rem * 0x5bd1e995)) % number_of_pd;
             auto index_to_validate = (temp_res ^ (rem * 0x5bd1e995)) & (number_of_pd - 1);
@@ -88,33 +84,41 @@ public:
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         // const uint32_t pd_index = out1 % number_of_pd;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        const uint64_t quot = (out2 >> 8) & 31;
+        const uint16_t quot = reduce16((uint16_t) out2, (uint16_t) QUOT_SIZE22);
+        // const uint64_t quot = (out2 >> 8) & QUOT_SIZE22;
         const uint8_t rem = out2 & 255;
         assert(pd_index < number_of_pd);
         assert(quot < 32);
 
-        return (pd320::pd_find_32(quot, rem, &pd_array[pd_index])) || (pd320::pd_find_32(quot, rem, &pd_array[get_alt_index(pd_index, rem)]));
+        const uint32_t v = pd256::get_v(rem, &pd_array[pd_index]);
+        return (v) ? pd256::pd_find_with_v(quot, v, &pd_array[pd_index]) : (pd256::pd_find_26(quot, rem, &pd_array[get_alt_index(pd_index, rem)]));
+
+        // return (pd256::pd_find_26(quot, rem, &pd_array[pd_index])) || (pd256::pd_find_26(quot, rem, &pd_array[get_alt_index(pd_index, rem)]));
     }
 
     void insert(const itemType s) {
+        // static int counter = 0;
+        // counter++;
         uint64_t hash_res = hasher(s);
 
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index1 = reduce32(out1, (uint32_t) number_of_pd);
         // const uint32_t pd_index1 = out1 % number_of_pd;
-        const uint64_t quot = (out2 >> 8) & 31;
+        const uint16_t quot = reduce16((uint16_t) out2, (uint16_t) QUOT_SIZE22);
+        // const uint64_t quot = (out2 >> 8) & 31;
         const uint8_t rem = out2 & 255;
         const uint32_t pd_index2 = get_alt_index(pd_index1, rem);
         assert(pd_index1 < number_of_pd);
         assert(pd_index2 < number_of_pd);
-        assert(quot < 32);
+        assert(quot < QUOT_SIZE22);
 
-        (pd320::get_capacity(&pd_array[pd_index1]) < pd320::get_capacity(&pd_array[pd_index2]))
-                ? pd320::pd_add_32(quot, rem, &pd_array[pd_index1])
-                : pd320::pd_add_32(quot, rem, &pd_array[pd_index2]);
+        assert(!(pd256::pd_full(&pd_array[pd_index1]) && pd256::pd_full(&pd_array[pd_index2])));
+        (pd256::get_capacity(&pd_array[pd_index1]) < pd256::get_capacity(&pd_array[pd_index2]))
+                ? pd256::pd_add_26(quot, rem, &pd_array[pd_index1])
+                : pd256::pd_add_26(quot, rem, &pd_array[pd_index2]);
     }
     void remove(const itemType s) {
-        // assert(false);
+        assert(false);
         assert(lookup(s));
 
         uint64_t hash_res = hasher(s);
@@ -128,7 +132,7 @@ public:
         assert(quot < 32);
 
 
-        pd320::conditional_remove(quot, rem, &pd_array[pd_index]) || pd320::conditional_remove(quot, rem, &pd_array[get_alt_index(pd_index, rem)]);
+        pd256::conditional_remove(quot, rem, &pd_array[pd_index]) || pd256::conditional_remove(quot, rem, &pd_array[get_alt_index(pd_index, rem)]);
     }
 
     // inline void hash_for_buckets(const itemType s, uint32_t *pd_index1, uint32_t *pd_index2) const {
@@ -147,7 +151,7 @@ public:
     //     using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
     //     unsigned long long h1 = Hash_ns::BobHash(&s, 16, 352582481);
     //     unsigned long long h2 = Hash_ns::BobHash(&s, 16, 23467721);
-    //     *quot = reduce32((uint32_t) h1, (uint32_t) quot_range);
+    //     *quot = reduce32((uint32_t) h1, (uint32_t) quotient_range);
     //     *rem = h2 & MASK(remainder_length);
     // }
 
@@ -161,10 +165,10 @@ public:
     // }
 
     auto validate_capacity_functions(size_t pd_index) -> bool {
-        return (pd320::get_capacity(&pd_array[pd_index]) == (pd320::get_capacity_naive(&pd_array[pd_index])));
-        // return c & pd320::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
+        return (pd256::get_capacity(&pd_array[pd_index]) == (pd256::get_capacity_naive(&pd_array[pd_index])));
+        // return c & pd256::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
     }
-    
+
     void get_static_info() {
         // const size_t num = 8;
         // size_t val[num] = {number_of_pd, capacity, quotient_range, single_pd_capacity, remainder_length,
@@ -242,9 +246,9 @@ public:
     auto get_capacity() -> size_t {
         size_t res = 0;
         size_t validate_res = 0;
-        // __m512i *ppd = &(pd_array[0]);
+        // __m256i *ppd = &(pd_array[0]);
         for (int i = 0; i < number_of_pd; ++i) {
-            res += pd320::get_capacity(&pd_array[i]);
+            res += pd256::get_capacity(&pd_array[i]);
         }
         // for (int i = 0; i < number_of_pd; ++i) {
         // validate_res += (pd_capacity_vec[i] >> 1u);
@@ -258,13 +262,13 @@ public:
     }
 
     auto get_name() -> std::string {
-        return "twoChoicer320";
+        return "twoChoicer256";
     }
 
     auto count_full_PDs() -> size_t {
         size_t count_overflowing_PD = 0;
         for (int i = 0; i < number_of_pd; ++i) {
-            count_overflowing_PD += pd320::is_full(&pd_array[i]);
+            count_overflowing_PD += pd256::is_full(&pd_array[i]);
             ;
         }
         return count_overflowing_PD;
@@ -273,7 +277,7 @@ public:
     auto count_empty_PDs() -> size_t {
         size_t count_empty_PD = 0;
         for (int i = 0; i < number_of_pd; ++i) {
-            count_empty_PD += pd320::get_capacity(&pd_array[i]) == 0;
+            count_empty_PD += pd256::get_capacity(&pd_array[i]) == 0;
         }
         return count_empty_PD;
     }
@@ -289,13 +293,13 @@ public:
         size_t start = 0, end = 0;
         size_t temp_start = 0, temp_end = 0;
         size_t index = 0;
-        __m512i *ppd = &pd_array[0];
+        __m256i *ppd = &pd_array[0];
         while (index < number_of_pd) {
             //            size_t temp_length = 0;
-            if (pd320::get_capacity(&pd_array[index]) == 0) {
+            if (pd256::get_capacity(&pd_array[index]) == 0) {
                 size_t temp_length = 1;
                 size_t temp_index = index + 1;
-                while ((temp_index < number_of_pd) and (pd320::get_capacity(&pd_array[temp_index]) == 0)) {
+                while ((temp_index < number_of_pd) and (pd256::get_capacity(&pd_array[temp_index]) == 0)) {
                     temp_index++;
                     temp_length++;
                 }
@@ -320,7 +324,7 @@ public:
         size_t res = 8 * sizeof(size_t);
 
         //PD's
-        res += sizeof(__m512i) * number_of_pd;
+        res += sizeof(__m256i) * number_of_pd;
         // Capacity vec.
         res += sizeof(uint8_t) * number_of_pd;
         // Pointer to spare.
@@ -336,13 +340,13 @@ public:
 
     auto analyse_pd_status(size_t p) -> double {
         return -42.0;
-        // return m512i_lp_average(pd_array, number_of_pd, p);
+        // return m256i_lp_average(pd_array, number_of_pd, p);
     }
 
     /* auto case_validate() -> bool {
             size_t index = random() % number_of_pd;
             // case_validate_counter++;
-            bool res = pd320::validate_number_of_quotient(&pd_array[index]);
+            bool res = pd256::validate_number_of_quotient(&pd_array[index]);
             if (!res) {
                 // std::cout << "case_validate_counter: " << case_validate_counter << std::endl;
                 std::cout << "index: " << index << std::endl;
@@ -357,7 +361,7 @@ public:
     //     uint32_t quot = -1, r = -1;
     //     split(hash_val, &pd_index, &quot, &r);
 
-    //     if (pd320::pd_find_50(quot, r, &pd_array[pd_index]))
+    //     if (pd256::pd_find_50(quot, r, &pd_array[pd_index]))
     //         return true;
     //     //        bool c1 = pd_array[pd_index].lookup(quot, r);
     //     //        bool c2 = pd_vec[pd_index]->lookup(quot, r);
@@ -373,16 +377,16 @@ public:
         uint32_t quot = -1, r = -1;
         split(hash_val, &pd_index, &quot, &r);
 
-        assert(pd320::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
+        assert(pd256::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
         if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
-            assert(pd320::is_full(&pd_array[pd_index]));
+            assert(pd256::is_full(&pd_array[pd_index]));
             pd_capacity_vec[pd_index] |= 1u;
             /**Todo!*/
     // insert_to_spare_with_pop(hash_val & MASK(spare_element_length));
     //         insert_to_spare_without_pop(hash_val & MASK(spare_element_length));
     //         return;
     //     }
-    //     auto res = pd320::pd_add_50(quot, r, &pd_array[pd_index]);
+    //     auto res = pd256::pd_add_50(quot, r, &pd_array[pd_index]);
     //     if (!res) {
     //         cout << "insertion failed!!!" << std::endl;
     //         assert(false);
@@ -410,13 +414,13 @@ public:
     // }
 
     // inline void remove_helper(spareItemType hash_val) {
-    //     if (TWOCHOICER320_HEADER_DB1)
+    //     if (TWOCHOICER256_HEADER_DB1)
     //         assert(lookup_helper(hash_val));
     //     size_t pd_index = -1;
     //     uint32_t quot = -1, r = -1;
     //     split(hash_val, &pd_index, &quot, &r);
 
-    //     if (pd320::conditional_remove(quot, r, &pd_array[pd_index])) {
+    //     if (pd256::conditional_remove(quot, r, &pd_array[pd_index])) {
     //         (pd_capacity_vec[pd_index]) -= 2;
     //         return;
     //     }
@@ -480,8 +484,8 @@ public:
     //     split(element, &pd_index, &quot, &r);
     //     if (pd_capacity_vec[pd_index] / 2 < single_pd_capacity) {
     //         //            cout << " HERE!!!" << endl;
-    //         assert(!pd320::is_full(&pd_array[pd_index]));
-    //         bool res = pd320::pd_add_50(quot, r, &pd_array[pd_index]);
+    //         assert(!pd256::is_full(&pd_array[pd_index]));
+    //         bool res = pd256::pd_add_50(quot, r, &pd_array[pd_index]);
     //         assert(res);
 
     //         (pd_capacity_vec[pd_index]) += 2;
@@ -490,8 +494,8 @@ public:
     //         cout << "element with hash_val: (" << element << ") was pop." << endl;
     //         return true;
     //     }
-    //     if (TWOCHOICER320_HEADER_DB1) {
-    //         assert(pd320::is_full(&pd_array[pd_index]));
+    //     if (TWOCHOICER256_HEADER_DB1) {
+    //         assert(pd256::is_full(&pd_array[pd_index]));
     //     }
     //     return false;
     // }
@@ -562,7 +566,7 @@ public:
     //         using Hash_ns = s_pd_filter::cuckoofilter::HashUtil;
     //         *q = (Hash_ns::BobHash(&h, 8, 1237894)) % (quotient_range); */
 
-    //     // *q = (h & MASK(quot_range + 2)) % (quotient_range);
+    //     // *q = (h & MASK(quotient_range + 2)) % (quotient_range);
 
     //     // h >>= remainder_length;
     //     // h >>= quotient_length;
@@ -575,7 +579,7 @@ public:
 
     // auto unSplit(uint32_t r, uint32_t quot, size_t pd_index) const -> spareItemType {
     //     assert(false);
-    //     assert(quot_range == 50);
+    //     assert(quotient_range == 50);
     //     spareItemType res = pd_index;
     //     res = (res << quotient_length) | quot;
     //     res = (res << remainder_length) | r;
@@ -605,7 +609,7 @@ public:
     // //         if (insert_counter == 0) {
     // //             std::cout << "number of pd:" << number_of_pd << std::endl;
     // //         }
-    // //         using namespace pd320;
+    // //         using namespace pd256;
     // //         db_key w_res ={ 0, 0, 0, 0, 0 };
     // //         uint64_t __attribute__((aligned(64))) temp_arr[6][8];
     // //         std::get<4>(w_res) = insert_counter;
@@ -624,7 +628,7 @@ public:
     //         std::get<3>(w_res) = r;
     //         int *v_res = &(std::get<0>(w_res));
     //         int b = 1ul;
-    //         __m512i *ppd = &pd_array[pd_index];
+    //         __m256i *ppd = &pd_array[pd_index];
     //         bool BPC = (pd_index == 91379);
     //         if (BPC) {
     //             std::cout << "h2" << std::endl;
@@ -640,11 +644,11 @@ public:
     //             std::cout << "r:\t" << r << std::endl;
     //         } */
     //         assert(pd_index < number_of_pd);
-    //         // size_t cap_res = pd320::get_capacity(&pd_array[pd_index]);
+    //         // size_t cap_res = pd256::get_capacity(&pd_array[pd_index]);
     //         // size_t cap_valid = pd_capacity_vec[pd_index] / 2;
-    //         assert(pd320::get_capacity(ppd) == pd_capacity_vec[pd_index] / 2);
+    //         assert(pd256::get_capacity(ppd) == pd_capacity_vec[pd_index] / 2);
     //         if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
-    //             assert(pd320::is_full(ppd));
+    //             assert(pd256::is_full(ppd));
     //             pd_capacity_vec[pd_index] |= 1u;
     //             /**Todo!*/
     //             insert_to_spare_without_pop(hash_val);
@@ -664,47 +668,47 @@ public:
     //         /* if (cond)
     //         {
     //             auto line = std::string(64, '*');
-    //             _mm512_store_si512(temp_arr[0], *(ppd - 1));
-    //             _mm512_store_si512(temp_arr[1], *(ppd));
-    //             _mm512_store_si512(temp_arr[2], *(ppd + 1));
+    //             _mm256_store_si256(temp_arr[0], *(ppd - 1));
+    //             _mm256_store_si256(temp_arr[1], *(ppd));
+    //             _mm256_store_si256(temp_arr[2], *(ppd + 1));
     //             std::cout << 0 << ")" << std::endl;
-    //             pd320::print512(ppd - 1);
+    //             pd256::print256(ppd - 1);
     //             print_8array(temp_arr[0]);
     //             print_array(temp_arr[0], 8);
     //             std::cout << line << std::endl;
     //
     //             std::cout << 1 << ")" << std::endl;
-    //             pd320::print512(ppd);
+    //             pd256::print256(ppd);
     //             print_8array(temp_arr[1]);
     //             print_array(temp_arr[1], 8);
     //             std::cout << line << std::endl;
     //             std::cout << 2 << ")" << std::endl;
-    //             pd320::print512(ppd);
+    //             pd256::print256(ppd);
     //             print_8array(temp_arr[2]);
     //             print_array(temp_arr[2], 8);
     //             std::cout << line << std::endl;
     //         }
     //  */
-    //  // auto res = pd320::pd_add_50(quot, r, ppd);
+    //  // auto res = pd256::pd_add_50(quot, r, ppd);
     //         auto res = inlining_pd_add_50(quot, r, ppd, pd_index);
     //         /* if (cond)
     //         {
     //             auto line = std::string(64, '*');
-    //             _mm512_store_si512(temp_arr[3], *(ppd - 1));
-    //             _mm512_store_si512(temp_arr[4], *ppd);
-    //             _mm512_store_si512(temp_arr[5], *(ppd + 1));
+    //             _mm256_store_si256(temp_arr[3], *(ppd - 1));
+    //             _mm256_store_si256(temp_arr[4], *ppd);
+    //             _mm256_store_si256(temp_arr[5], *(ppd + 1));
     //             std::cout << 3 << ")" << std::endl;
-    //             pd320::print512(ppd - 1);
+    //             pd256::print256(ppd - 1);
     //             print_8array(temp_arr[3]);
     //             print_array(temp_arr[3], 8);
     //             std::cout << line << std::endl;
     //             std::cout << 4 << ")" << std::endl;
-    //             pd320::print512(ppd);
+    //             pd256::print256(ppd);
     //             print_8array(temp_arr[4]);
     //             print_array(temp_arr[4], 8);
     //             std::cout << line << std::endl;
     //             std::cout << 5 << ")" << std::endl;
-    //             pd320::print512(ppd + 1);
+    //             pd256::print256(ppd + 1);
     //             print_8array(temp_arr[5]);
     //             print_array(temp_arr[5], 8);
     //             std::cout << line << std::endl;
@@ -720,9 +724,9 @@ public:
     //         *v_res |= (!c2 * b);
     //         b <<= 1u;
     //         *v_res |= (!c3 * b);
-    //         /* assert(pd320::validate_number_of_quotient(&pd_array[pd_index - 1]));
-    //         assert(pd320::validate_number_of_quotient(&pd_array[pd_index]));
-    //         bool temp_failed = pd320::validate_number_of_quotient(&pd_array[pd_index + 1]);
+    //         /* assert(pd256::validate_number_of_quotient(&pd_array[pd_index - 1]));
+    //         assert(pd256::validate_number_of_quotient(&pd_array[pd_index]));
+    //         bool temp_failed = pd256::validate_number_of_quotient(&pd_array[pd_index + 1]);
     //         if (!temp_failed)
     //         {
     //             std::cout << "in Failed:" << std::endl;
@@ -767,10 +771,10 @@ public:
     //             uint32_t quot = -1, r = -1;
     //             split(hash_val, &pd_index, &quot, &r);
     //             assert(pd_index < number_of_pd);
-    //             // __m512i temp_pd = pd_array[pd_index];
-    //             assert(pd320::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
+    //             // __m256i temp_pd = pd_array[pd_index];
+    //             assert(pd256::get_capacity(&pd_array[pd_index]) == pd_capacity_vec[pd_index] / 2);
     //             if (pd_capacity_vec[pd_index] / 2 == (single_pd_capacity)) {
-    //                 assert(pd320::is_full(&pd_array[pd_index]));
+    //                 assert(pd256::is_full(&pd_array[pd_index]));
     //                 pd_capacity_vec[pd_index] |= 1u;
     //                 /**Todo!*/
     //                 insert_to_spare_without_pop(hash_val);
@@ -788,4 +792,4 @@ public:
     //     }
 };
 
-#endif// TWOCHOICER320_HEADER
+#endif// TWOCHOICER256_HEADER

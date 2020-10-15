@@ -12,6 +12,9 @@
 #include "fixed_pd_45.hpp"
 //#include <unordered_map>
 
+#define CMP(x) ((x) && ((x) < 7))
+
+
 #define FIXED_DICT_VER2_DB1 (true)
 #define FIXED_DICT_VER2_DB2 (true & FIXED_DICT_VER2_DB1)
 #define FIXED_DICT_VER2_DB3 (true & FIXED_DICT_VER2_DB2)
@@ -68,6 +71,58 @@
 //         07000000,
 //         070000000};
 
+
+static constexpr uint64_t simd_table[50][4] = {
+        {07ULL, 0, 0, 0},
+        {070ULL, 0, 0, 0},
+        {0700ULL, 0, 0, 0},
+        {07000ULL, 0, 0, 0},
+        {070000ULL, 0, 0, 0},
+        {0700000ULL, 0, 0, 0},
+        {07000000ULL, 0, 0, 0},
+        {070000000ULL, 0, 0, 0},
+        {0700000000ULL, 0, 0, 0},
+        {07000000000ULL, 0, 0, 0},
+        {070000000000ULL, 0, 0, 0},
+        {0700000000000ULL, 0, 0, 0},
+        {07000000000000ULL, 0, 0, 0},
+        {070000000000000ULL, 0, 0, 0},
+        {0700000000000000ULL, 0, 0, 0},
+        {07000000000000000ULL, 0, 0, 0},
+        {070000000000000000ULL, 0, 0, 0},
+        {0700000000000000000ULL, 0, 0, 0},
+        {07000000000000000000ULL, 0, 0, 0},
+        {070000000000000000000ULL, 0, 0, 0},
+        {0700000000000000000000ULL, 0, 0, 0},
+        {0, 07ULL, 0, 0},
+        {0, 070ULL, 0, 0},
+        {0, 0700ULL, 0, 0},
+        {0, 07000ULL, 0, 0},
+        {0, 070000ULL, 0, 0},
+        {0, 0700000ULL, 0, 0},
+        {0, 07000000ULL, 0, 0},
+        {0, 070000000ULL, 0, 0},
+        {0, 0700000000ULL, 0, 0},
+        {0, 07000000000ULL, 0, 0},
+        {0, 070000000000ULL, 0, 0},
+        {0, 0700000000000ULL, 0, 0},
+        {0, 07000000000000ULL, 0, 0},
+        {0, 070000000000000ULL, 0, 0},
+        {0, 0700000000000000ULL, 0, 0},
+        {0, 07000000000000000ULL, 0, 0},
+        {0, 070000000000000000ULL, 0, 0},
+        {0, 0700000000000000000ULL, 0, 0},
+        {0, 07000000000000000000ULL, 0, 0},
+        {0, 070000000000000000000ULL, 0, 0},
+        {0, 0700000000000000000000ULL, 0, 0},
+        {0, 0, 07ULL, 0},
+        {0, 0, 070ULL, 0},
+        {0, 0, 0700ULL, 0},
+        {0, 0, 07000ULL, 0},
+        {0, 0, 070000ULL, 0},
+        {0, 0, 0700000ULL, 0},
+        {0, 0, 07000000ULL, 0},
+        {0, 0, 070000000ULL, 0}};
 
 template<typename spareItemType, typename itemType>
 class Fixed_Dict_Ver2 {
@@ -129,19 +184,22 @@ public:
 
     virtual ~Fixed_Dict_Ver2() {
         assert(get_capacity() >= 0);
-        auto ss = get_extended_info();
-        std::cout << ss.str();
+        // auto ss = get_extended_info();
+        // std::cout << ss.str();
         free(pd_array);
         delete spare;
     }
 
 
     inline auto lookup(const itemType s) const -> bool {
+        // return minimal_lookup(s);
         // return lookup_ver1(s);
         // return lookup_ver2(s);
-        return lookup_ver3(s);
+        // return lookup_ver3(s);
         // return lookup_ver4(s);
         // return lookup_ver5(s);
+        // return lookup_ver8(s);
+        return lookup_ver9(s);
     }
 
     /*inline auto lookup_ver1(const itemType s) const -> bool {
@@ -233,12 +291,6 @@ public:
     }
 */
 
-    inline auto lookup_helper(size_t counter, uint64_t quot, uint8_t rem, const __m512i *pd) const -> bool {
-        const uint64_t v = Fixed_pd45::Body::get_v(rem, pd) >> 19ul;
-        if (!v)
-            return false;
-        return (v >> Fixed_pd45::Header::get_start(quot, pd)) & MASK(counter);
-    }
 
     inline auto lookup_ver3(const itemType s) const -> bool {
         uint64_t hash_res = Hasher(s);
@@ -247,35 +299,27 @@ public:
         const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         const uint8_t rem = out2 & MASK(bits_per_item);
 
+        size_t counter = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
+        if (!counter) {
+            return false;
+        } else if (counter == Fixed_pd45::counter_overflowed_val) {
+            const uint8_t rem = out2 & MASK(bits_per_item);
+            return spare->find(
+                    ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
+        } else {
+            const uint8_t rem = out2 & MASK(bits_per_item);
+            uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]);
+            if (!v)
+                return false;
+            uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
+            return (v >> start) & MASK(counter);
+        }
 
         //        uint64_t *header = (ind) ? packed_fpd_array[pd_index].header2 : packed_fpd_array[pd_index].header1;
-        const uint8_t counter = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
-        switch (counter) {
-            case 0:
-                return false;
-            case 1:
-                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
-            case 2:
-                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
-            case 3:
-                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
-            case 4:
-                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
-            case 5:
-                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
-            case 6:
-                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
-            case 7:
-                return spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
-            default:
-                return false;
-        }
         // if (counter)
         // const uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]) >> 19ul;
         // if (!v) {
         //     return (counter == Fixed_pd45::counter_overflowed_val) ? spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem) : false;
-
-
         // } else {
         //     if (counter == Fixed_pd45::counter_overflowed_val)
         //         return spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
@@ -284,7 +328,7 @@ public:
         // if (!v)
         // return
         // const uint8_t counter = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
-
+        //
         // return Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]) && Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
         // const uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index])
         // if (!v){
@@ -292,7 +336,7 @@ public:
         // }
         // const uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
         // return (counter < 7) ? counter && v && ((v >> start) & (1ULL << counter) - 1ULL) : spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
-
+        //
         // size_t counter = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
         // if (!counter) {
         //     return false;
@@ -394,492 +438,702 @@ public:
         }
     }
 
-        void insert(const itemType s) {
-            uint64_t hash_res = Hasher(s);
-            uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-            const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-            const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+    inline auto lookup_helper(size_t counter, uint64_t quot, uint8_t rem, const __m512i *pd) const -> bool {
+        const uint64_t v = Fixed_pd45::Body::get_v(rem, pd) >> 19ul;
+        if (!v)
+            return false;
+        return (v >> Fixed_pd45::Header::get_start(quot, pd)) & MASK(counter);
+    }
+
+    inline auto lookup_ver7(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
+
+        //        uint64_t *header = (ind) ? packed_fpd_array[pd_index].header2 : packed_fpd_array[pd_index].header1;
+        const uint8_t counter = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
+        switch (counter) {
+            case 0:
+                return false;
+            case 1:
+                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
+            case 2:
+                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
+            case 3:
+                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
+            case 4:
+                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
+            case 5:
+                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
+            case 6:
+                return lookup_helper(counter, quot, rem, &pd_array[pd_index]);
+            case 7:
+                return spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
+            default:
+                return false;
+        }
+    }
+
+    inline auto lookup_ver8(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
+
+        size_t counter = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
+        if (CMP(counter)) {
             const uint8_t rem = out2 & MASK(bits_per_item);
-
-
-            auto res = Fixed_pd45::add(quot, rem, &pd_array[pd_index]);
-            if (res == -1) {
-                assert(lookup_ver3(s));
-                // if (lookup_ver3(s) != lookup_ver5(s)) {
-                //     lookup_ver3(s);
-                //     lookup_ver5(s);
-                //     lookup_ver3(s);
-                //     lookup_ver5(s);
-                //     assert(0);
-                // }
-                //             std::cout << "AA 1" << std::endl;
-                return;
-            } else if (res == -2) {
-                uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) |
-                                     ((uint64_t) rem);
-                insert_to_spare_without_pop(spare_val);
-                assert(spare->find(spare_val));
-                assert(lookup(s));
-                //             std::cout << "AA 2" << std::endl;
-                return;
-            } else if (res == -3) {
-                const uint64_t partial_spare_item =
-                        ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item);
-                promote_quot_and_remove_from_body(quot, Fixed_pd45::max_valid_counter_value, partial_spare_item,
-                                                  &pd_array[pd_index]);
-                const uint64_t spare_val = partial_spare_item | ((uint64_t) rem);
-                insert_to_spare_without_pop(spare_val);
-
-                assert(spare->find(spare_val));
-                assert(Fixed_pd45::Header::did_quot_overflowed(quot, &pd_array[pd_index]));
-                assert(lookup(s));
-                //             std::cout << "AA 3" << std::endl;
-                return;
-            } else if (res == -4) {
-
-                size_t max_quot = Fixed_pd45::Header::get_max_quot(&pd_array[pd_index]);
-                auto temp_val = Fixed_pd45::Header::read_counter(max_quot, &pd_array[pd_index]);
-                assert(temp_val < Fixed_pd45::counter_overflowed_val);
-                assert(temp_val);
-
-                uint64_t partial_spare_item =
-                        ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (max_quot << bits_per_item);
-                promote_quot_and_remove_from_body(max_quot, temp_val, partial_spare_item, &pd_array[pd_index]);
-
-                Fixed_pd45::Header::set_quot_as_overflow(max_quot, &pd_array[pd_index]);
-                if (max_quot == quot) {
-                    uint64_t spare_val = partial_spare_item | ((uint64_t) rem);
-
-                    insert_to_spare_without_pop(spare_val);
-                    assert(lookup(s));
-                    //                 std::cout << "AA 4" << std::endl;
-                    return;
-                } else {
-                    //necessary for increasing relevent counter.
-                    int new_header_add_res = Fixed_pd45::Header::add(quot, &pd_array[pd_index]);
-                    assert(new_header_add_res == -1);
-                    uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
-                    uint64_t end = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
-                    assert(end != Fixed_pd45::counter_overflowed_val);
-                    Fixed_pd45::Body::add(start, start + end - 1, rem, &pd_array[pd_index]);
-                    assert(lookup(s));
-                    //                 std::cout << "AA 4.2" << std::endl;
-                }
-            }
+            uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]);
+            if (!v)
+                return false;
+            return (v >> Fixed_pd45::Header::get_start(quot, &pd_array[pd_index])) & MASK(counter);
+        } else {
+            const uint8_t rem = out2 & MASK(bits_per_item);
+            return counter && spare->find(
+                                      ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
         }
+    }
 
+    inline auto lookup_ver9(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
 
-        void promote_quot_and_remove_from_body(uint64_t quot, size_t curr_counter_val, uint64_t partial_spare_item,
-                                               __m512i * pd) {
-            size_t begin_fingerprint = Fixed_pd45::Header::get_start(quot, pd);
-            for (size_t i = 0; i < curr_counter_val; i++) {
-                //todo: Error could be here.
-                uint8_t temp_rem = ((uint8_t *) (pd))[Fixed_pd45::bodyStartIndex + begin_fingerprint + i];
-                uint64_t spare_val = partial_spare_item | ((uint64_t) temp_rem);
-                insert_to_spare_without_pop(spare_val);
-                assert(spare->find(spare_val));
-            }
-            //        assert(Fixed_pd45::Header::validate_capacity(pd));
-            Fixed_pd45::Body::remove_quot(begin_fingerprint, begin_fingerprint + curr_counter_val, pd);
-            //        assert(Fixed_pd45::Header::validate_capacity(pd));
+        // return Fixed_pd45::Header::read_counter4(quot, &pd_array[pd_index]);
+        __m256i pd = _mm512_castsi512_si256(pd_array[pd_index]);
+        __m256i mask = _mm256_loadu_si256((__m256i *) simd_table[quot]);
+        if (!_mm256_testc_si256(pd, mask)) {
+            uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]);
+            if (!v)
+                return false;
+            uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
+            return (v >> start) & 7;
+
+        } else {
+            return spare->find(
+                    ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
         }
+    }
 
-        void promote_quot_and_remove_from_body(uint64_t quot, uint64_t partial_spare_item, __m512i * pd) {
-            size_t counter_size = Fixed_pd45::Header::read_counter(quot, pd);
-            assert(counter_size < Fixed_pd45::counter_overflowed_val);
-            assert(0 < counter_size);
-            //        assert(Fixed_pd45::Header::validate_capacity(pd));
-            promote_quot_and_remove_from_body(quot, counter_size, partial_spare_item, pd);
-            //        assert(Fixed_pd45::Header::validate_capacity(pd));
-        }
+    inline auto minimal_lookup(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
 
-        inline void remove(const itemType s) {
-            assert(false);
-        }
+        uint8_t x;
+        memcpy(&x, &pd_array[pd_index], 1);
+        return x;
+        // return Fixed_pd45::Header::read_counter4(quot, &pd_array[pd_index]);
+        // __m256i pd = _mm512_castsi512_si256(pd_array[pd_index]);
+        // __m256i mask = _mm256_loadu_si256((__m256i *) simd_table[quot]);
+        // const uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]);
+        // if (!v) {
+        //     return _mm256_testc_si256(pd, mask) &&
+        //            spare->find(((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
+        // }
+        // uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
+        // return (v >> start) & MASK(Fixed_pd45::Header::read_counter4(quot, &pd_array[pd_index]));
+        // return 
+        // return Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]) || _mm256_testc_si256(pd, mask);
+        // return Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]) && _mm256_testc_si256(pd, mask);
+        // if (!_mm256_testc_si256(pd, mask)) {
+        //     uint64_t v = Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]);
+        //     if (!v)
+        //         return false;
+        //     uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
+        //     return (v >> start) & MASK(Fixed_pd45::Header::read_counter4(quot, &pd_array[pd_index]));
 
-        inline void insert_to_spare_without_pop(spareItemType spare_val) {
-            if (!spare->insert(spare_val)) {
-                std::cout << "spare failed. Collecting Data" << std::endl;
-                auto ss = get_extended_info();
-                std::cout << ss.str();
-                assert(false);
-            }
-        }
+        // } else {
+        //     return spare->find(
+        //             ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem);
+        // }
+        // __m256i res = _mm256_and_si256(pd, mask);
+        // return _mm256_testz_si256(res, res);
+        // return Fixed_pd45::Header::read_TWO_counter(quot, &pd_array[pd_index]);
+        // return Fixed_pd45::Header::read_one_bit(quot, &pd_array[pd_index]);
+        // return Fixed_pd45::Body::get_v(rem, &pd_array[pd_index]);
+    }
 
-        void insert_to_spare_with_pop(spareItemType hash_val) {
-            uint32_t b1 = -1, b2 = -1;
-            spare->get_element_buckets(hash_val, &b1, &b2);
-            if (pop_attempt_with_insertion_by_bucket(hash_val, b2))
-                std::cout << "AA 5" << std::endl;
+    void insert(const itemType s) {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
+
+
+        auto res = Fixed_pd45::add(quot, rem, &pd_array[pd_index]);
+        if (res == -1) {
+            assert(lookup_ver4(s));
+            assert(lookup(s));
+            //             std::cout << "AA 1" << std::endl;
             return;
+        } else if (res == -2) {
+            uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) |
+                                 ((uint64_t) rem);
+            insert_to_spare_without_pop(spare_val);
+            assert(spare->find(spare_val));
+            assert(lookup(s));
+            //             std::cout << "AA 2" << std::endl;
+            return;
+        } else if (res == -3) {
+            const uint64_t partial_spare_item =
+                    ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item);
+            promote_quot_and_remove_from_body(quot, Fixed_pd45::max_valid_counter_value, partial_spare_item,
+                                              &pd_array[pd_index]);
+            const uint64_t spare_val = partial_spare_item | ((uint64_t) rem);
+            insert_to_spare_without_pop(spare_val);
 
-            auto hold = hash_val;
-            size_t bucket = b1;
-            for (size_t i = 0; i < MAX_CUCKOO_LOOP; ++i) {
-                if (pop_attempt_with_insertion_by_bucket(hold, bucket)) {
-                    return;
-                }
-                spare->cuckoo_swap(&hold, &bucket);
+            assert(spare->find(spare_val));
+            assert(Fixed_pd45::Header::did_quot_overflowed(quot, &pd_array[pd_index]));
+            assert(lookup(s));
+            //             std::cout << "AA 3" << std::endl;
+            return;
+        } else if (res == -4) {
+
+            size_t max_quot = Fixed_pd45::Header::get_max_quot(&pd_array[pd_index]);
+            auto temp_val = Fixed_pd45::Header::read_counter(max_quot, &pd_array[pd_index]);
+            assert(temp_val < Fixed_pd45::counter_overflowed_val);
+            assert(temp_val);
+
+            uint64_t partial_spare_item =
+                    ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (max_quot << bits_per_item);
+            promote_quot_and_remove_from_body(max_quot, temp_val, partial_spare_item, &pd_array[pd_index]);
+
+            Fixed_pd45::Header::set_quot_as_overflow(max_quot, &pd_array[pd_index]);
+            if (max_quot == quot) {
+                uint64_t spare_val = partial_spare_item | ((uint64_t) rem);
+
+                insert_to_spare_without_pop(spare_val);
+                assert(lookup(s));
+                //                 std::cout << "AA 4" << std::endl;
+                return;
+            } else {
+                //necessary for increasing relevent counter.
+                int new_header_add_res = Fixed_pd45::Header::add(quot, &pd_array[pd_index]);
+                assert(new_header_add_res == -1);
+                uint64_t start = Fixed_pd45::Header::get_start(quot, &pd_array[pd_index]);
+                uint64_t end = Fixed_pd45::Header::read_counter(quot, &pd_array[pd_index]);
+                assert(end != Fixed_pd45::counter_overflowed_val);
+                Fixed_pd45::Body::add(start, start + end - 1, rem, &pd_array[pd_index]);
+                assert(lookup(s));
+                //                 std::cout << "AA 4.2" << std::endl;
             }
-            cout << spare->get_capacity() / ((double) spare->get_max_capacity()) << endl;
+        }
+    }
+
+    void promote_quot_and_remove_from_body(uint64_t quot, size_t curr_counter_val, uint64_t partial_spare_item,
+                                           __m512i *pd) {
+        size_t begin_fingerprint = Fixed_pd45::Header::get_start(quot, pd);
+        for (size_t i = 0; i < curr_counter_val; i++) {
+            //todo: Error could be here.
+            uint8_t temp_rem = ((uint8_t *) (pd))[Fixed_pd45::bodyStartIndex + begin_fingerprint + i];
+            uint64_t spare_val = partial_spare_item | ((uint64_t) temp_rem);
+            insert_to_spare_without_pop(spare_val);
+            assert(spare->find(spare_val));
+        }
+        //        assert(Fixed_pd45::Header::validate_capacity(pd));
+        Fixed_pd45::Body::remove_quot(begin_fingerprint, begin_fingerprint + curr_counter_val, pd);
+        //        assert(Fixed_pd45::Header::validate_capacity(pd));
+    }
+
+    void promote_quot_and_remove_from_body(uint64_t quot, uint64_t partial_spare_item, __m512i *pd) {
+        size_t counter_size = Fixed_pd45::Header::read_counter(quot, pd);
+        assert(counter_size < Fixed_pd45::counter_overflowed_val);
+        assert(0 < counter_size);
+        //        assert(Fixed_pd45::Header::validate_capacity(pd));
+        promote_quot_and_remove_from_body(quot, counter_size, partial_spare_item, pd);
+        //        assert(Fixed_pd45::Header::validate_capacity(pd));
+    }
+
+
+    auto lookup_count(const itemType s, int caser = 0) const -> bool {
+        constexpr bool x = CMP(1) && CMP(2) && CMP(3) && CMP(4) && CMP(5) && CMP(6);
+        constexpr bool y = CMP(0) || CMP(7);
+        static_assert(x != y);
+        static_assert(x);
+        // static_assert(y);
+
+
+        // static size_t l1_lookups[2] = {0, 0};
+        // static size_t l2_lookups[2] = {0, 0};
+        // static size_t OF_counter = 0;
+        // static size_t only_OF_counter = 0;
+
+        static size_t total = 0;
+        total++;
+        static size_t v_disq = 0;
+        static size_t counter_disq = 0;
+        static size_t v_minus_c = 0;
+        static size_t v_and_c_OF = 0;
+
+        // static size_t shifted_v_disq = 0;
+
+        // static size_t only_v_disq = 0;
+        // static size_t only_counter_disq = 0;
+
+        // static size_t counter_and_sv_disq = 0;
+
+        // static size_t v_disqualified_but_should_look_in_l2 = 0;
+        // static size_t v_disqualified_but_l2_contained = 0;
+        // static size_t v_disqualified_and_l2_disq = 0;
+
+
+        // static size_t v_arr[7] = {0};
+        // static size_t c_arr[7] = {0};
+
+        // static size_t last_q_counter = 0;
+        // static size_t only_last_q_counter = 0;
+        if (caser == 1) {
+            total = 0;
+            v_disq = 0;
+            counter_disq = 0;
+            v_minus_c = 0;
+            v_and_c_OF = 0;
+            // auto line = std::string(64, '@');
+            // std::cout << line << std::endl;
+            // std::cout << "Zeroing!" << std::endl;
+            // std::cout << line << std::endl;
+            return true;
+        }
+        if (caser == 2) {
+            auto line = std::string(64, '*');
+            std::cout << line << std::endl;
+            // std::cout << "l1_lookups:(         \t" << l1_lookups[0] << ", " << l1_lookups[1] << ")" << std::endl;
+            // std::cout << "l2_lookups:(         \t" << l2_lookups[0] << ", " << l2_lookups[1] << ")" << std::endl;
+            std::cout << "total:           \t" << total << std::endl;
+            std::cout << "v_disq:          \t" << v_disq;
+            std::cout << "    \t" << (1.0 * v_disq / total) << std::endl;
+            std::cout << "counter_disq:    \t" << counter_disq;
+            std::cout << "    \t" << (1.0 * counter_disq / total) << std::endl;
+            std::cout << "v_minus_c:       \t" << v_minus_c;
+            std::cout << "    \t" << (1.0 * v_minus_c / total) << std::endl;
+            size_t v_cup_c = v_disq - v_minus_c;
+            size_t c_minus_v = counter_disq - v_cup_c;
+            std::cout << "c_minus_v:       \t" << c_minus_v;
+            std::cout << "    \t" << (1.0 * c_minus_v / total) << std::endl;
+            std::cout << "v_and_c_OF:      \t" << v_and_c_OF;
+            std::cout << "    \t" << (1.0 * v_and_c_OF / total) << std::endl;
+            std::cout << line << std::endl;
+            return true;
+        }
+
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        const uint8_t rem = out2 & MASK(bits_per_item);
+        bool v_res = lookup(s);
+
+        const __m512i *ppd = &pd_array[pd_index];
+        size_t counter = Fixed_pd45::Header::read_counter(quot, ppd);
+        uint64_t v = Fixed_pd45::Body::get_v(rem, ppd);
+
+        counter_disq += (counter == 0);
+        v_disq += (!v);
+        v_minus_c += (!v) && (counter != 0);
+        v_and_c_OF += (!v) && (counter == 7);
+
+        if ((v == 0) && (counter != 7)) {
+            assert(!v_res);
+        }
+        return lookup(s);
+    }
+
+    inline void remove(const itemType s) {
+        assert(false);
+    }
+
+    inline void insert_to_spare_without_pop(spareItemType spare_val) {
+        if (!spare->insert(spare_val)) {
+            std::cout << "spare failed. Collecting Data" << std::endl;
+            auto ss = get_extended_info();
+            std::cout << ss.str();
             assert(false);
         }
+    }
+
+    void insert_to_spare_with_pop(spareItemType hash_val) {
+        uint32_t b1 = -1, b2 = -1;
+        spare->get_element_buckets(hash_val, &b1, &b2);
+        if (pop_attempt_with_insertion_by_bucket(hash_val, b2))
+            std::cout << "AA 5" << std::endl;
+        return;
+
+        auto hold = hash_val;
+        size_t bucket = b1;
+        for (size_t i = 0; i < MAX_CUCKOO_LOOP; ++i) {
+            if (pop_attempt_with_insertion_by_bucket(hold, bucket)) {
+                return;
+            }
+            spare->cuckoo_swap(&hold, &bucket);
+        }
+        cout << spare->get_capacity() / ((double) spare->get_max_capacity()) << endl;
+        assert(false);
+    }
 
 
-        auto pop_attempt_by_bucket(size_t bucket_index)->void {
-            for (int i = 0; i < spare->get_bucket_size(); ++i) {
-                if (spare->is_empty_by_bucket_index_and_location(bucket_index, i))
-                    continue;
-                auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
-                if (single_pop_attempt(temp_el)) {
-                    //                cout << "here" << endl;
-                    spare->clear_slot_bucket_index_and_location(bucket_index, i);
-                }
+    auto pop_attempt_by_bucket(size_t bucket_index) -> void {
+        for (int i = 0; i < spare->get_bucket_size(); ++i) {
+            if (spare->is_empty_by_bucket_index_and_location(bucket_index, i))
+                continue;
+            auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
+            if (single_pop_attempt(temp_el)) {
+                //                cout << "here" << endl;
+                spare->clear_slot_bucket_index_and_location(bucket_index, i);
             }
         }
+    }
 
-        auto pop_attempt_with_insertion_by_bucket(spareItemType hash_val, size_t bucket_index)->bool {
-            /* Todo: optimize.
+    auto pop_attempt_with_insertion_by_bucket(spareItemType hash_val, size_t bucket_index) -> bool {
+        /* Todo: optimize.
          * 1) copy the bucket using memcpy and pop every non empty element.
          * 2) another way.
          */
 
-            for (int i = 0; i < spare->get_bucket_size(); ++i) {
-                if (spare->is_empty_by_bucket_index_and_location(bucket_index, i)) {
-                    spare->insert_by_bucket_index_and_location(hash_val, bucket_index, i);
-                    return true;
-                }
-                auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
-                if (single_pop_attempt(temp_el)) {
-                    spare->insert_by_bucket_index_and_location(hash_val, bucket_index, i);
-                    return true;
-                }
+        for (int i = 0; i < spare->get_bucket_size(); ++i) {
+            if (spare->is_empty_by_bucket_index_and_location(bucket_index, i)) {
+                spare->insert_by_bucket_index_and_location(hash_val, bucket_index, i);
+                return true;
             }
-            return false;
+            auto temp_el = spare->get_element_by_bucket_index_and_location(bucket_index, i);
+            if (single_pop_attempt(temp_el)) {
+                spare->insert_by_bucket_index_and_location(hash_val, bucket_index, i);
+                return true;
+            }
         }
+        return false;
+    }
 
-        /**
+    /**
          * reads the element if
          * @param element
          * @return
          */
-        auto single_pop_attempt(spareItemType element)->bool {
-            const uint32_t pd_index = element >> (bits_per_item + quotient_length);
-            assert(pd_index < number_of_pd);
-            const uint64_t quot = (element >> bits_per_item) & MASK(quotient_length);
-            assert(quot <= 50);
-            const uint8_t rem = element & MASK(bits_per_item);
+    auto single_pop_attempt(spareItemType element) -> bool {
+        const uint32_t pd_index = element >> (bits_per_item + quotient_length);
+        assert(pd_index < number_of_pd);
+        const uint64_t quot = (element >> bits_per_item) & MASK(quotient_length);
+        assert(quot <= 50);
+        const uint8_t rem = element & MASK(bits_per_item);
 
-            assert(0);
-            // if (!pd_name::pd_full(&pd_array[pd_index])) {
-            //     //            cout << " HERE!!!" << endl;
-            //     // assert(!pd_name::pd_full(&pd_array[pd_index]));
-            //     bool res = pd_name::pd_conditional_add_50(quot, rem, &pd_array[pd_index]);
-            //     assert(res);
+        assert(0);
+        // if (!pd_name::pd_full(&pd_array[pd_index])) {
+        //     //            cout << " HERE!!!" << endl;
+        //     // assert(!pd_name::pd_full(&pd_array[pd_index]));
+        //     bool res = pd_name::pd_conditional_add_50(quot, rem, &pd_array[pd_index]);
+        //     assert(res);
 
-            //     // (pd_capacity_vec[pd_index]) += 2;
-            //     spare->decrease_capacity();
+        //     // (pd_capacity_vec[pd_index]) += 2;
+        //     spare->decrease_capacity();
 
-            //     // cout << "element with hash_val: (" << element << ") was pop." << endl;
-            //     return true;
-            // }
-            // if (FIXED_DICT_DB1) {
-            //     assert(pd_name::pd_full(&pd_array[pd_index]));
-            // }
-            return false;
-        }
-
-
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /////////////////////////////// Validation functions.////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-        auto squared_chi_test()->double {
-            // vector<uint16_t> temp_capacity_vec(pd_capacity_vec);
-            vector<spareItemType> spare_elements;
-
-            spare->get_all_elements(&spare_elements);
-            for (size_t i = 0; i < spare_elements.size(); i++) {
-                auto temp = spare_elements[i];
-                size_t temp_pd_index = (temp >> (bits_per_item + quotient_length));
-                // temp_capacity_vec[temp_pd_index]++;
-            }
-
-            double res = 0;
-            for (size_t i = 0; i < number_of_pd; i++) {
-                auto temp1 = Fixed_pd45::Header::get_capacity(&pd_array[i]) - expected_pd_capacity;
-                res += temp1 * temp1;
-            }
-            return res / (filter_max_capacity * expected_pd_capacity);
-        }
-
-
-        auto validate_capacity_functions(size_t pd_index)->bool {
-            return true;
-            // bool c = (pd_name::get_capacity(&pd_array[pd_index]) == (pd_name::get_capacity_naive(&pd_array[pd_index])));
-            // return c & pd_name::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
-        }
-
-        auto get_extended_info()->std::stringstream {
-            // print_search_counters();
-            std::stringstream ss;
-            size_t temp_capacity = 0;
-            for (size_t i = 0; i < number_of_pd; i++) {
-                size_t cap_a = Fixed_pd45::Header::get_capacity(&pd_array[i]);
-                assert(cap_a <= Fixed_pd45::CAPACITY);
-                temp_capacity += cap_a;
-                // temp_capacity += Fixed_pd45::Header::get_capacity(packed_fpd_array[i].header1) + Fixed_pd45::Header::get_capacity(packed_fpd_array[i].header2);
-            }
-
-            // std::sum(pd_capacity_vec);
-            auto line = std::string(64, '*');
-            ss << line << std::endl;
-
-            ss << "filter max capacity is: " << str_format(filter_max_capacity) << std::endl;
-            // ss << "total_capacity: " << str_format(total_capacity) << std::endl;
-            ss << "l1_capacity (computed): " << str_format(temp_capacity) << std::endl;
-            // ss << "l1_capacity (var): " << str_format(l1_capacity) << std::endl;
-            // ss << "basic squared chi is: " << squared_chi_test_basic() << std::endl;
-            // ss << "squared chi is: " << squared_chi_test() << std::endl;
-
-            // ss << "total capacity is: " << str_format(temp_capacity + spare->get_capacity()) << std::endl;
-            ss << "spare capacity is: " << str_format(spare->get_capacity()) << std::endl;
-            ss << "spare load factor is: " << spare->get_load_factor() << std::endl;
-            double ratio = 1.0 * spare->get_capacity() / (double) temp_capacity;
-            ss << "l2/l1 capacity ratio is: " << ratio << std::endl;
-            ss << "spare_element_length is: " << spare_element_length << std::endl;
-
-
-            // if (insert_existing_counter) {
-            //     ss << "insert_existing_counter: " << insert_existing_counter << std::endl;
-            //     double ratio = insert_existing_counter / (double) filter_max_capacity;
-            //     assert(ratio > 0);
-            //     ss << "ratio to max capacity: " << ratio << std::endl;
-            // }
-            ss << std::string(64, '.') << std::endl;
-            auto temp_ss = get_dynamic_info();
-            // ss << "l1 byte size is: " << str_format(get_byte_size()) << std::endl;
-            // ss << "total byte size is: " << str_format(get_byte_size_with_spare()) << std::endl;
-            ss << std::string(80, '-') << std::endl;
-            ss << temp_ss.str();
-            ss << line << std::endl;
-
-            // spare->get_info(&ss);
-            return ss;
-        }
-
-        // void get_static_info() {
-        //     const size_t num = 8;
-        //     size_t val[num] = {number_of_pd, capacity, quotient_range, single_pd_capacity, remainder_length,
-        //                        pd_index_length,
-        //                        quotient_length, spare_element_length};
-
-        //     string names[num] = {"number_of_pd", "capacity", "quotient_range", "single_pd_capacity", "remainder_length",
-        //                          "pd_index_length", "quotient_length", "spare_element_length"};
-        //     table_print(num, names, val);
+        //     // cout << "element with hash_val: (" << element << ") was pop." << endl;
+        //     return true;
         // }
+        // if (FIXED_DICT_DB1) {
+        //     assert(pd_name::pd_full(&pd_array[pd_index]));
+        // }
+        return false;
+    }
 
-        auto get_dynamic_info()->std::stringstream {
-            /* if (!hashing_test) {
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////// Validation functions.////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    auto squared_chi_test() -> double {
+        // vector<uint16_t> temp_capacity_vec(pd_capacity_vec);
+        vector<spareItemType> spare_elements;
+
+        spare->get_all_elements(&spare_elements);
+        for (size_t i = 0; i < spare_elements.size(); i++) {
+            auto temp = spare_elements[i];
+            size_t temp_pd_index = (temp >> (bits_per_item + quotient_length));
+            // temp_capacity_vec[temp_pd_index]++;
+        }
+
+        double res = 0;
+        for (size_t i = 0; i < number_of_pd; i++) {
+            auto temp1 = Fixed_pd45::Header::get_capacity(&pd_array[i]) - expected_pd_capacity;
+            res += temp1 * temp1;
+        }
+        return res / (filter_max_capacity * expected_pd_capacity);
+    }
+
+
+    auto validate_capacity_functions(size_t pd_index) -> bool {
+        return true;
+        // bool c = (pd_name::get_capacity(&pd_array[pd_index]) == (pd_name::get_capacity_naive(&pd_array[pd_index])));
+        // return c & pd_name::get_capacity(&pd_array[pd_index]) == (pd_capacity_vec[pd_index] >> 1u);
+    }
+
+    auto get_extended_info() -> std::stringstream {
+        // print_search_counters();
+        std::stringstream ss;
+        size_t temp_capacity = 0;
+        for (size_t i = 0; i < number_of_pd; i++) {
+            size_t cap_a = Fixed_pd45::Header::get_capacity(&pd_array[i]);
+            assert(cap_a <= Fixed_pd45::CAPACITY);
+            temp_capacity += cap_a;
+            // temp_capacity += Fixed_pd45::Header::get_capacity(packed_fpd_array[i].header1) + Fixed_pd45::Header::get_capacity(packed_fpd_array[i].header2);
+        }
+
+        // std::sum(pd_capacity_vec);
+        auto line = std::string(64, '*');
+        ss << line << std::endl;
+
+        ss << "filter max capacity is: " << str_format(filter_max_capacity) << std::endl;
+        // ss << "total_capacity: " << str_format(total_capacity) << std::endl;
+        ss << "l1_capacity (computed): " << str_format(temp_capacity) << std::endl;
+        // ss << "l1_capacity (var): " << str_format(l1_capacity) << std::endl;
+        // ss << "basic squared chi is: " << squared_chi_test_basic() << std::endl;
+        // ss << "squared chi is: " << squared_chi_test() << std::endl;
+
+        // ss << "total capacity is: " << str_format(temp_capacity + spare->get_capacity()) << std::endl;
+        ss << "spare capacity is: " << str_format(spare->get_capacity()) << std::endl;
+        ss << "spare load factor is: " << spare->get_load_factor() << std::endl;
+        double ratio = 1.0 * spare->get_capacity() / (double) temp_capacity;
+        ss << "l2/l1 capacity ratio is: " << ratio << std::endl;
+        ss << "spare_element_length is: " << spare_element_length << std::endl;
+
+
+        // if (insert_existing_counter) {
+        //     ss << "insert_existing_counter: " << insert_existing_counter << std::endl;
+        //     double ratio = insert_existing_counter / (double) filter_max_capacity;
+        //     assert(ratio > 0);
+        //     ss << "ratio to max capacity: " << ratio << std::endl;
+        // }
+        ss << std::string(64, '.') << std::endl;
+        auto temp_ss = get_dynamic_info();
+        // ss << "l1 byte size is: " << str_format(get_byte_size()) << std::endl;
+        // ss << "total byte size is: " << str_format(get_byte_size_with_spare()) << std::endl;
+        ss << std::string(80, '-') << std::endl;
+        ss << temp_ss.str();
+        ss << line << std::endl;
+
+        // spare->get_info(&ss);
+        return ss;
+    }
+
+    // void get_static_info() {
+    //     const size_t num = 8;
+    //     size_t val[num] = {number_of_pd, capacity, quotient_range, single_pd_capacity, remainder_length,
+    //                        pd_index_length,
+    //                        quotient_length, spare_element_length};
+
+    //     string names[num] = {"number_of_pd", "capacity", "quotient_range", "single_pd_capacity", "remainder_length",
+    //                          "pd_index_length", "quotient_length", "spare_element_length"};
+    //     table_print(num, names, val);
+    // }
+
+    auto get_dynamic_info() -> std::stringstream {
+        /* if (!hashing_test) {
                 std::cout << std::string(120, '$') << std::endl;
                 std::cout << "Probably did not hit all PD's. (hashing_test is false)." << std::endl;
                 std::cout << std::string(120, '$') << std::endl;
             } */
-            size_t spare_capacity = spare->get_capacity();
-            // size_t count_overflowing_PD = count_overflowing_PDs();
-            // size_t count_empty_PD = count_empty_PDs();
+        size_t spare_capacity = spare->get_capacity();
+        // size_t count_overflowing_PD = count_overflowing_PDs();
+        // size_t count_empty_PD = count_empty_PDs();
 
-            // const size_t num = 4;
-            // size_t val[num] = {spare_capacity, count_overflowing_PD, count_empty_PD, number_of_pd};
+        // const size_t num = 4;
+        // size_t val[num] = {spare_capacity, count_overflowing_PD, count_empty_PD, number_of_pd};
 
-            // string names[num] = {"spare_capacity", "count_overflowing_PD", "count_empty_PD", "number_of_pd"};
-            // std::stringstream ss = table_print(num, names, val);
+        // string names[num] = {"spare_capacity", "count_overflowing_PD", "count_empty_PD", "number_of_pd"};
+        // std::stringstream ss = table_print(num, names, val);
 
-            // const size_t dnum = 4;
-            // double l0 = analyse_pd_status(0);
-            // double l1 = analyse_pd_status(1);
-            // double l2 = analyse_pd_status(2);
-            // double l3 = analyse_pd_status(3);
+        // const size_t dnum = 4;
+        // double l0 = analyse_pd_status(0);
+        // double l1 = analyse_pd_status(1);
+        // double l2 = analyse_pd_status(2);
+        // double l3 = analyse_pd_status(3);
 
-            // double dval[dnum] = {l0, l1, l2, l3};
+        // double dval[dnum] = {l0, l1, l2, l3};
 
-            // string dnames[dnum] = {"l0", "l1", "l2", "l3"};
-            // table_print(dnum, dnames, dval, os);
+        // string dnames[dnum] = {"l0", "l1", "l2", "l3"};
+        // table_print(dnum, dnames, dval, os);
 
-            // if (count_empty_PD > 1) {
-            //     // auto tp = find_empty_pd_interval();
-            //     size_t start = std::get<0>(tp), end = std::get<1>(tp);
-            //     ss << "longest_empty_interval length is: " << end - start << std::endl;
-            //     ss << "start: " << start << std::endl;
-            //     ss << "end: " << end << std::endl;
-            // }
-            std::stringstream ss;
-            return ss;
-            // return os;
-        }
-
-        auto get_elements_buckets(itemType x)->std::tuple<uint32_t, uint32_t> {
-            return get_hash_val_buckets(wrap_hash(x));
-        }
-
-        auto get_hash_val_buckets(itemType hash_val)->std::tuple<uint32_t, uint32_t> {
-            uint32_t b1 = -1, b2 = -1;
-            spare->my_hash(hash_val, &b1, &b2);
-            return std::make_tuple(b1, b2);
-        }
-
-        auto get_second_level_capacity()->std::size_t {
-            return spare->get_capacity();
-        }
-
-        auto get_second_level_load_ratio()->double {
-            return spare->get_capacity() / ((double) spare->get_max_capacity());
-        }
-
-        auto get_capacity()->size_t {
-            size_t res = 0;
-            // size_t validate_res = l1_capacity;
-            // __m512i *ppd = &(pd_array[0]);
-            for (int i = 0; i < number_of_pd; ++i) {
-                res += Fixed_pd45::Header::get_capacity(&pd_array[i]);
-                //  pd_name::get_capacity(&pd_array[i]);
-            }
-            // if (res != validate_res) {
-            //     std::cout << "res: " << res << std::endl;
-            //     std::cout << "validate_res: " << validate_res << std::endl;
-            //     std::cout << "total_capacity: " << total_capacity << std::endl;
-            //     std::cout << "Did not update <l1_capacity> inside a pop operation." << std::endl;
-
-            //     assert(false);
-            // }
-            return res;
-        }
-
-
-        auto get_name()->std::string {
-            return "Fixed_Dict_Ver2";
-        }
-
-        // auto count_overflowing_PDs() -> size_t {
-        //     size_t count_overflowing_PD = 0;
-        //     for (int i = 0; i < number_of_pd; ++i) {
-        //         bool add_cond = pd_name::pd_full(&pd_array[i]);
-        //         count_overflowing_PD += add_cond;
-        //         bool is_full = pd_name::pd_full(&pd_array[i]);
-        //         //            bool is_full2 = pd_vec[i]->is_full();
-        //         //            assert(is_full == is_full2);
-        //         bool final = (!add_cond or is_full);
-        //         // assert(final);
-        //     }
-        //     return count_overflowing_PD;
+        // if (count_empty_PD > 1) {
+        //     // auto tp = find_empty_pd_interval();
+        //     size_t start = std::get<0>(tp), end = std::get<1>(tp);
+        //     ss << "longest_empty_interval length is: " << end - start << std::endl;
+        //     ss << "start: " << start << std::endl;
+        //     ss << "end: " << end << std::endl;
         // }
+        std::stringstream ss;
+        return ss;
+        // return os;
+    }
 
-        //     auto count_empty_PDs() -> size_t {
-        //         size_t count_empty_PD = 0;
-        //         for (int i = 0; i < number_of_pd; ++i) {
-        //             /* bool temp_cond = (pd_capacity_vec[i] >> 1ul) == pd_name::get_capacity(&pd_array[i]);
-        //                 size_t r1 = pd_capacity_vec[i] >> 1ul;
-        //                 size_t r2 = pd_name::get_capacity(&pd_array[i]);
-        //                 size_t r3 = pd_name::get_capacity(&pd_array[i]);
+    auto get_elements_buckets(itemType x) -> std::tuple<uint32_t, uint32_t> {
+        return get_hash_val_buckets(wrap_hash(x));
+    }
 
-        //                 if (!temp_cond) {
-        //                     if (r1 == r2) {
-        //                         std::cout << "r3 is wrong: " << r3 << "\t instead of " << r1 << std::endl;
-        //                         // assert(false);
+    auto get_hash_val_buckets(itemType hash_val) -> std::tuple<uint32_t, uint32_t> {
+        uint32_t b1 = -1, b2 = -1;
+        spare->my_hash(hash_val, &b1, &b2);
+        return std::make_tuple(b1, b2);
+    }
 
-        //                     }
-        //                     else {
-        //                         std::cout << "r1 is: " << r1 << std::endl;
-        //                         std::cout << "r2 is: " << r2 << std::endl;
-        //                         std::cout << "r3 is: " << r3 << std::endl;
-        //                         assert(false);
-        //                     }
-        //                 } */
-        //             // assert((pd_name::get_capacity(pd_array[i])) == pd_name::get_capacity(&pd_array[i]));
-        //             bool add_cond = (pd_name::get_capacity(&pd_array[i]) <= 0);
-        //             count_empty_PD += add_cond;
-        //             // bool is_full = pd_name::pd_full(&pd_array[i]);
-        //             //            bool is_full2 = pd_vec[i]->is_full();
-        //             //            assert(is_full == is_full2);
-        //             // bool final = (!add_cond or is_full);
-        //             // assert(final);
-        //         }
-        //         return count_empty_PD;
-        //     }
+    auto get_second_level_capacity() -> std::size_t {
+        return spare->get_capacity();
+    }
 
-        //     /**
-        //          * For validation.
-        //          * This test to see if the hash function could not map elements to certain interval, such as the higher ones.
-        //          * Specifically by finding the longest interval of empty PDs.
-        //          * @return
-        //          */
-        //     auto find_empty_pd_interval() -> std::tuple<size_t, size_t> {
-        //         assert(0);
-        //         return {42, 42};
-        //     }
+    auto get_second_level_load_ratio() -> double {
+        return spare->get_capacity() / ((double) spare->get_max_capacity());
+    }
 
-        //     auto get_byte_size() {
-        //         //variables.
-        //         size_t res = 8 * sizeof(size_t);
+    auto get_capacity() -> size_t {
+        size_t res = 0;
+        // size_t validate_res = l1_capacity;
+        // __m512i *ppd = &(pd_array[0]);
+        for (int i = 0; i < number_of_pd; ++i) {
+            res += Fixed_pd45::Header::get_capacity(&pd_array[i]);
+            //  pd_name::get_capacity(&pd_array[i]);
+        }
+        // if (res != validate_res) {
+        //     std::cout << "res: " << res << std::endl;
+        //     std::cout << "validate_res: " << validate_res << std::endl;
+        //     std::cout << "total_capacity: " << total_capacity << std::endl;
+        //     std::cout << "Did not update <l1_capacity> inside a pop operation." << std::endl;
 
-        //         //PD's
-        //         res += sizeof(__m512i) * number_of_pd;
-        //         // Capacity vec.
-        //         res += sizeof(uint8_t) * number_of_pd;
-        //         // Pointer to spare->
-        //         res += 1;
-        //         return res;
-        //     }
-
-        //     auto get_byte_size_with_spare() {
-        //         auto l1_size = get_byte_size();
-        //         auto l2_size = spare->get_byte_size();
-        //         return l1_size + l2_size;
-        //     }
+        //     assert(false);
+        // }
+        return res;
+    }
 
 
-        //     auto analyse_pd_status(size_t p) -> double {
-        //         return -42.0;
-        //         // return m512i_lp_average(pd_array, number_of_pd, p);
-        //     }
+    auto get_name() -> std::string {
+        return "Fixed_Dict_Ver2";
+    }
 
-        //     /* auto case_validate() -> bool {
-        //             size_t index = random() % number_of_pd;
-        //             // case_validate_counter++;
-        //             bool res = pd_name::validate_number_of_quotient(&pd_array[index]);
-        //             if (!res) {
-        //                 // std::cout << "case_validate_counter: " << case_validate_counter << std::endl;
-        //                 std::cout << "index: " << index << std::endl;
-        //                 // std::cout << "actual val:" <<  << std::endl;
-        //             }
-        //             return res;
-        //         }
+    // auto count_overflowing_PDs() -> size_t {
+    //     size_t count_overflowing_PD = 0;
+    //     for (int i = 0; i < number_of_pd; ++i) {
+    //         bool add_cond = pd_name::pd_full(&pd_array[i]);
+    //         count_overflowing_PD += add_cond;
+    //         bool is_full = pd_name::pd_full(&pd_array[i]);
+    //         //            bool is_full2 = pd_vec[i]->is_full();
+    //         //            assert(is_full == is_full2);
+    //         bool final = (!add_cond or is_full);
+    //         // assert(final);
+    //     }
+    //     return count_overflowing_PD;
+    // }
 
-        //     bool f(const itemType x) const {
-        //         return false;
-        //         return x == 1979170537;
-        //     }
-        // */
-        // private:
-        //     auto pop_attempt_by_element(const itemType s) {
-        //         uint32_t b1, b2;
-        //         std::tie(b1, b2) = get_elements_buckets(s);
-        //         pop_attempt_by_bucket(b1);
-        //         pop_attempt_by_bucket(b2);
-        //     }
+    //     auto count_empty_PDs() -> size_t {
+    //         size_t count_empty_PD = 0;
+    //         for (int i = 0; i < number_of_pd; ++i) {
+    //             /* bool temp_cond = (pd_capacity_vec[i] >> 1ul) == pd_name::get_capacity(&pd_array[i]);
+    //                 size_t r1 = pd_capacity_vec[i] >> 1ul;
+    //                 size_t r2 = pd_name::get_capacity(&pd_array[i]);
+    //                 size_t r3 = pd_name::get_capacity(&pd_array[i]);
 
-        //     auto pop_attempt_by_hash_val(const itemType hash_val) {
-        //         uint32_t b1, b2;
-        //         std::tie(b1, b2) = get_hash_val_buckets(hash_val);
-        //         pop_attempt_by_bucket(b1);
-        //         pop_attempt_by_bucket(b2);
-        //     }
+    //                 if (!temp_cond) {
+    //                     if (r1 == r2) {
+    //                         std::cout << "r3 is wrong: " << r3 << "\t instead of " << r1 << std::endl;
+    //                         // assert(false);
+
+    //                     }
+    //                     else {
+    //                         std::cout << "r1 is: " << r1 << std::endl;
+    //                         std::cout << "r2 is: " << r2 << std::endl;
+    //                         std::cout << "r3 is: " << r3 << std::endl;
+    //                         assert(false);
+    //                     }
+    //                 } */
+    //             // assert((pd_name::get_capacity(pd_array[i])) == pd_name::get_capacity(&pd_array[i]));
+    //             bool add_cond = (pd_name::get_capacity(&pd_array[i]) <= 0);
+    //             count_empty_PD += add_cond;
+    //             // bool is_full = pd_name::pd_full(&pd_array[i]);
+    //             //            bool is_full2 = pd_vec[i]->is_full();
+    //             //            assert(is_full == is_full2);
+    //             // bool final = (!add_cond or is_full);
+    //             // assert(final);
+    //         }
+    //         return count_empty_PD;
+    //     }
+
+    //     /**
+    //          * For validation.
+    //          * This test to see if the hash function could not map elements to certain interval, such as the higher ones.
+    //          * Specifically by finding the longest interval of empty PDs.
+    //          * @return
+    //          */
+    //     auto find_empty_pd_interval() -> std::tuple<size_t, size_t> {
+    //         assert(0);
+    //         return {42, 42};
+    //     }
+
+    //     auto get_byte_size() {
+    //         //variables.
+    //         size_t res = 8 * sizeof(size_t);
+
+    //         //PD's
+    //         res += sizeof(__m512i) * number_of_pd;
+    //         // Capacity vec.
+    //         res += sizeof(uint8_t) * number_of_pd;
+    //         // Pointer to spare->
+    //         res += 1;
+    //         return res;
+    //     }
+
+    //     auto get_byte_size_with_spare() {
+    //         auto l1_size = get_byte_size();
+    //         auto l2_size = spare->get_byte_size();
+    //         return l1_size + l2_size;
+    //     }
 
 
-        /*
+    //     auto analyse_pd_status(size_t p) -> double {
+    //         return -42.0;
+    //         // return m512i_lp_average(pd_array, number_of_pd, p);
+    //     }
+
+    //     /* auto case_validate() -> bool {
+    //             size_t index = random() % number_of_pd;
+    //             // case_validate_counter++;
+    //             bool res = pd_name::validate_number_of_quotient(&pd_array[index]);
+    //             if (!res) {
+    //                 // std::cout << "case_validate_counter: " << case_validate_counter << std::endl;
+    //                 std::cout << "index: " << index << std::endl;
+    //                 // std::cout << "actual val:" <<  << std::endl;
+    //             }
+    //             return res;
+    //         }
+
+    //     bool f(const itemType x) const {
+    //         return false;
+    //         return x == 1979170537;
+    //     }
+    // */
+    // private:
+    //     auto pop_attempt_by_element(const itemType s) {
+    //         uint32_t b1, b2;
+    //         std::tie(b1, b2) = get_elements_buckets(s);
+    //         pop_attempt_by_bucket(b1);
+    //         pop_attempt_by_bucket(b2);
+    //     }
+
+    //     auto pop_attempt_by_hash_val(const itemType hash_val) {
+    //         uint32_t b1, b2;
+    //         std::tie(b1, b2) = get_hash_val_buckets(hash_val);
+    //         pop_attempt_by_bucket(b1);
+    //         pop_attempt_by_bucket(b2);
+    //     }
+
+
+    /*
             inline auto wrap_hash(const string *s) const -> spareItemType {
                 assert(false);
                 assert(spare_element_length <= 32);
@@ -891,7 +1145,7 @@ public:
                 split(h, pd_index, q, r);
             }
         */
-    };
+};
 
 
 #endif//COMPARING_FILTERS_SIMPLER_FIXED_DICT_VER2_HPP

@@ -120,10 +120,75 @@ namespace Fixed_pd45 {
             return (((uint64_t *) pd)[w_index] >> (rel_index * counter_size)) & MASK(counter_size);
         }
 
-        inline auto read_counter(uint64_t quot, const __m512i *pd) -> uint8_t {
+        inline auto read_counter2(uint64_t quot, const __m512i *pd) -> uint8_t {
             return (((uint64_t *) pd)[div_mod_Table2[quot << 1u]] >> (div_mod_Table2[(quot << 1u) | 1u])) &
                    counter_overflowed_val;
         }
+
+        inline auto read_counter3(uint64_t quot, const __m512i *pd) -> size_t {
+            assert(false);
+            static int counter = 0;
+            counter++;
+            const size_t byte_index = (quot * 3) / 8;
+            const size_t shift = (quot * 3) % 8;
+            uint16_t temp;
+            memcpy(&temp, ((uint8_t *) pd) + byte_index, 2);
+            auto res = (temp >> shift) & 7;
+            auto v_res = read_counter1(quot, pd);
+            // auto v_res2 = read_counter2(quot, pd);
+            // assert(v_res == v_res2);
+            assert(res == read_counter1(quot, pd));
+            return res;
+        }
+
+        inline auto read_counter4(uint64_t quot, const __m512i *pd) -> size_t {
+            // USE: _bextr_u64
+
+            const size_t w_index = div_mod_Table2[(quot << 1u)];
+            const uint64_t word = ((uint64_t *) pd)[w_index];
+            const size_t rel_index = div_mod_Table2[(quot << 1u) | 1u];
+            size_t res = _bextr_u64(word, rel_index, counter_size);
+            // size_t v_res = read_counter(quot, pd);
+            assert(res == read_counter2(quot, pd));
+            return res;
+        }
+
+        inline auto read_TWO_counter(uint64_t quot, const __m512i *pd) -> size_t {
+            //   const uint16_t temp = quot << 1ul;
+            const size_t w_index = quot / 32;
+            const size_t rel_index = quot & 31;
+            return (((uint64_t *) pd)[w_index] >> (rel_index)) & counter_overflowed_val;
+        }
+
+        inline auto read_TWO_counter2(uint64_t quot, const __m512i *pd) -> size_t {
+            const size_t w_index = quot / 32;
+            const uint64_t word = ((uint64_t *) pd)[w_index];
+            const size_t rel_index = quot & 31;
+            return _bextr_u64(word, rel_index, 2);
+            //   return (((uint64_t *)pd)[w_index] >> (rel_index)) &
+            //   counter_overflowed_val;
+        }
+
+        inline auto read_one_bit(uint64_t quot, const __m512i *pd) -> size_t {
+            return _mm_cvtsi128_si64(_mm512_castsi512_si128(*pd)) & MASK(quot);
+            // const size_t w_index = quot / 32;
+            // const uint64_t word = ((uint64_t *) pd)[w_index];
+            // const size_t rel_index = quot & 31;
+            // return ((uint64_t *) pd)[0] & ;
+            // return _bextr_u64(word, rel_index, 2);
+            //   return (((uint64_t *)pd)[w_index] >> (rel_index)) &
+            //   counter_overflowed_val;
+        }
+
+
+        inline auto read_counter(uint64_t quot, const __m512i *pd) -> size_t {
+            assert(read_counter1(quot, pd) == read_counter2(quot, pd));
+            // assert(read_counter1(quot, pd) == read_counter3(quot, pd));
+            assert(read_counter1(quot, pd) == read_counter4(quot, pd));
+            return read_counter4(quot, pd);
+            // return read_TWO_counter(quot, pd);
+        }
+
 
         // auto read_counter(uint64_t quot, const __m512i *pd) -> size_t;
 

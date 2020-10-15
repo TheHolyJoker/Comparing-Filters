@@ -285,7 +285,7 @@ static constexpr uint8_t Table3_8[256] =
                 15,
                 16,
                 17,
-        };
+};
 
 
 namespace v_pd256_plus {
@@ -377,8 +377,8 @@ namespace pd256_plus {
     auto get_capacity(const __m256i *pd) -> int;
 
     inline bool pd_full(const __m256i *pd) {
-        static int counter = 0;
-        counter++;
+        // static int counter = 0;
+        // counter++;
         auto res = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & (1ULL << (63 - (8)));
         size_t cap = get_capacity(pd);
         bool v_res = get_capacity(pd) == 25;
@@ -434,9 +434,9 @@ namespace pd256_plus {
 
 
     inline uint64_t get_clean_header(const __m256i *pd) {
-        uint64_t res = (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) >> 6) & ((1ULL << 50) - 1);
-        auto temp = _mm_popcnt_u64(res);
-        assert(_mm_popcnt_u64(res) == QUOT_SIZE25);
+        // uint64_t res = (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) >> 6) & ((1ULL << 50) - 1);
+        // auto temp = _mm_popcnt_u64(res);
+        // assert(_mm_popcnt_u64(res) == QUOT_SIZE25);
         return (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) >> 6) & ((1ULL << 50) - 1);
     }
 
@@ -555,31 +555,32 @@ namespace pd256_plus {
      * @return uint8_t 
      */
     inline auto get_last_quot_capacity(int64_t last_quot, const __m256i *pd) -> uint8_t {
+        //todo: fix this:
         return get_specific_quot_capacity_wrapper(last_quot, pd);
 
-        assert(pd_full(pd));
-        assert(last_quot < QUOT_SIZE25);
-        const uint64_t last_zero_index = last_quot + (CAPACITY25 - 1);
-        const uint64_t rel_index = last_zero_index & 63;
-        assert(last_zero_index > 64);
-
-        const uint64_t h1 = _mm_extract_epi64(_mm256_castsi256_si128(*pd), 1);
-        uint64_t h1_masked = _mm_extract_epi64(_mm256_castsi256_si128(*pd), 1) & ((1ULL << (rel_index)) - 1);
-        const auto first_one_index = _lzcnt_u64(h1_masked);
-        const auto first_one_index_lsb = 63 - _lzcnt_u64(h1_masked);
-        assert(first_one_index_lsb < rel_index);
-        auto res = rel_index - first_one_index_lsb;
-#ifndef NDEBUG
-        auto v_res = get_specific_quot_capacity_wrapper(last_quot, pd);
-        if (v_res != res) {
-            v_pd256_plus::print_headers(pd);
-            v_pd256_plus::print_hlb(pd);
-            assert(false);
-        }
-#endif// DEBUG
-
-        assert(res == get_specific_quot_capacity_wrapper(last_quot, pd));
-        return res;
+        /* //         assert(pd_full(pd));
+//         assert(last_quot < QUOT_SIZE25);
+//         const uint64_t last_zero_index = last_quot + (CAPACITY25 - 1);
+//         const uint64_t rel_index = last_zero_index & 63;
+//         assert(last_zero_index > 64);
+// 
+//         const uint64_t h1 = _mm_extract_epi64(_mm256_castsi256_si128(*pd), 1);
+//         uint64_t h1_masked = _mm_extract_epi64(_mm256_castsi256_si128(*pd), 1) & ((1ULL << (rel_index)) - 1);
+//         const auto first_one_index = _lzcnt_u64(h1_masked);
+//         const auto first_one_index_lsb = 63 - _lzcnt_u64(h1_masked);
+//         assert(first_one_index_lsb < rel_index);
+//         auto res = rel_index - first_one_index_lsb;
+// #ifndef NDEBUG
+//         auto v_res = get_specific_quot_capacity_wrapper(last_quot, pd);
+//         if (v_res != res) {
+//             v_pd256_plus::print_headers(pd);
+//             v_pd256_plus::print_hlb(pd);
+//             assert(false);
+//         }
+// #endif// DEBUG
+// 
+//         assert(res == get_specific_quot_capacity_wrapper(last_quot, pd));
+//         return res; */
     }
 
     inline auto get_last_quot_capacity(const __m256i *pd) -> uint8_t {
@@ -794,9 +795,10 @@ namespace pd256_plus {
 
         uint64_t new_v = (v << quot) & ~h0;
         const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+        //bzhi: Copy all bits from unsigned 64-bit integer a to dst, and reset (set to 0) the high bits in dst starting at index.
         const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
         const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
-        const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+        const uint64_t v_mask = _blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits);
         // bool att = v_mask & new_v;
         return v_mask & new_v;
     }
@@ -882,7 +884,7 @@ namespace pd256_plus {
         if (new_v_off == 0)
             return _mm_popcnt_u64(h0 & (new_v - 1)) == quot;
         else if (_blsr_u64(new_v_off) == 0) {
-            bool res = (_mm_popcnt_u64(h0 & ((new_v_off) - 1)) == quot) ||
+            bool res = (_mm_popcnt_u64(h0 & ((new_v_off) -1)) == quot) ||
                        (_mm_popcnt_u64(h0 & ((new_v ^ new_v_off) - 1)) == quot);
             assert(res == pd_find_25_ver0(quot, rem, pd));
             return res;
@@ -892,8 +894,7 @@ namespace pd256_plus {
                 const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
                 const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
                 const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
-                const uint64_t v_mask = (
-                        (_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+                const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
                 // bool att = v_mask & new_v;
                 return v_mask & new_v;
             } else {
@@ -908,7 +909,7 @@ namespace pd256_plus {
 
         const __m256i target = _mm256_set1_epi8(rem);
         const uint64_t v = (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ul);
-        const uint64_t v2 = ((uint64_t) (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ULL)) << quot;
+        const uint64_t v2 = ((uint64_t)(_mm256_cmpeq_epu8_mask(target, *pd) >> 7ULL)) << quot;
         // // const uint64_t v3 = (_mm256_cmpeq_epu8_mask(target, *pd) << quot) >> 7ul;
         // // if ((v << quot) != v2) {
         // //     std::cout << std::string(80, '*') << std::endl;
@@ -950,8 +951,7 @@ namespace pd256_plus {
         const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
         const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
         const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
-        const uint64_t v_mask = (
-                (_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+        const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
         auto res = v_mask & new_v2;
         auto v_res = v_mask & new_v;
         assert(res == v_res);
@@ -964,7 +964,7 @@ namespace pd256_plus {
 
         const __m256i target = _mm256_set1_epi8(rem);
         // const uint64_t v = (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ul);
-        const uint64_t v2 = ((uint64_t) (_mm256_cmpeq_epu8_mask(target, *pd) >> 7ULL)) << quot;
+        const uint64_t v2 = ((uint64_t)(_mm256_cmpeq_epu8_mask(target, *pd) >> 7ULL)) << quot;
 
         if (!v2) return false;
 
@@ -981,9 +981,121 @@ namespace pd256_plus {
         const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
         const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
         const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
-        const uint64_t v_mask = (
-                (_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
+        const uint64_t v_mask = ((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits)) & (~h0));
         return v_mask & v2;
+    }
+
+    inline bool pd_find_25_ver14_db(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const int64_t h0 = get_clean_header(pd);
+        uint64_t new_v = (v << quot) & ~h0;
+        const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+        const uint64_t m0 = (~_bzhi_u64(-1, 0 - 1));
+        const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+        const uint64_t h_cleared_quot_plus_one_set_bits = _blsr_u64(h_cleared_quot_set_bits);
+        const uint64_t v_mask = _blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(h_cleared_quot_plus_one_set_bits);
+        // bool att = v_mask & new_v;
+        return v_mask & new_v;
+    }
+
+    inline uint64_t mask_between_bits_naive(uint64_t x) {
+        uint64_t hi_bit = (x - 1) & x;
+        uint64_t lo_bit = hi_bit ^ x;
+        uint64_t mid_lo = hi_bit - 1;
+        uint64_t lo = (lo_bit - 1) | lo_bit;
+        uint64_t res = mid_lo ^ lo;
+        assert((res & (~x)) == res);
+        return res;
+    }
+
+    inline uint64_t mask_between_bits_naive2(uint64_t x) {
+        uint64_t hi_bit = (x - 1) & x;
+        uint64_t clear_hi = hi_bit - 1;
+        uint64_t lo_set = ((x - 1) | x);
+        uint64_t res = (clear_hi ^ lo_set) & (~x);
+        uint64_t v_res = mask_between_bits_naive(x);
+
+        // if (res != v_res){
+
+        //     v_pd256_plus::p_format_word(x);
+        //     v_pd256_plus::p_format_word(res);
+        //     v_pd256_plus::p_format_word(v_res);
+        //     std::cout << std::string(80, '=') << std::endl;
+        //     v_pd256_plus::p_format_word(hi_bit);
+        //     v_pd256_plus::p_format_word(clear_hi);
+        //     v_pd256_plus::p_format_word(lo_set);
+        //     v_pd256_plus::p_format_word(res);
+        //     std::cout << std::string(80, '=') << std::endl;
+        //     assert(0);
+        // }
+        assert(res == mask_between_bits_naive(x));
+        return res;
+    }
+    inline uint64_t mask_between_bits_naive3(uint64_t x) {
+        auto res = _blsmsk_u64(x) ^ _blsmsk_u64(_blsr_u64(x) >> 1);
+        assert(res == mask_between_bits_naive2(x));
+        assert(res == mask_between_bits_naive(x));
+        return res;
+    }
+    inline uint64_t mask_between_bits_naive5(uint64_t x) {
+        uint64_t hi_bit = (x - 1) & x;
+        uint64_t clear_hi = hi_bit - 1;
+        uint64_t lo_set = (x - 1);
+        uint64_t res = clear_hi ^ lo_set;// & (~x0)
+        return res;
+    }
+
+    inline bool pd_find_25_ver15(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const uint64_t h0 = get_clean_header(pd);
+        if (quot) {
+            const uint64_t new_v = (v << quot) & ~h0;
+            const uint64_t mask2 = 3ul << (quot - 1);
+            const uint64_t two_bits_mask = _pdep_u64(mask2, h0);
+            const uint64_t v_mask = mask_between_bits_naive5(two_bits_mask);
+            return v_mask & new_v;
+        }
+        return v & (_blsmsk_u64(h0) >> 1ul);
+    }
+
+    inline bool pd_find_25_ver16(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        if (!v) return false;
+
+        const uint64_t h0 = get_clean_header(pd);
+        const uint64_t new_v = (v << quot) & ~h0;
+        const uint64_t v_mask = (quot) ? mask_between_bits_naive5(_pdep_u64(3ul << (quot - 1), h0)): (_blsmsk_u64(h0) >> 1ul);
+        return v_mask & new_v;
+    }
+
+    inline bool pd_find_25_ver17(int64_t quot, uint8_t rem, const __m256i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 32));
+        assert(quot < QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd);
+        if (!v)
+            return false;
+        const uint64_t h0 = get_clean_header(pd);
+        const uint64_t new_v = ((v >> 7ul) << quot) & ~h0;
+        const uint64_t v_mask = (quot) ? mask_between_bits_naive5(_pdep_u64(3ul << (quot - 1), h0)): (_blsmsk_u64(h0) >> 1ul);
+        return v_mask & new_v;
     }
 
     inline bool pd_losse_find_ver1(int64_t quot, uint8_t rem, const __m256i *pd) {
@@ -1041,12 +1153,12 @@ namespace pd256_plus {
 
 
     inline bool pd_find_25(int64_t quot, uint8_t rem, const __m256i *pd) {
-// #ifndef NDEBUG
-//         if (pd_find_25_ver0(quot, rem, pd) != pd_find_25_ver13(quot, rem, pd)) {
-//             pd_find_25_ver13(quot, rem, pd);
-//             pd_find_25_ver13(quot, rem, pd);
-//         }
-// #endif// NDEBUG
+#ifndef NDEBUG
+        if (pd_find_25_ver0(quot, rem, pd) != pd_find_25_ver13(quot, rem, pd)) {
+            pd_find_25_ver13(quot, rem, pd);
+            pd_find_25_ver13(quot, rem, pd);
+        }
+#endif// NDEBUG
 
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver7(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver8(quot, rem, pd));
@@ -1055,6 +1167,10 @@ namespace pd256_plus {
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver12(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver11(quot, rem, pd));
         assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver13(quot, rem, pd));
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver15(quot, rem, pd));
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver16(quot, rem, pd));
+        assert(pd_find_25_ver0(quot, rem, pd) == pd_find_25_ver17(quot, rem, pd));
+        // return pd_find_25_ver17(quot, rem, pd);
         return pd_find_25_ver9(quot, rem, pd);
         // return pd_find_25_ver13(quot, rem, pd);
     }
@@ -1068,26 +1184,28 @@ namespace pd256_plus {
 
 
     inline bool did_pd_overflowed(const __m256i *pd) {
-        return _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32;
+        return !(_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32);
     }
 
 
     inline void set_overflow_bit(__m256i *pd) {
         uint64_t *h_array = ((uint64_t *) pd);
         h_array[0] |= 32;
+        h_array[0] ^= 32;
         assert(did_pd_overflowed(pd));
     }
 
     inline void clear_overflow_bit(__m256i *pd) {
         assert(false);
-        uint64_t *h_array = ((uint64_t *) pd);
-        assert(did_pd_overflowed(pd));
-        h_array[1] ^= (1ULL) << (103 - 64);
-        assert(!did_pd_overflowed(pd));
+        // uint64_t *h_array = ((uint64_t *) pd);
+        // assert(did_pd_overflowed(pd));
+        // h_array[1] ^= (1ULL) << (103 - 64);
+        // assert(!did_pd_overflowed(pd));
     }
 
 
     inline void encode_last_quot_new(int64_t last_quot, __m256i *pd) {
+        //check this
         uint8_t byte_to_write = last_quot | (get_header(pd) & (32 + 64 + 128));
         memcpy(pd, &byte_to_write, 1);
         assert(decode_last_quot(pd) == last_quot);
@@ -1133,7 +1251,7 @@ namespace pd256_plus {
 
     inline bool cmp_qr_naive(uint16_t qr, const __m256i *pd) {
         const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
-        if (!(hfb & 32))
+        if ((hfb & 32))
             return false;
         uint16_t old_q = (hfb & 31);
         if (old_q < (qr >> 8))
@@ -1159,13 +1277,13 @@ namespace pd256_plus {
         bool of_res = did_pd_overflowed(pd);
         size_t r_counter = 0;
         const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
-        if (!(hfb & 32)) {
+        if ((hfb & 32)) {
             // c1++;
             // std::cout << "s0" << std::endl;
             return No;
         }
         assert(did_pd_overflowed(pd));
-        uint16_t old_q = (hfb & 31);
+        uint16_t old_q = hfb;
         if (old_q < (qr >> 8)) {
             // c2++;
             // std::cout << "s1" << std::endl;
@@ -1196,6 +1314,8 @@ namespace pd256_plus {
     }
 
     inline bool cmp_qr_smart_slow(uint16_t qr, const __m256i *pd) {
+        assert(0);
+
         // if (!(_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32)){
         //     return false;
         // }
@@ -1214,13 +1334,29 @@ namespace pd256_plus {
     }
 
     inline bool cmp_qr_smart(uint16_t qr, const __m256i *pd) {
-        if (!(_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32)) {
+        // assert(0);
+        // const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
+        if (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32) {
             return false;
         }
         const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 31;
         const uint16_t old_qr = (hfb << 8ul) | get_last_byte(pd);
-        assert((old_qr < qr) == cmp_qr_naive(qr, pd));
+        // assert((old_qr < qr) == cmp_qr_naive(qr, pd));
         return old_qr < qr;
+    }
+    inline bool cmp_qr1(uint16_t qr, const __m256i *pd) {
+        if (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32) {
+            return false;
+        }
+        const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 31;
+        const uint16_t old_qr = (hfb << 8ul) | get_last_byte(pd);
+        return old_qr < qr;
+    }
+
+    inline bool cmp_qr2(uint16_t qr, const __m256i *pd) {
+        const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
+        return ((hfb << 8ul) | get_last_byte(pd)) < qr;
+        //   return (hfb & 32) && (((hfb & 31) << 8ul) | get_last_byte(pd)) < qr;
     }
 
     inline pd_Status pd_find0(int64_t quot, uint8_t rem, const __m256i *pd) {
@@ -1235,7 +1371,8 @@ namespace pd256_plus {
             return Yes;
 
         const uint64_t first_byte = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
-        return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
+        return ((first_byte & 31) <= quot) ? look_in_the_next_level : No;
+        // return ((first_byte & 32) && ((first_byte & 31) <= quot)) ? look_in_the_next_level : No;
     }
 
     // inline pd_Status pd_find3(int64_t quot, uint8_t rem, const __m256i *pd) {

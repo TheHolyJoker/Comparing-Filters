@@ -155,32 +155,36 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
 
     auto insertion_time = time_insertions(wrap_filter, add_vec, round_counter * add_step, (round_counter + 1) * add_step);
     // size_t true_lookup_time = 0;
+    
+    
     //Zeroing out stuff.
-    // #ifdef COUNT
-    //     FilterAPI<Table>::get_functionality(wrap_filter);
-    // #endif// COUNT
+    #ifdef COUNT
+        FilterAPI<Table>::get_functionality(wrap_filter);
+    #endif// COUNT
 
+    // ulong uniform_lookup_time = 0;
     auto uniform_lookup_time = time_lookups(wrap_filter, find_vec, round_counter * find_step, (round_counter + 1) * find_step);
 
-#ifdef COUNT
-    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
-        std::cout << "\nUniform" << std::endl;
-        FilterAPI<Table>::get_functionality(wrap_filter);
-    } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
-        std::cout << "\nUniform" << std::endl;
-        FilterAPI<Table>::get_functionality(wrap_filter);
-    }
-#endif// COUNT
+    #ifdef COUNT
+        // if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
+            std::cout << "\nUniform" << std::endl;
+            FilterAPI<Table>::get_functionality(wrap_filter);
+        // } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
+            // std::cout << "\nUniform" << std::endl;
+            // FilterAPI<Table>::get_functionality(wrap_filter);
+        // }
+    #endif// COUNT
 
+    // ulong true_lookup_time = 0;
     auto true_lookup_time = time_lookups(wrap_filter, add_vec, 0, true_find_step);
 #ifdef COUNT
-    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
-        std::cout << "\nTrue" << std::endl;
-        FilterAPI<Table>::get_functionality(wrap_filter);
-    } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
-        std::cout << "\nTrue" << std::endl;
-        FilterAPI<Table>::get_functionality(wrap_filter);
-    }
+    // if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
+    //     std::cout << "\nTrue" << std::endl;
+    //     FilterAPI<Table>::get_functionality(wrap_filter);
+    // } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
+    std::cout << "\nTrue" << std::endl;
+    FilterAPI<Table>::get_functionality(wrap_filter);
+    // }
 #endif// COUNT
 
 
@@ -194,11 +198,7 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     *ss << temp.str();
 
 #ifdef COUNT
-    if (FilterAPI<Table>::get_ID(wrap_filter) == d512_ver3) {
-        std::cout << std::string(88, '=') << std::endl;
-    } else if (FilterAPI<Table>::get_ID(wrap_filter) == d256_ver4) {
-        std::cout << std::string(88, '=') << std::endl;
-    }
+    std::cout << std::string(88, '=') << std::endl;
 
 #endif// COUNT
 }

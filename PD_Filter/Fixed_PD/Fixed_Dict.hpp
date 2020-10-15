@@ -75,8 +75,8 @@ public:
 
     virtual ~Fixed_Dict() {
         assert(get_capacity() >= 0);
-        auto ss = get_extended_info();
-        std::cout << ss.str();
+        // auto ss = get_extended_info();
+        // std::cout << ss.str();
         free(packed_fpd_array);
         delete spare;
     }
