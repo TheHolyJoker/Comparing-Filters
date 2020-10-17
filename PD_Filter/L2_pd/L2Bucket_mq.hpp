@@ -1,5 +1,5 @@
 /**
- * @file L2Bucket_mq.hpp Level 2 Bucket minus the quots.
+ * @file MainBucket.hpp Level 2 Bucket minus the quots.
  * @author Tomer Even (you@domain.com)
  * @brief This class is an attempt to implement a part of the second level bucket.
  * Every query of an element x, in the second level, contains several fields:
@@ -41,23 +41,32 @@
 #define FILTERS_L2_BUCKET_HPP
 
 #include "x86intrin.h"
-#include <assert.h>
+#include <cassert>
+#include <climits>
+#include <cstdint>
+#include <cstring>
 #include <immintrin.h>
 #include <iostream>
-#include <limits.h>
-#include <stdint.h>
-#include <string.h>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
+#ifndef MASK
 #define MASK(p) ((1ULL << (p)) - 1ULL)
+#endif// !MASK
+
 #define BITWISE_DISJOINT(a, b) (!((a) & (b)))
+
+#ifndef MAX
 #define MAX(a, b) (((a) <= (b)) ? (b) : (a))
+#endif// !MAX
+
+
 #define GAP (4)
 
 typedef std::vector<bool> b_vec;
 typedef std::tuple<uint64_t, uint8_t, bool> key;
+//typedef std::tuple<uint64_t, uint8_t, bool> Q_key;
 // typedef std::unordered_map<key, size_t> keymap;
 
 typedef unsigned __int128 u128;
@@ -133,27 +142,6 @@ namespace print_memory {
         std::cout << str_word_LE(word, gap) << std::endl;
     }
 
-    // template<>
-    // auto str_word_LE<u128>(u128 word, size_t gap) -> std::string {
-    //     constexpr unsigned slot_size = 128;
-    //     u128 b = 1ULL;
-    //     std::string res = "";
-    //     for (size_t i = 0; i < slot_size; i++) {
-    //         if ((i > 0) && (is_divisible(i, gap * gap))) {
-    //             res += "|";
-    //         } else if ((i > 0) && (is_divisible(i, gap))) {
-    //             res += ".";
-    //         }
-
-    //         res += (word & b) ? "1" : "0";
-    //         b <<= 1ul;
-    //     }
-    //     return res;
-    // }
-    // template<>
-    // void print_word_LE<u128>(u128 word, size_t gap) {
-    //     std::cout << str_word_LE<u128>(word, gap) << std::endl;
-    // }
 
     template<typename T>
     void print_array(T *a, size_t a_size) {
@@ -172,6 +160,7 @@ namespace print_memory {
         }
         std::cout << "] " << std::endl;
     }
+
     template<typename T>
     void print_array_with_nonzero_indexes(T *a, size_t a_size) {
         std::cout << "[";
@@ -189,6 +178,18 @@ namespace print_memory {
         std::cout << "]" << std::endl;
     }
 
+    template<typename T>
+    void print_array_in_lines(T *a, size_t a_size, size_t line_length) {
+        std::cout << "[  " << a[0];
+        for (size_t i = 1; i < a_size; i++) {
+            if (!(i % line_length)) {
+                std::cout << std::endl;
+                std::cout << " ";
+            }
+            std::cout << ", " << a[i];
+        }
+        std::cout << "] " << std::endl;
+    }
 
     template<typename T>
     auto str_array_LE(T *a, size_t a_size, size_t gap) -> std::string {
@@ -210,7 +211,7 @@ namespace print_memory {
 
 
 template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
-constexpr size_t get_l2_bucket_bit_size() {
+constexpr size_t get_l2_MainBucket_bit_size() {
     constexpr size_t mask_part = max_capacity;
     constexpr size_t pd_index_part = batch_size + max_capacity;
     // constexpr size_t quot_part = 4 * max_capacity;
@@ -222,12 +223,12 @@ constexpr size_t get_l2_bucket_bit_size() {
 
 template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
 constexpr size_t get_l2_bucket_size() {
-    return get_l2_bucket_bit_size<max_capacity, batch_size, bits_per_item>() / (sizeof(uint64_t) * CHAR_BIT);
+    return get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() / (sizeof(uint64_t) * CHAR_BIT);
 }
 
 template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
 void init_vec(std::vector<bool> *v) {
-    size_t total_size = get_l2_bucket_bit_size<max_capacity, batch_size, bits_per_item>();
+    size_t total_size = get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>();
     size_t index = 0;
     size_t offset = 0;
 
@@ -323,7 +324,7 @@ inline u128 get_mask_from_header(u128 header, uint64_t index) {
     uint64_t pop = _mm_popcnt_u64(lo);
     if (index < pop) {
         uint64_t temp_mask = get_select_mask(lo, index - 1);
-        uint64_t temp_mask2 = get_select_mask(lo, index - 2);
+        //        uint64_t temp_mask2 = get_select_mask(lo, index - 2);
         /* if (_mm_popcnt_u64(temp_mask) != 2) {
 
             std::cout << "pop:     \t" << pop << std::endl;
@@ -510,36 +511,105 @@ namespace bits_memcpy {
         copy_recursive(src, dest, src_start + first_length, dest_start + first_length, second_length);
     }
 
-
+    /**
+     * @brief 
+     * 
+     * @tparam T 
+     * @param word 
+     * @param start 
+     * @param end is the last bit that will be changed.  
+     * @param shift 
+     */
     template<typename T>
-    void shift_array_towards_the_start(T *a, size_t start, size_t end, size_t shift) {
+    void shift_word_towards_the_start_word_aligned(T *word, size_t start, size_t end, size_t shift) {
+        constexpr unsigned slot_size = sizeof(*word) * CHAR_BIT;
+        assert(is_divisible<slot_size>(start));
+        assert(shift < slot_size);
+
+        // T s_mask = MASK(start);
+        // T e_mask = MASK(end);
+        // T lo = (*word) & s_mask;
+        // T mid = ((*word) & (~s_mask) & (e_mask)) >> shift;
+
+        uint64_t mask = MASK(end);
+        T lo = ((*word) >> shift) & mask;
+        T hi = (*word) & (~mask);
+        assert(BITWISE_DISJOINT(hi, lo));
+        (*word) = hi | lo;
+        return;
+    }
+
+    /**
+     * @brief Changing bits between start and end (including start and end).
+     * 
+     * @tparam T 
+     * @param a 
+     * @param start 
+     * @param end 
+     * @param shift 
+     */
+    template<typename T>
+    void shift_array_towards_the_start_word_aligned(T *a, size_t start, size_t end, size_t shift) {
         constexpr unsigned slot_size = sizeof(a[0]) * CHAR_BIT;
         assert(is_divisible<slot_size>(start));
         assert(shift < slot_size);
 
-        size_t i = start / slot_size;
         size_t last_index = end / slot_size;
+        size_t first_index = start / slot_size;
+        if (first_index == last_index) {
+            shift_word_towards_the_start_word_aligned(&a[last_index], start % slot_size, end % slot_size, shift);
+            /* size_t rel_index = end % slot_size;
+            uint64_t mask = MASK(rel_index);
+            T lo = (a[last_index] >> shift) & mask;
+            T hi = a[last_index] & (~mask);
+            assert(BITWISE_DISJOINT(hi, lo));
+            a[last_index] = hi | lo; */
+            return;
+        }
+
+        size_t i = first_index;
+        // size_t last_index = end / slot_size;
         for (; i < last_index; i++) {
             a[i] >>= shift;
             uint64_t temp = (a[i + 1] << (slot_size - shift));
             a[i] |= temp;
         }
 
-        size_t rel_index = end % slot_size;
+        shift_word_towards_the_start_word_aligned(&a[last_index], start % slot_size, end % slot_size, shift);
+        /* size_t rel_index = end % slot_size;
         uint64_t mask = MASK(rel_index);
         T lo = (a[last_index] & mask) >> shift;
         T hi = a[last_index] & (~mask);
         assert(BITWISE_DISJOINT(hi, lo));
-        a[last_index] = hi | lo;
+        a[last_index] = hi | lo; */
     }
 
+    template<typename T>
+    void shift_word_towards_the_end_word_aligned(T *word, size_t start, size_t end, size_t shift) {
+        if (end)
+            return;
+        assert(shift);
+        constexpr unsigned slot_size = sizeof(*word) * CHAR_BIT;
+        assert(is_divisible<slot_size>(start));
+        assert(shift < slot_size);
+
+        // size_t rel_index = end % slot_size;
+        uint64_t mask = MASK(end);
+        T temp = *word;
+        T lo = (temp << shift) & mask;
+        T hi = temp & (~mask);
+        assert(BITWISE_DISJOINT(hi, lo));
+        *word = hi | lo;
+    }
+
+
     /**
-     * @brief 
+     * @brief Changing bits between start and end (including start and end).
      * 
      * @tparam T 
      * @param a 
      * @param start 
-     * @param end the last bit that will be changed. meaning we write 'end - start' + 1 bits. 
+     * @param end The last bit that will be changed. meaning we write 'end - start' + 1 bits. 
      * @param shift 
      */
     template<typename T>
@@ -547,19 +617,20 @@ namespace bits_memcpy {
         constexpr unsigned slot_size = sizeof(a[0]) * CHAR_BIT;
         assert(is_divisible<slot_size>(start));
         assert(shift < slot_size);
-
+        assert(start <= end);
 
         size_t last_index = end / slot_size;
         size_t first_index = start / slot_size;
-        T last_slot = a[last_index];
+        //        T last_slot = a[last_index];
 
         if (first_index == last_index) {
-            size_t rel_index = end % slot_size;
+            shift_word_towards_the_end_word_aligned(&a[last_index], start % slot_size, end % slot_size, shift);
+            /*size_t rel_index = end % slot_size;
             uint64_t mask = MASK(rel_index);
             T lo = (a[last_index] << shift) & mask;
             T hi = a[last_index] & (~mask);
             assert(BITWISE_DISJOINT(hi, lo));
-            a[last_index] = hi | lo;
+            a[last_index] = hi | lo;*/
             return;
         }
 
@@ -574,12 +645,14 @@ namespace bits_memcpy {
         assert(i == first_index);
         a[i] <<= shift;
 
-        size_t rel_index = end % slot_size;
+        shift_word_towards_the_end_word_aligned(&a[last_index], start % slot_size, end % slot_size, shift);
+        /*size_t rel_index = end % slot_size;
+//        assert(rel_index);
         uint64_t mask = MASK(rel_index);
         T lo = a[last_index] & mask;
         T hi = last_slot & (~mask);
         assert(BITWISE_DISJOINT(hi, lo));
-        a[last_index] = hi | lo;
+        a[last_index] = hi | lo;*/
     }
 
     /**
@@ -606,6 +679,42 @@ namespace bits_memcpy {
             shift_array_towards_the_end_word_aligned<uint8_t>(pointer, start, end, shift);
         }
     }
+
+    /**
+     * @brief ONLY FOR SHIFT = 4;
+     * 
+     * @tparam T 
+     * @tparam shift 
+     * @param a 
+     * @param start 
+     * @param end 
+     */
+    template<typename T, size_t shift = 4>
+    void shift_array_towards_the_end_half_aligned(T *a, size_t start, size_t end) {
+        assert(shift == 4);
+        assert(is_divisible<CHAR_BIT>(start * 2));
+        constexpr unsigned slot_size = sizeof(a[0]) * CHAR_BIT;
+
+        if (is_divisible<CHAR_BIT>(start)) {
+            uint8_t *pointer = ((uint8_t *) a);
+            shift_array_towards_the_end_word_aligned<uint8_t>(pointer, start, end, shift);
+            return;
+        }
+
+        //fix suffix.
+        uint8_t *pointer = ((uint8_t *) a);
+        shift_array_towards_the_end_word_aligned<uint8_t>(pointer, start + 4, end, shift);
+
+        assert((start / CHAR_BIT) == ((start + 3) / CHAR_BIT));
+        assert((start / CHAR_BIT) + 1 == ((start + 4)) / CHAR_BIT);
+
+        //fix first byte
+        auto i = start / CHAR_BIT;
+        uint8_t temp = pointer[i] >> shift;
+        pointer[i] &= MASK(shift);// keeping low
+        pointer[i + 1] |= temp;   // setting low to previous element hi.
+    }
+
 
     template<typename T, typename S>
     void beginnings_are_aligned(T *src, S *dest, size_t src_start, size_t dest_start, size_t length) {
@@ -681,19 +790,49 @@ namespace bits_memcpy {
 
 }// namespace bits_memcpy
 
+namespace bits_memcpy {
+    template<size_t length, size_t a_size>
+    uint64_t my_cmp_epu(uint64_t rem, const uint64_t *a) {
+        constexpr unsigned slot_size = sizeof(uint64_t) * CHAR_BIT;
+        static_assert(((slot_size * a_size) % length) == 0);
+
+        constexpr unsigned word_capacity = slot_size / length;
+        constexpr unsigned words_num = a_size;
+        constexpr unsigned capacity = word_capacity * words_num;
+        static_assert(capacity <= 64);
+        constexpr uint64_t mask = MASK(length);
+
+        uint64_t b = 1ULL;
+        uint64_t res = 0;
+        for (size_t i = 0; i < words_num; i++) {
+            uint64_t temp = a[i];
+            for (size_t j = 0; j < word_capacity; j++) {
+                res |= ((temp & mask) == rem) ? b : 0;
+                temp >>= length;
+                b <<= 1ul;
+            }
+        }
+        return res;
+    }
+
+}// namespace bits_memcpy
+
 
 template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
-class L2Bucket_mq {
+class alignas(64) MainBucket {
     static_assert(max_capacity <= 64, "max_capacity is too big");
     static_assert(max_capacity + batch_size <= 128, "pd_index header does not fit inside 128 bit");
 
-    static constexpr size_t bucket_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>();
-
+    const size_t bucket_size{get_l2_bucket_size<max_capacity, batch_size, bits_per_item>()};
+    uint64_t *pd;
 public:
-    uint64_t pd[bucket_size] __attribute__((aligned(64)));
+    // __attribute__((aligned(64)));
 
-    L2Bucket_mq() {
-        constexpr unsigned bit_size = bucket_size * sizeof(pd[0]) * CHAR_BIT;
+    MainBucket() {
+        int ok1 = posix_memalign((void **) &pd, 64, 64 * bucket_size);
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+
+        constexpr unsigned bit_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>() * 64;
         std::vector<bool> v(bit_size, false);
         init_vec<max_capacity, batch_size, bits_per_item>(&v);
         // constexpr size_t zeros_left = max_capacity - (64 - batch_size);
@@ -705,7 +844,17 @@ public:
         assert(cmp_res2 == -1);
     }
 
-    L2Bucket_mq(const L2Bucket_mq &temp_bucket) {
+    ~MainBucket(){
+        free(pd);
+    }
+
+    void init(){
+        constexpr unsigned bit_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>() * 64;
+        constexpr uint64_t empty_pd[get_l2_bucket_size<max_capacity, batch_size, bits_per_item>()] = {MASK(batch_size)};
+        memcpy(pd, empty_pd, (bit_size + 7) / 8);
+    }
+
+    MainBucket(const MainBucket &temp_bucket) {
         for (size_t i = 0; i < bucket_size; i++) {
             pd[i] = temp_bucket.pd[i];
         }
@@ -729,16 +878,6 @@ public:
         return get_capacity() == max_capacity;
     }
 
-    void read_pd_header(uint64_t *dest) {
-        constexpr unsigned end = max_capacity + batch_size;
-        read_bits(pd, dest, 0, end);
-        // constexpr unsigned kBytes2copy = (max_capacity + batch_size + CHAR_BIT - 1) / CHAR_BIT;
-        // constexpr unsigned last_index = (max_capacity + batch_size + 63) / 64;
-        // constexpr unsigned mask = (max_capacity + batch_size) & 63;
-        // memcpy(dest, pd, kBytes2copy);
-        // bool cond = ((dest[last_index] & MASK(mask)) == dest[last_index]);
-        // assert(cond);
-    }
 
     unsigned __int128 get_pd_header() {
         unsigned __int128 x = 0;
@@ -754,19 +893,6 @@ public:
         return x;
     }
 
-    // void read_quot_header(uint64_t *dest) {
-    //     constexpr unsigned start = max_capacity + batch_size;
-    //     constexpr unsigned size = max_capacity + quot_range;
-    //     read_bits(pd, dest, start, start + size);
-    // }
-    // unsigned __int128 get_quot_header() {
-    //     uint64_t a[2] = {0};
-    //     read_quot_header(a);
-    //     constexpr unsigned kBytes2copy = (max_capacity + quot_range + CHAR_BIT - 1) / CHAR_BIT;
-    //     unsigned __int128 x;
-    //     memcpy(&x, a, kBytes2copy);
-    //     return x;
-    // }
 
     uint64_t get_location_bitmask_header() {
         constexpr unsigned start = get_pd_header_size();
@@ -988,7 +1114,7 @@ public:
 
     uint64_t body_find(uint8_t rem) {
         constexpr bool does_bucket_size_is_512_bit =
-                get_l2_bucket_bit_size<max_capacity, batch_size, bits_per_item>() == 512;
+                get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() == 512;
         if (does_bucket_size_is_512_bit) {
             constexpr unsigned shift = 64 - max_capacity;
             // const __m512i body = _mm512_load_si512(pd);
@@ -1007,7 +1133,7 @@ public:
 
     u128 get_pd_header_mask(uint64_t pd_index) {
         auto res = get_mask_from_header(get_pd_header(), pd_index);
-        auto pop_res = popcount128(res);
+        uint64_t pop_res = popcount128(res);
         auto v_res = get_pd_index_capacity(pd_index);
         if (pop_res != v_res) {
             print_pd();
@@ -1027,29 +1153,23 @@ public:
     }
 
 
-    bool insert(uint64_t pd_index, uint8_t rem, bool is_primary_location) {
-        assert(!find(pd_index, rem, is_primary_location));
+    size_t insert(uint64_t pd_index, uint8_t rem, bool is_primary_location) {
+        // assert(!find(pd_index, rem, is_primary_location));
         if (is_full())
-            return false;
+            return max_capacity;
 
         assert(pd_index < batch_size);
 
         unsigned __int128 header = get_pd_header();
         constexpr unsigned kBytes2copy = (get_pd_header_size() + CHAR_BIT - 1) / CHAR_BIT;
         assert(popcount128(header) == batch_size);
-        //        return true;
-        // const unsigned fill = select128(header, 50 - 1) - (50 - 1);
-        // assert((fill <= 14) || (fill == pd_popcount(pd)));
-        // assert((fill == 51) == pd_full(pd));
-        // if (fill == 51)
-        //     return false;
 
 
         const uint64_t begin = pd_index ? (select128(header, pd_index - 1) + 1) : 0;
         const uint64_t end = select128(header, pd_index);
         assert(begin <= end);
         assert(end < get_pd_header_size());
-        const __m512i target = _mm512_set1_epi8(rem);
+        //        const __m512i target = _mm512_set1_epi8(rem);
 
         unsigned __int128 new_header = header & ((((unsigned __int128) 1) << begin) - 1);
         new_header |= ((header >> end) << (end + 1));
@@ -1065,7 +1185,7 @@ public:
 
         constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
         constexpr unsigned size0fPd =
-                (get_l2_bucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
+                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
         uint64_t i = begin_fingerprint;
         for (; i < end_fingerprint; ++i) {
@@ -1093,26 +1213,26 @@ public:
 
 
         assert(find_true_db(pd_index, rem, is_primary_location));
-        return true;
+        return i;
     }
 
     auto conditional_remove_db(int64_t pd_index, uint8_t rem, bool is_primary_location) -> bool {
-        //todo::the error is in identifying the index of the remainder we delete. We identify it solely on the body, and don't check the location_bitmask.  
+        //todo::the error is in identifying the index of the remainder we delete. We identify it solely on the body, and don't check the location_bitmask.
         // bool db_cond = (pd_index == 29) && (rem == 58) && is_primary_location;
         // if (db_cond){
         //     find_print_db(pd_index, rem, is_primary_location);
         //     std::cout << std::string(80, 'H') << std::endl;
         // }
-        uint64_t old_find_res = find(pd_index, rem, is_primary_location);
+        //        uint64_t old_find_res = find(pd_index, rem, is_primary_location);
         assert(find(pd_index, rem, is_primary_location));
-        assert(pd_index < batch_size);
+        assert(((uint64_t) pd_index) < batch_size);
 
-        auto old_header = get_pd_header();
-        auto old_location_bit_mask = get_location_bitmask(is_primary_location);
-        auto old_capacity = get_capacity();
-        uint64_t old_capacity_list[batch_size] = {0};// todo
-        get_pd_index_capacity_list(old_capacity_list);
-        uint64_t old_v = body_find(rem);
+        //        auto old_header = get_pd_header();
+        //        auto old_location_bit_mask = get_location_bitmask(is_primary_location);
+        //        auto old_capacity = get_capacity();
+        //        uint64_t old_capacity_list[batch_size] = {0};// todo
+        //        get_pd_index_capacity_list(old_capacity_list);
+        //        uint64_t old_v = body_find(rem);
 
         unsigned __int128 header = get_pd_header();
         constexpr unsigned kBytes2copy = (get_pd_header_size() + CHAR_BIT - 1) / CHAR_BIT;
@@ -1143,15 +1263,14 @@ public:
 
         constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
         constexpr unsigned size0fPd =
-                (get_l2_bucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
+                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
         uint64_t i = begin_fingerprint;
         for (; i < end_fingerprint; ++i) {
-            if ((rem <= ((const uint8_t *) pd)[firstBodyByte + i])){
+            if ((rem <= ((const uint8_t *) pd)[firstBodyByte + i])) {
                 //add test here.
                 break;
             }
-                
         }
         if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[firstBodyByte + i])) {
             assert(0);
@@ -1213,7 +1332,7 @@ public:
 
     auto conditional_remove(int64_t pd_index, uint8_t rem, bool is_primary_location) -> bool {
         assert(0);
-        assert(pd_index < batch_size);
+        assert(pd_index < ((int64_t) batch_size));
 
         unsigned __int128 header = get_pd_header();
         constexpr unsigned kBytes2copy = (get_pd_header_size() + CHAR_BIT - 1) / CHAR_BIT;
@@ -1244,7 +1363,7 @@ public:
 
         constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
         constexpr unsigned size0fPd =
-                (get_l2_bucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
+                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
         uint64_t i = begin_fingerprint;
         for (; i < end_fingerprint; ++i) {
@@ -1254,6 +1373,9 @@ public:
         if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[firstBodyByte + i])) {
             return false;
         }
+        uint64_t find_res = find(pd_index, rem, is_primary_location);
+        auto find_res_i = _tzcnt_u64(find_res);
+        i = find_res_i;
 
         assert(popcount128(new_header) == batch_size);
         memcpy(pd, &new_header, kBytes2copy);
@@ -1264,6 +1386,38 @@ public:
 
         remove_bit_from_location_bitmask(i);
         return true;
+    }
+
+    void remove_by_index(int64_t pd_index, uint8_t rem, bool is_primary_location, size_t index) {
+        assert(find(pd_index, rem, is_primary_location) & (1ULL << index));
+
+        // updating the pd_index header
+        unsigned __int128 header = get_pd_header();
+        constexpr unsigned kBytes2copy = (get_pd_header_size() + CHAR_BIT - 1) / CHAR_BIT;
+
+        assert(popcount128(header) == batch_size);
+        const uint64_t begin = pd_index ? (select128(header, pd_index - 1) + 1) : 0;
+        const uint64_t end = select128(header, pd_index);
+        assert(begin <= end);
+        assert(end < get_pd_header_size());
+
+        unsigned __int128 new_header = header & ((((unsigned __int128) 1) << begin) - 1);
+        new_header |= ((header >> end) << (end - 1));
+        assert(popcount128(new_header) == batch_size);
+        memcpy(pd, &new_header, kBytes2copy);
+
+
+        // updating the body
+        constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
+        constexpr unsigned size0fPd =
+                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
+
+        memmove(&((uint8_t *) pd)[firstBodyByte + index],
+                &((const uint8_t *) pd)[firstBodyByte + index + 1],
+                size0fPd - (firstBodyByte + index + 1));
+
+        //updating the location_bitmask
+        remove_bit_from_location_bitmask(index);
     }
 
     auto get_pd_index_capacity(uint64_t pd_index) {
@@ -1347,7 +1501,7 @@ public:
         // // auto lo_capacity = 64 - _mm_popcnt_u64(lo);
         // // auto hi_capacity = 64 - _mm_popcnt_u64(hi);
 
-        while (counter < batch_size) {
+        while (counter < ((int) batch_size)) {
             assert(_mm_popcnt_u64(header));
             auto temp_cap = _tzcnt_u64(header);
             a[counter] = temp_cap;
@@ -1360,11 +1514,728 @@ public:
     }
 };
 
+namespace packing_helper {
+    template<typename T>
+    bool cmp_array(T *a, T *b, size_t words_to_compare) {
+        for (size_t i = 0; i < words_to_compare; i++) {
+            bool temp = (a[i] == b[i]);
+            if (!temp) return false;
+        }
+        return true;
+    }
 
-namespace l2_bucket_tests {
+
+    void unpack_array(uint64_t *unpacked_array, size_t unpack_size, const uint64_t *pack_array, size_t pack_size,
+                      size_t el_length);
+
+    void pack_array(const uint64_t *unpacked_array, size_t unpack_size, uint64_t *pack_array, size_t pack_size,
+                    size_t el_length);
+
+    bool validate_pack_unpack(uint64_t *unpacked_array, size_t unpack_size, size_t el_length);
+
+    bool validate_unpack_pack(uint64_t *packed_array, size_t packed_size, size_t el_length);
+
+}// namespace packing_helper
+
+
+/**
+ * @brief Like linked list, but contiguous, and packed.
+ *
+ * @tparam max_capacity
+ * @tparam batch_size
+ * @tparam quot_length
+ */
+template<size_t max_capacity, size_t batch_size, size_t quot_length>
+class alignas(8) Quotients {
+    static constexpr unsigned total_bits_size = quot_length * max_capacity;
+    static constexpr unsigned slot_size = sizeof(uint64_t) * CHAR_BIT;
+    static constexpr unsigned Q_list_size = (total_bits_size + slot_size - 1) / slot_size;
+    static constexpr unsigned alignment = 8;
+    // uint64_t *Q_list;
+
+public:
+    uint64_t Q_list[Q_list_size];// __attribute__((aligned(alignment)));
+
+
+    Quotients() {
+
+        //        Q_list = new uint64_t[Q_list_size];
+        // int ok = posix_memalign((void **) &Q_list, alignment, alignment * Q_list_size);
+        // if (ok != 0) {
+        //     std::cout << "Failed!!!" << std::endl;
+        //     assert(false);
+        //     return;
+        // }
+        std::fill(Q_list, Q_list + Q_list_size, 0);
+    }
+
+    void init(){
+        std::fill(Q_list, Q_list + Q_list_size, 0);
+    }
+    ~Quotients() {
+        //        delete[] Q_list;
+        // free(Q_list);
+    }
+
+    void add_simple_shift_helper(size_t word_index, size_t rel_index, int64_t quot) {
+        //        constexpr unsigned word_capacity = slot_size / quot_length;
+        //        size_t word_index = index / word_capacity;
+        //        size_t rel_index = (index * quot_length) % slot_size;
+        uint64_t mask = MASK(rel_index);
+        uint64_t lo = Q_list[word_index] & mask;
+        uint64_t mid = quot << rel_index;
+        uint64_t hi = (Q_list[word_index] & ~mask) << quot_length;
+        assert(BITWISE_DISJOINT(lo, mid));
+        assert(BITWISE_DISJOINT(lo, hi));
+        assert(BITWISE_DISJOINT(mid, hi));
+        Q_list[word_index] = lo | mid | hi;
+        //        return;
+    }
+
+    void add_simple_shift(size_t index, int64_t quot) {
+        static_assert(quot_length == 4, "quot_length is not 4");
+        constexpr unsigned word_capacity = slot_size / quot_length;
+        size_t word_index = index / word_capacity;
+        size_t rel_index = (index * quot_length) % slot_size;
+        //        uint64_t mask = MASK(rel_index);
+
+        if (word_index == Q_list_size - 1) {
+            add_simple_shift_helper(word_index, rel_index, quot);
+            /*uint64_t lo = Q_list[word_index] & mask;
+            uint64_t mid = quot << rel_index;
+            uint64_t hi =  (Q_list[word_index] & ~mask) << quot_length;
+            assert(BITWISE_DISJOINT(lo,mid));
+            assert(BITWISE_DISJOINT(lo,hi));
+            assert(BITWISE_DISJOINT(mid,hi));
+            Q_list[word_index] = lo | mid | hi;*/
+            return;
+        } else if (word_index == Q_list_size - 2) {
+            Q_list[word_index + 1] <<= quot_length;
+            uint64_t temp_lo = Q_list[word_index] >> (slot_size - quot_length);
+            Q_list[word_index + 1] |= temp_lo;
+            add_simple_shift_helper(word_index, rel_index, quot);
+            return;
+        } else if (word_index == Q_list_size - 3) {
+            Q_list[word_index + 2] <<= quot_length;
+            uint64_t temp_lo = Q_list[word_index + 1] >> (slot_size - quot_length);
+            Q_list[word_index + 2] |= temp_lo;
+
+            Q_list[word_index + 1] <<= quot_length;
+            uint64_t temp_lo2 = Q_list[word_index] >> (slot_size - quot_length);
+            Q_list[word_index + 1] |= temp_lo2;
+            add_simple_shift_helper(word_index, rel_index, quot);
+            return;
+        } else {
+            assert(false);
+        }
+    }
+
+    void add(size_t index, int64_t quot) {
+        assert(((uint64_t) quot) <= MASK(quot_length));
+        assert(index < max_capacity);
+        add_simple_shift(index, quot);
+        /*static_assert(quot_length == 4, "quot_length is not 4");
+        size_t start = index * quot_length;
+        constexpr unsigned end = quot_length * max_capacity;
+        if (is_divisible<CHAR_BIT>(start)) {
+            uint8_t *pointer = ((uint8_t *) Q_list);
+            bits_memcpy::shift_array_towards_the_end_word_aligned<uint8_t>(pointer, start, end - 1, quot_length);
+
+            pointer[start / CHAR_BIT] |= quot;
+            return;
+        }
+
+
+        if (index == max_capacity - 1) {
+            constexpr unsigned i = (end - 1) / CHAR_BIT;
+            uint8_t *pointer = ((uint8_t *) Q_list);
+            pointer[i] &= MASK(quot_length);    // keeping low
+            pointer[i] |= (quot << quot_length);// adding new element.
+            return;
+        }
+        //fix suffix.
+        uint8_t *pointer = ((uint8_t *) Q_list);
+        bits_memcpy::shift_array_towards_the_end_word_aligned<uint8_t>(pointer, start + quot_length, end - 1, quot_length);
+
+        //fix first byte
+        constexpr uint64_t shift = quot_length;
+        auto i = start / CHAR_BIT;
+        uint8_t temp = pointer[i] >> shift;
+        pointer[i] &= MASK(shift);    // keeping low
+        pointer[i] |= (quot << shift);// adding new element.
+        // constexpr unsigned last_byte_index = max_capacity * quot_length / CHAR_BIT;
+        // assert(i < last_byte_index);
+        pointer[i + 1] |= temp;// setting low to previous element hi.*/
+    }
+
+    bool find_naive(uint64_t mask, uint8_t quot) {
+        if (!mask)
+            return false;
+
+        const uint64_t begin = _tzcnt_u64(mask);
+        const uint64_t end = 64 - _lzcnt_u64(mask);
+        const uint64_t length = end - begin;
+        const uint64_t pop = _mm_popcnt_u64(mask);
+        assert(length == pop);
+        uint64_t unpack_array[max_capacity] = {0};
+        unpack_Q_list(unpack_array);
+
+        for (size_t i = begin; i < end; i++) {
+            if (unpack_array[i] == quot)
+                return true;
+        }
+        return false;
+    }
+
+    uint64_t find1(uint64_t mask, uint8_t quot) {
+        if (!mask)
+            return false;
+
+        uint64_t my_mask = bits_memcpy::my_cmp_epu<quot_length, Q_list_size>(quot, Q_list);
+        uint64_t v_my_mask = get_quot_mask(quot);
+
+        constexpr uint64_t const_mask = MASK(max_capacity);
+        bool cond = ((v_my_mask & const_mask) == (my_mask & const_mask));
+        if (!cond) {
+            std::cout << "quot:       \t" << ((uint16_t) quot) << std::endl;
+            std::cout << "Q_list:     \t";
+            print_Q_list_unpacked();
+            std::cout << "my_mask:     \t";
+            print_memory::print_word_LE(my_mask, GAP);
+            std::cout << "v_my_mask:   \t";
+            print_memory::print_word_LE(v_my_mask, GAP);
+            assert(0);
+        }
+        assert(cond);
+
+        auto temp_res = my_mask & mask;
+        return temp_res;
+    }
+
+    bool find_true_db(uint64_t mask, uint8_t quot) {
+        auto v_find = find_naive(mask, quot);
+        auto att_find = find1(mask, quot);
+        assert(v_find == (!!att_find));
+
+        uint64_t my_mask = bits_memcpy::my_cmp_epu<quot_length, Q_list_size>(quot, Q_list);
+        uint64_t v_my_mask = get_quot_mask(quot);
+
+        constexpr uint64_t const_mask = MASK(max_capacity);
+        bool cond = ((v_my_mask & const_mask) == (my_mask & const_mask));
+        if (!cond) {
+            std::cout << "quot:       \t" << ((uint16_t) quot) << std::endl;
+            std::cout << "Q_list:     \t";
+            print_Q_list_unpacked();
+            std::cout << "my_mask:     \t";
+            print_memory::print_word_LE(my_mask, GAP);
+            std::cout << "v_my_mask:   \t";
+            print_memory::print_word_LE(v_my_mask, GAP);
+            assert(0);
+        }
+        assert(cond);
+
+        auto temp_res = my_mask & mask;
+        if (!temp_res) {
+            std::cout << "quot:       \t" << ((uint16_t) quot) << std::endl;
+            std::cout << "Q_list:     \t";
+            print_Q_list_unpacked();
+            std::cout << "my_mask:     \t";
+            print_memory::print_word_LE(my_mask, GAP);
+            std::cout << "v_my_mask:   \t";
+            print_memory::print_word_LE(v_my_mask, GAP);
+            std::cout << "mask:        \t";
+            print_memory::print_word_LE(mask, GAP);
+            assert(0);
+        }
+        return temp_res;
+    }
+
+    /**
+     * @brief
+     *
+     * @param mask the lookup result of the first part of the lookup, that happened in MainBucket.
+     * @param quot which quot we are looking for.
+     */
+    bool find(uint64_t mask, uint8_t quot) {
+        auto v_find = find_naive(mask, quot);
+        auto att_find = find1(mask, quot);
+        bool cond = v_find == (!!att_find);
+        if (!cond) {
+            v_find = find_naive(mask, quot);
+            att_find = find1(mask, quot);
+        }
+        assert(v_find == (!!att_find));
+        return att_find;
+    }
+
+    void conditional_remove_simple_shift_helper_helper(size_t word_index, size_t rel_index, int64_t) {
+        uint64_t mask = MASK(rel_index);
+        uint64_t lo = Q_list[word_index] & mask;
+        //        uint64_t mid = quot << rel_index;
+        uint64_t hi = (Q_list[word_index] >> quot_length) & (~mask);
+        assert(BITWISE_DISJOINT(lo, hi));
+        Q_list[word_index] = lo | hi;
+    }
+
+    void conditional_remove_simple_shift_helper(size_t index, int64_t quot) {
+        constexpr unsigned word_capacity = slot_size / quot_length;
+        size_t word_index = index / word_capacity;
+        size_t rel_index = (index * quot_length) % slot_size;
+        //        uint64_t word_mask = MASK(rel_index);
+
+        if (word_index == Q_list_size - 1) {
+            conditional_remove_simple_shift_helper_helper(word_index, rel_index, quot);
+            return;
+        } else if (word_index == Q_list_size - 2) {
+            conditional_remove_simple_shift_helper_helper(word_index, rel_index, quot);
+            uint64_t temp_hi = Q_list[word_index + 1] << (slot_size - quot_length);
+            Q_list[word_index] |= temp_hi;
+            Q_list[word_index + 1] >>= quot_length;
+            return;
+        } else if (word_index == Q_list_size - 3) {
+            conditional_remove_simple_shift_helper_helper(word_index, rel_index, quot);
+            uint64_t temp_hi = Q_list[word_index + 1] << (slot_size - quot_length);
+            Q_list[word_index] |= temp_hi;
+            Q_list[word_index + 1] >>= quot_length;
+
+            uint64_t temp_hi2 = Q_list[word_index + 2] << (slot_size - quot_length);
+            Q_list[word_index + 1] |= temp_hi2;
+            Q_list[word_index + 2] >>= quot_length;
+            return;
+        } else {
+            assert(false);
+        }
+    }
+
+    size_t conditional_remove_simple_shift(uint64_t mask, int64_t quot) {
+        uint64_t find_res = find(mask, quot);
+        if (find_res == 0) {
+            return -1;
+        }
+        uint64_t index = _tzcnt_u64(find_res);
+        if (index == max_capacity - 1) {
+            return index;
+        }
+        conditional_remove_simple_shift_helper(index, quot);
+        return index;
+    }
+
+    size_t conditional_remove(uint64_t mask, int64_t quot) {
+        return conditional_remove_simple_shift(mask, quot);
+        /*uint64_t find_res = find(mask, quot);
+        if (find_res == 0) {
+            return -1;
+        }
+
+        uint64_t index = _tzcnt_u64(find_res);
+        if (index == max_capacity - 1) {
+            return index;
+        }
+        // if (index == max_capacity){};
+
+        static_assert(quot_length == 4, "quot_length is not 4");
+        size_t start = index * quot_length;
+        constexpr unsigned end = quot_length * max_capacity;
+        if (is_divisible<CHAR_BIT>(start)) {
+            uint8_t *pointer = ((uint8_t *) Q_list);
+            bits_memcpy::shift_array_towards_the_start_word_aligned<uint8_t>(pointer, start, end - 1, quot_length);
+            return index;
+        }
+        uint8_t *pointer = ((uint8_t *) Q_list);
+        assert((start / CHAR_BIT) == ((start + 3) / CHAR_BIT));
+        assert((start / CHAR_BIT) + 1 == ((start + 4)) / CHAR_BIT);
+
+        constexpr uint64_t shift = quot_length;
+        auto i = start / CHAR_BIT;
+        uint8_t temp = pointer[i + 1] & MASK(shift);
+        bits_memcpy::shift_array_towards_the_start_word_aligned<uint8_t>(pointer, start + quot_length, end - 1,
+                                                                         quot_length);
+
+        pointer[i] &= MASK(shift);    // keeping low
+        pointer[i] |= (temp << shift);// moving first element in the "shift" one place backwords.
+
+        return index;*/
+    }
+
+
+    /**
+     * @brief Get the minimal quot object
+     *
+     * @param mask representing the relevant quotients.
+     * mask should be a continguos sequence (possibly empty) of ones.
+     * @return size_t
+     */
+    size_t get_minimal_quot(uint64_t mask) {
+        //mask validation:
+        if (!mask) {
+            std::cout << "*** " << __FILE__ << ":" << __LINE__ << " *** " << std::endl;
+            assert(0);
+        }
+        const uint64_t begin = _tzcnt_u64(mask);
+        const uint64_t end = 63 - _lzcnt_u64(mask);
+        const uint64_t length = end - begin;
+        const uint64_t pop = _mm_popcnt_u64(mask);
+        assert(length == pop);
+
+        uint64_t my_mask = MASK(end) ^MASK(begin);
+        assert(my_mask == mask);
+
+        return get_minimal_quot(begin, end);
+    }
+
+    size_t get_minimal_quot_naive(uint64_t begin, uint64_t end) {
+        uint64_t unpack_array[max_capacity] = {0};
+        unpack_Q_list(unpack_array);
+        uint64_t min_q = unpack_array[begin];
+        uint64_t min_index = begin;
+        // todo: check limits
+        for (size_t i = begin; i < end; i++) {
+            if (unpack_array[i] < min_q) {
+                min_q = unpack_array[i];
+                min_index = i;
+            }
+        }
+        return (min_index << quot_length) | min_q;
+    }
+
+    size_t get_minimal_quot(uint64_t begin, uint64_t end) {
+        return -1;
+    }
+
+
+    void unpack_Q_list(uint64_t *unpack_array) {
+        static constexpr unsigned slot_size = sizeof(uint64_t) * CHAR_BIT;
+        constexpr unsigned quots_in_word = slot_size / quot_length;
+        constexpr unsigned words_num = max_capacity / quots_in_word;
+        static_assert((max_capacity % quots_in_word) == 0);
+
+        constexpr uint64_t mask = MASK(quot_length);
+
+        for (size_t i = 0; i < words_num; i++) {
+            uint64_t temp = Q_list[i];
+            for (size_t j = 0; j < quots_in_word; j++) {
+                size_t index = i * quots_in_word + j;
+                unpack_array[index] = temp & mask;
+                temp >>= quot_length;
+            }
+        }
+    }
+
+
+    uint64_t get_quot_mask(uint64_t quot) {
+        packing_helper::validate_unpack_pack(Q_list, Q_list_size, quot_length);
+        uint64_t unpack_array[max_capacity] = {0};
+        unpack_Q_list(unpack_array);
+        uint64_t res = 0;
+        for (size_t i = 0; i < max_capacity; i++) {
+            if (unpack_array[i] == quot) {
+                res |= (1ull << i);
+            }
+            // res |= ((unpack_array[i] == quot) << i);
+        }
+        return res;
+    }
+
+    void print_Q_list_unpacked() {
+        uint64_t unpack_array[max_capacity] = {0};
+        unpack_Q_list(unpack_array);
+        print_memory::print_array_in_lines(unpack_array, max_capacity, 8);
+        //        print_memory::print_array_with_nonzero_indexes(unpack_array, max_capacity);
+    }
+
+    void print_find_arg(uint64_t mask, uint8_t quot) {
+        std::cout << std::string(80, '=') << std::endl;
+
+        std::cout << "quot:      \t" << ((uint64_t) quot);
+        std::cout << std::endl;
+        std::cout << "maskIndex: \t" << (_tzcnt_u64(mask));
+        std::cout << std::endl;
+        std::cout << "maskLength:\t" << (_mm_popcnt_u64(mask));
+        std::cout << std::endl;
+        std::cout << "mask:      \t";
+        print_memory::print_word_LE(mask, GAP);
+
+        std::cout << std::string(80, '=') << std::endl;
+    }
+
+    //    void print_Q_list(){
+    //        print_Q_list_unpacked();
+    ////        uint64_t unpacked_array[max_capacity] = {0};
+    ////        unpacked_array()
+    ////        print_array_in_lines()
+    //    }
+};
+
+
+namespace L2_Bucket_operations {
+    bool add();
+
+    bool find(uint64_t pd_index, uint8_t quot, uint8_t rem, bool is_primary_location);
+
+    bool conditional_delete();
+};// namespace L2_Bucket_operations
+
+
+//can't work. should be testing linked list.
+namespace Quotients_tests {
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    void rec_cmp_single(Quotients<max_capacity, batch_size, quot_length> *bucket, my_map::map_t *my_map, key temp_key) {
+        uint64_t index = std::get<0>(temp_key);
+        uint8_t quot = std::get<1>(temp_key);
+        //        bool location_mask = std::get<2>(temp_key);
+
+        auto map_count = my_map->count(temp_key);
+        assert(map_count <= 1);
+        bool map_find_res = !!(map_count);
+        uint64_t mask = 1ULL << index;
+        bool find_res = bucket->find(mask, quot);
+        if (find_res != map_find_res) {
+            bucket->print_find_arg(mask, quot);
+            std::cout << "find_res:     " << find_res << std::endl;
+            std::cout << "map_find_res: " << map_find_res << std::endl;
+            std::cout << "map_count: " << map_count << std::endl;
+            bucket->print_Q_list_unpacked();
+            bucket->find(mask, quot);
+            exit(-1);
+            //            pd->find(pd_index, rem, location_mask);
+        }
+        assert(find_res == map_find_res);
+    }
+
+    // template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    // bool validate_pack_unpack(Quotients<max_capacity, batch_size, quot_length> *ql) {
+    //     uint64_t unpack_array[max_capacity] = {0};
+    //     uint64_t pack_array[(quot_length * max_capacity / 64)] = {0};
+    //     unpack_Q_list(unpack_array);
+    //     // pack_array;
+    //     assert(0);
+    //     return true;
+    // }
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    bool simplest_test() {
+        auto bucket = Quotients<max_capacity, batch_size, quot_length>();
+        const uint64_t quot = 0;
+        for (size_t i = 0; i < max_capacity; i++) {
+            bucket.add(i, quot);
+            uint64_t mask = 1ULL << i;
+            bool temp = bucket.find_true_db(mask, quot);
+            bool temp2 = bucket.find(mask, quot);
+            assert(temp == temp2);
+            if (!temp) {
+                std::cout << "i: " << i << std::endl;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    void insert_and_true_lookup(Quotients<max_capacity, batch_size, quot_length> *bucket) {
+        for (size_t i = 0; i < max_capacity; i++) {
+            uint64_t quot = random() % MASK(quot_length) + 1;
+            uint64_t index = random() % max_capacity;
+            bucket->add(index, quot);
+            uint64_t mask = 1ULL << index;
+            bool temp = bucket->find_true_db(mask, quot);
+            bool temp2 = bucket->find(mask, quot);
+            assert(temp == temp2);
+            assert(temp);
+        }
+    }
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    void insert_and_true_lookup(Quotients<max_capacity, batch_size, quot_length> *bucket, my_map::map_t *my_map) {
+        for (size_t i = 0; i < max_capacity; i++) {
+            uint8_t quot = rand() % MASK(quot_length) + 1;
+            uint64_t index = rand() % max_capacity;
+            const key temp_key = {index, quot, true};
+
+            rec_cmp_single(bucket, my_map, temp_key);
+
+            bucket->add(index, quot);
+            my_map->insert(std::pair<key, size_t>(temp_key, 42));
+
+
+            uint64_t mask = 1ULL << index;
+            bool temp = bucket->find_true_db(mask, quot);
+            bool temp2 = bucket->find(mask, quot);
+            assert(temp == temp2);
+            assert(temp);
+
+            rec_cmp_single(bucket, my_map, temp_key);
+        }
+    }
+
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    bool true_negative_lookup_test() {
+        auto bucket = Quotients<max_capacity, batch_size, quot_length>();
+        // insertion and true lookups.
+        for (size_t i = 0; i < max_capacity; i++) {
+            uint8_t quot = (i / 4) + 1;
+            bucket.add(i, quot);
+            uint64_t mask = 1ULL << i;
+            bool temp = bucket.find_true_db(mask, quot);
+            bool temp2 = bucket.find(mask, quot);
+            assert(temp == temp2);
+            if (!temp) {
+                std::cout << "i: " << i << std::endl;
+                return false;
+            }
+        }
+        // false lookups with quot that is not the bucket.
+        for (size_t i = 0; i < max_capacity; i++) {
+            uint8_t quot = 15;
+            uint64_t mask = 2ULL << i;
+            bool temp = bucket.find(mask, quot);
+            assert(!temp);
+            if (temp) {
+                std::cout << "failed in the false positive lookups part 1." << std::endl;
+                std::cout << "i: " << i << std::endl;
+                return false;
+            }
+        }
+
+        // false lookups with wrong index.
+        for (size_t i = 0; i < max_capacity; i++) {
+            uint8_t quot = (i / 4) + 1;
+            uint64_t mask = 16ULL << i;
+            bool temp = bucket.find(mask, quot);
+            assert(!temp);
+            if (temp) {
+                std::cout << "failed in the false positive lookups part 2." << std::endl;
+                std::cout << "i: " << i << std::endl;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    bool true_negative_lookup_test2() {
+        auto bucket = Quotients<max_capacity, batch_size, quot_length>();
+        // insertion and true lookups.
+        for (size_t i = 0; i < max_capacity; i++) {
+            uint8_t quot = (i / 4) + 1;
+            bucket.add(i, quot);
+            uint64_t mask = 1ULL << i;
+            bool temp = bucket.find_true_db(mask, quot);
+            bool temp2 = bucket.find(mask, quot);
+            assert(temp == temp2);
+            if (!temp) {
+                std::cout << "i: " << i << std::endl;
+                return false;
+            }
+        }
+    }
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    bool true_negative_lookup_test_all() {
+        auto bucket = Quotients<max_capacity, batch_size, quot_length>();
+        my_map::map_t my_map;
+        insert_and_true_lookup(&bucket, &my_map);
+        // insertion and true lookups.
+        for (size_t index = 0; index < max_capacity; ++index) {
+            for (uint8_t quot = 1; quot < 16; ++quot) {
+                const key temp_key = {index, quot, true};
+                rec_cmp_single(&bucket, &my_map, temp_key);
+            }
+        }
+        return true;
+    }
+
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    auto rand_test18() -> bool {
+        // size_t max_capacity = 51;
+        // uint64_t valid_max_quot = 0;
+        auto bucket = Quotients<max_capacity, batch_size, quot_length>();
+        for (size_t i = 0; i < max_capacity; i++) {
+            uint64_t quot = rand() % MASK(quot_length);
+            uint64_t index = rand() % max_capacity;
+            // bool location_mask = rand() & 1;
+            bucket.add(index, quot);
+            // assert(res);
+            uint64_t mask = 1ULL << index;
+            bool temp = bucket.find_true_db(mask, quot);
+            bool temp2 = bucket.find(mask, quot);
+            assert(temp == temp2);
+            if (!temp) {
+                bucket.find(mask, quot);
+                bucket.find(mask, quot);
+                bucket.find(mask, quot);
+            }
+            assert(temp);
+        }
+        return true;
+    }
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    auto recursive_add_delete_core_with_map(Quotients<max_capacity, batch_size, quot_length> *bucket, size_t *reps,
+                                            size_t depth, my_map::map_t *my_map) -> bool {
+        static int counter = 0;
+        if (depth == max_capacity)
+            return true;
+
+        assert(depth < max_capacity);
+
+        while (rand() & 1) {
+            if (*reps == 0) return true;
+            *reps -= 1;
+            uint8_t quot = (rand() % MASK(quot_length)) + 1;
+            uint64_t index = rand() % max_capacity;
+            uint64_t mask = 1ULL << index;
+            const key temp_key = {index, quot, true};
+
+
+            rec_cmp_single(bucket, my_map, temp_key);
+
+            //prevents insertion of an element that is already in the pd again.
+            if (!bucket->find(mask, quot)) {
+                my_map->insert(std::pair<key, size_t>(temp_key, 42));
+                bucket->add(index, quot);
+                //                assert(res);
+                assert(bucket->find(mask, quot));
+                rec_cmp_single(bucket, my_map, temp_key);
+            }
+            rec_cmp_single(bucket, my_map, temp_key);
+
+            recursive_add_delete_core_with_map(bucket, reps, depth + 1, my_map);
+
+            rec_cmp_single(bucket, my_map, temp_key);
+
+            if (bucket->find(mask, quot)) {
+                size_t index_del_res = bucket->conditional_remove(mask, quot);
+                bool del_res = (index_del_res < max_capacity);
+                assert(del_res);
+                bool refind_res = bucket->find(mask, quot);
+                assert(!refind_res);
+                my_map->erase(temp_key);
+                rec_cmp_single(bucket, my_map, temp_key);
+            }
+            counter++;
+        }
+        return true;
+    }
+
+    template<size_t max_capacity, size_t batch_size, size_t quot_length>
+    auto recursive_add_delete_with_map(size_t reps) -> bool {
+        size_t counter = reps;
+        //        auto pd = MainBucket<max_capacity, batch_size, quot_length>();
+        auto bucket = Quotients<max_capacity, batch_size, quot_length>();
+        my_map::map_t my_map;
+
+        while (counter) {
+            recursive_add_delete_core_with_map(&bucket, &counter, 1, &my_map);
+        }
+        return true;
+    }
+}// namespace Quotients_tests
+
+namespace MainBucket_tests {
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
     bool rt0() {
-        auto bucket = L2Bucket_mq<max_capacity, batch_size, bits_per_item>();
+        auto bucket = MainBucket<max_capacity, batch_size, bits_per_item>();
         const uint64_t pd_index = 0;
         for (size_t i = 0; i < max_capacity; i++) {
             bucket.insert(pd_index, i, i & 1ul);
@@ -1379,9 +2250,9 @@ namespace l2_bucket_tests {
 
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
     auto insert_find_single(uint64_t pd_index, uint8_t rem, bool is_prime_location,
-                            L2Bucket_mq<max_capacity, batch_size, bits_per_item> *pd) -> bool {
+                            MainBucket<max_capacity, batch_size, bits_per_item> *pd) -> bool {
         assert(!pd->is_full());
-        L2Bucket_mq<max_capacity, batch_size, bits_per_item> temp_pd(*pd);
+        MainBucket<max_capacity, batch_size, bits_per_item> temp_pd(*pd);
 
         // auto before_last_quot = pd512_plus::decode_last_quot_wrapper(pd);
         auto res = temp_pd.insert(pd_index, rem, is_prime_location);
@@ -1392,7 +2263,7 @@ namespace l2_bucket_tests {
     }
 
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
-    auto insert_find_all(L2Bucket_mq<max_capacity, batch_size, bits_per_item> *pd) -> bool {
+    auto insert_find_all(MainBucket<max_capacity, batch_size, bits_per_item> *pd) -> bool {
         for (size_t pd_index = 0; pd_index < batch_size; pd_index++) {
             for (size_t rem = 0; rem < 256; rem++) {
                 insert_find_single(pd_index, rem, 1, pd);
@@ -1403,7 +2274,7 @@ namespace l2_bucket_tests {
 
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
     auto insert_find_all() -> bool {
-        L2Bucket_mq<max_capacity, batch_size, bits_per_item> temp_pd;
+        MainBucket<max_capacity, batch_size, bits_per_item> temp_pd;
         return insert_find_all(&temp_pd);
     }
 
@@ -1411,7 +2282,7 @@ namespace l2_bucket_tests {
     auto rand_test1() -> bool {
         // size_t max_capacity = 51;
         // uint64_t valid_max_quot = 0;
-        L2Bucket_mq<max_capacity, batch_size, bits_per_item> temp_pd;
+        MainBucket<max_capacity, batch_size, bits_per_item> temp_pd;
         for (size_t i = 0; i < max_capacity; i++) {
             uint64_t pd_index = rand() % batch_size;
             uint64_t r = rand() & 255;
@@ -1425,7 +2296,7 @@ namespace l2_bucket_tests {
 
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
     auto rand_test2() -> bool {
-        L2Bucket_mq<max_capacity, batch_size, bits_per_item> temp_pd;
+        MainBucket<max_capacity, batch_size, bits_per_item> temp_pd;
         for (size_t i = 0; i < max_capacity; i++) {
             uint64_t pd_index = rand() % batch_size;
             uint64_t r = rand() & 255;
@@ -1439,7 +2310,7 @@ namespace l2_bucket_tests {
 
 
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
-    auto recursive_add_delete_core(L2Bucket_mq<max_capacity, batch_size, bits_per_item> *pd, size_t *reps,
+    auto recursive_add_delete_core(MainBucket<max_capacity, batch_size, bits_per_item> *pd, size_t *reps,
                                    size_t depth) -> bool {
         static int counter = 0;
         if (depth == max_capacity)
@@ -1460,7 +2331,7 @@ namespace l2_bucket_tests {
                 assert(res);
                 assert(pd->find(pd_index, rem, location_mask));
             }
-            bool rec_res = recursive_add_delete_core(pd, reps, depth + 1);
+            recursive_add_delete_core(pd, reps, depth + 1);
 
             if (pd->find(pd_index, rem, location_mask)) {
                 bool del_res = pd->conditional_remove_db(pd_index, rem, location_mask);
@@ -1475,7 +2346,7 @@ namespace l2_bucket_tests {
 
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
     auto recursive_add_delete(size_t reps) -> bool {
-        auto pd = L2Bucket_mq<max_capacity, batch_size, bits_per_item>();
+        auto pd = MainBucket<max_capacity, batch_size, bits_per_item>();
         size_t counter = reps;
         while (counter) {
             if (counter-- == 0) return true;
@@ -1489,7 +2360,7 @@ namespace l2_bucket_tests {
                 assert(res);
                 assert(pd.find(pd_index, rem, location_mask));
             }
-            bool rec_res = recursive_add_delete_core(&pd, &counter, 1);
+            recursive_add_delete_core(&pd, &counter, 1);
             if (pd.find(pd_index, rem, location_mask)) {
                 bool del_res = pd.conditional_remove_db(pd_index, rem, location_mask);
                 assert(del_res);
@@ -1500,8 +2371,10 @@ namespace l2_bucket_tests {
 
         return true;
     }
+
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
-    void rec_cmp_single(L2Bucket_mq<max_capacity, batch_size, bits_per_item> *pd, my_map::map_t *my_map, key temp_key) {
+    void
+    rec_cmp_single(MainBucket<max_capacity, batch_size, bits_per_item> *pd, my_map::map_t *my_map, key temp_key) {
         uint64_t pd_index = std::get<0>(temp_key);
         uint8_t rem = std::get<1>(temp_key);
         bool location_mask = std::get<2>(temp_key);
@@ -1542,7 +2415,7 @@ namespace l2_bucket_tests {
 
 
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
-    auto recursive_add_delete_core_with_map(L2Bucket_mq<max_capacity, batch_size, bits_per_item> *pd, size_t *reps,
+    auto recursive_add_delete_core_with_map(MainBucket<max_capacity, batch_size, bits_per_item> *pd, size_t *reps,
                                             size_t depth, my_map::map_t *my_map) -> bool {
         static int counter = 0;
         if (depth == max_capacity)
@@ -1590,7 +2463,7 @@ namespace l2_bucket_tests {
     template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
     auto recursive_add_delete_with_map(size_t reps) -> bool {
         size_t counter = reps;
-        auto pd = L2Bucket_mq<max_capacity, batch_size, bits_per_item>();
+        auto pd = MainBucket<max_capacity, batch_size, bits_per_item>();
         my_map::map_t my_map;
 
         while (counter) {
@@ -1776,7 +2649,7 @@ namespace l2_bucket_tests {
     }
 */
 
-}// namespace l2_bucket_tests
+}// namespace MainBucket_tests
 
 
 namespace bits_memcpy {
@@ -1814,7 +2687,8 @@ namespace bits_memcpy {
 
         template<typename T>
         void
-        test_single_failed_data(const T *src, T *dest, T *dest_att1, T *dest_att2, size_t src_start, size_t dest_start,
+        test_single_failed_data(const T *src, T *dest, T *dest_att1, T *dest_att2, size_t src_start,
+                                size_t dest_start,
                                 size_t length, size_t temp_size) {
             T res_for_xor_array[temp_size] = {0};
             std::cout << std::string(80, '.') << std::endl;
@@ -1840,7 +2714,8 @@ namespace bits_memcpy {
             std::cout << "dest_att:  \t" << print_memory::str_array_LE(dest_att1, temp_size, 4) << std::endl;
             std::cout << "dest_att2: \t" << print_memory::str_array_LE(dest_att2, temp_size, 4) << std::endl;
             xor_array(dest_att1, dest_att2, res_for_xor_array, temp_size);
-            std::cout << "xor_array: \t" << print_memory::str_array_LE(res_for_xor_array, temp_size, 4) << std::endl;
+            std::cout << "xor_array: \t" << print_memory::str_array_LE(res_for_xor_array, temp_size, 4)
+                      << std::endl;
 
             std::cout << std::string(80, '-') << std::endl;
             std::cout << "dest:       \t";
@@ -1975,7 +2850,8 @@ namespace bits_memcpy {
 
 
         template<typename T>
-        bool test_single(const T *src, T *dest, size_t src_start, size_t dest_start, size_t length, size_t dest_size) {
+        bool
+        test_single(const T *src, T *dest, size_t src_start, size_t dest_start, size_t length, size_t dest_size) {
             assert(test_recursive_copy_single(src, dest, src_start, dest_start, length, dest_size));
 
             // constexpr unsigned slot_size = sizeof(src[0]) * CHAR_BIT;

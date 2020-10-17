@@ -60,7 +60,8 @@ set(PROJECT_SOURCES
     PD_Filter/HashTables/hashTable_BatchPacking.hpp
     PD_Filter/HashTables/hashTable_CuckooFilter.hpp
     PD_Filter/HashTables/Spare_Low_Load.hpp
-    
+    PD_Filter/HashTables/packed_spare.hpp
+
     PD_Filter/Dict512/pd512.hpp
     PD_Filter/Dict512/pd512.cpp
     PD_Filter/Dict512/pd512_plus.hpp
@@ -72,7 +73,7 @@ set(PROJECT_SOURCES
     PD_Filter/Dict512/Dict512_Ver2.hpp
     # PD_Filter/Dict512/Dict512_Ver3.hpp
     PD_Filter/Dict512/Dict512_Ver4.hpp
-    
+
     PD_Filter/Dict320/pd320.hpp
     PD_Filter/Dict320/pd320.cpp
     PD_Filter/Dict320/pd256.hpp
@@ -82,6 +83,7 @@ set(PROJECT_SOURCES
     PD_Filter/Dict320/Dict320.hpp
     PD_Filter/Dict320/Dict256_Ver4.hpp
     PD_Filter/Dict320/Dict256_Ver5.hpp
+    PD_Filter/Dict320/Dict256_Ver6.hpp
     PD_Filter/Dict320/Dict320_v2.hpp
     PD_Filter/Dict320/twoChoicer320.hpp
     PD_Filter/Dict320/twoChoicer256.hpp
@@ -100,7 +102,7 @@ set(PROJECT_SOURCES
     
 #    PD_Filter/L2_pd/tpd.hpp
 #    PD_Filter/L2_pd/tpd.cpp
-
+    PD_Filter/L2_pd/L2Bucket_mq.hpp PD_Filter/L2_pd/L2Bucket_mq.cpp
     
     )
 
@@ -109,7 +111,7 @@ add_executable(Filters main.cpp ${PROJECT_SOURCES})
 target_compile_options(Filters PRIVATE -O3 -DNDEBUG)
 add_executable(valid_test main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
-target_compile_options(valid_test PRIVATE -O0)
+target_compile_options(valid_test PRIVATE -O0 -g) # -Wall -Wextra -W)
 
 add_executable(test_o2 main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
@@ -125,7 +127,9 @@ target_compile_options(profiling PRIVATE -O3 -DNDEBUG -DPROF)
 
 add_executable(temp PD_Filter/L2_pd/L2Bucket_mq.hpp PD_Filter/L2_pd/L2Bucket_mq.cpp PD_Filter/L2_pd/temp_main.cpp)
 # Add the compile options ONLY for valid_test.
-target_compile_options(profiling PRIVATE -O0 -g)
+# target_compile_options(temp PRIVATE -O0 -g)
+target_compile_options(temp PRIVATE -O0 -g -Wall -Wextra -W) #  -fstack-clash-protection -fstack-protector)
+# target_compile_options(temp PRIVATE -O0 -g -g3 -Wall -Wextra -W -fstack-clash-protection -fstack-protector)
 
 
 target_link_libraries(Filters OpenSSL::SSL)

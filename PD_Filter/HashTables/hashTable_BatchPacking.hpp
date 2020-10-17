@@ -31,7 +31,7 @@
 // static size_t line_counter = 0;
 
 template<size_t bucket_capacity, size_t batch_size, size_t quot_range, size_t bits_per_item>
-constexpr auto get_l2_bucket_bit_size() {
+constexpr auto get_l2_MainBucket_bit_size() {
     constexpr size_t mask_part = bucket_capacity;
     constexpr size_t pd_index_part = batch_size + bucket_capacity;
     constexpr size_t quot_part = quot_range + bucket_capacity;

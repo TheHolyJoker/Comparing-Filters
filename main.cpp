@@ -22,6 +22,8 @@ auto get_fp_ratios() -> bool {
     using Table_Dict512_Ver3 = Dict512_Ver3<temp_hash, spare_item, itemType>;
     using Table_Dict256_Ver4 = Dict256_Ver4<spare_item, itemType>;
     using Table_Dict256_Ver5 = Dict256_Ver5<spare_item, itemType>;
+    using Table_Dict256_Ver6 = Dict256_Ver6<itemType>;
+
     using Table_Fixed_Dict = Fixed_Dict<spare_item, itemType>;
     using Table_Fixed_Dict_Ver2 = Fixed_Dict_Ver2<spare_item, itemType>;
 
@@ -46,18 +48,22 @@ auto get_fp_ratios() -> bool {
 
     // single_fp_rates_probabilistic<Table_Fixed_Dict, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     // single_fp_rates_probabilistic<Table_Fixed_Dict, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<SimdBlockFilter<>, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<SimdBlockFilter<>, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    // single_fp_rates_probabilistic<Table_Fixed_Dict_Ver2, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    // single_fp_rates_probabilistic<Table_Fixed_Dict_Ver2, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
-    single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<SimdBlockFilter<>, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<SimdBlockFilter<>, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // // single_fp_rates_probabilistic<Table_Fixed_Dict_Ver2, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // // single_fp_rates_probabilistic<Table_Fixed_Dict_Ver2, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver4, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    // single_fp_rates_probabilistic<Table_Dict256_Ver5, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    single_fp_rates_probabilistic<Table_Dict256_Ver6, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    single_fp_rates_probabilistic<Table_Dict256_Ver6, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    single_fp_rates_probabilistic<Table_Dict256_Ver6, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
+    single_fp_rates_probabilistic<Table_Dict256_Ver6, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     // single_fp_rates_probabilistic<Table_Dict512_Ver3, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     // single_fp_rates_probabilistic<Table_CF, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
     // single_fp_rates_probabilistic<Table_Dict512, itemType>(fp_capacity, fp_lookups, 8, &fp_elements);
@@ -90,14 +96,19 @@ int main(int argc, char **argv) {
     using Table_Dict512_Ver4 = Dict512_Ver4<temp_hash, spare_item, itemType>;
     using Table_Dict256_Ver4 = Dict256_Ver4<spare_item, itemType>;
     using Table_Dict256_Ver5 = Dict256_Ver5<spare_item, itemType>;
+    using Table_Dict256_Ver6 = Dict256_Ver6<itemType>;
     using Table_Fixed_Dict = Fixed_Dict<spare_item, itemType>;
     using Table_Fixed_Dict_Ver2 = Fixed_Dict_Ver2<spare_item, itemType>;
 
 
     // assert((default_validation_test_single<Table_TC256, itemType>()));
-    assert((default_validation_test_single<SimdBlockFilter<>, itemType>()));
-    assert((default_validation_test_single<Table_Dict256_Ver4, itemType>()));
-    assert((default_validation_test_single<Table_Dict256_Ver5, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+    // assert((default_validation_test_single<SimdBlockFilter<>, itemType>()));
+    // assert((default_validation_test_single<Table_Dict256_Ver4, itemType>()));
+    // assert((default_validation_test_single<Table_Dict256_Ver5, itemType>()));
     // assert((default_validation_test_single<Table_Fixed_Dict, itemType>()));
     // assert((default_validation_test_single<Table_Fixed_Dict_Ver2, itemType>()));
     //    assert((default_validation_test_single<Table_Dict512_Ver4, itemType>()));
@@ -110,6 +121,8 @@ int main(int argc, char **argv) {
     // assert((default_validation_test_single<Table_Dict_CF, itemType>()));
     // assert((default_validation_test_single<Table_TC, itemType>()));
     assert(print_pass());
+    // return 0;
+
 
     get_fp_ratios();
 
@@ -128,25 +141,29 @@ int main(int argc, char **argv) {
     // single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
 
 
+    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_TC256, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_TC256, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_TC256, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
     
-    single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
