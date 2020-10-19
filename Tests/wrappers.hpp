@@ -602,7 +602,8 @@ struct FilterAPI<Dict256_Ver6<itemType>> {
     using Table = Dict256_Ver6<itemType>;
 
     static Table ConstructFromAddCount(size_t add_count) {
-        return Table(add_count, .95, .5);
+        std::cout << "Lower workload" << std::endl;
+        return Table(add_count, .90, .5);
     }
 
     static void Add(itemType key, Table *table) {
@@ -622,9 +623,9 @@ struct FilterAPI<Dict256_Ver6<itemType>> {
     }
 
     static void Remove(itemType key, Table *table) {
-        throw std::runtime_error("Unsupported");
+        // throw std::runtime_error("Unsupported");
         // std::cout << "Remove in Wrapper!" << std::endl;
-        // table->remove(key);
+        table->remove(key);
     }
 
     // Todo return const here:

@@ -102,7 +102,7 @@ set(PROJECT_SOURCES
     
 #    PD_Filter/L2_pd/tpd.hpp
 #    PD_Filter/L2_pd/tpd.cpp
-    PD_Filter/L2_pd/L2Bucket_mq.hpp PD_Filter/L2_pd/L2Bucket_mq.cpp
+        PD_Filter/L2_pd/twoDimPD.hpp PD_Filter/L2_pd/twoDimPD.cpp
     
     )
 
@@ -111,11 +111,16 @@ add_executable(Filters main.cpp ${PROJECT_SOURCES})
 target_compile_options(Filters PRIVATE -O3 -DNDEBUG)
 add_executable(valid_test main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
-target_compile_options(valid_test PRIVATE -O0 -g) # -Wall -Wextra -W)
+target_compile_options(valid_test PRIVATE -O0 -g3) # -Wall -Wextra -W)
 
 add_executable(test_o2 main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
-target_compile_options(test_o2 PRIVATE -O2)
+target_compile_options(test_o2 PRIVATE -O2 -g)
+
+add_executable(test_o1 main.cpp ${PROJECT_SOURCES})
+# Add the compile options ONLY for valid_test.
+target_compile_options(test_o1 PRIVATE -O1 -g3)
+
 
 add_executable(counting main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
@@ -125,10 +130,10 @@ add_executable(profiling main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
 target_compile_options(profiling PRIVATE -O3 -DNDEBUG -DPROF)
 
-add_executable(temp PD_Filter/L2_pd/L2Bucket_mq.hpp PD_Filter/L2_pd/L2Bucket_mq.cpp PD_Filter/L2_pd/temp_main.cpp)
+add_executable(temp PD_Filter/L2_pd/twoDimPD.hpp PD_Filter/L2_pd/twoDimPD.cpp PD_Filter/L2_pd/temp_main.cpp)
 # Add the compile options ONLY for valid_test.
 # target_compile_options(temp PRIVATE -O0 -g)
-target_compile_options(temp PRIVATE -O0 -g -Wall -Wextra -W) #  -fstack-clash-protection -fstack-protector)
+target_compile_options(temp PRIVATE -O0 -g3 -Wall -Wextra -W) #  -fstack-clash-protection -fstack-protector)
 # target_compile_options(temp PRIVATE -O0 -g -g3 -Wall -Wextra -W -fstack-clash-protection -fstack-protector)
 
 

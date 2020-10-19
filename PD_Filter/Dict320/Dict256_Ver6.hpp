@@ -6,6 +6,10 @@
 #include "../../Bloom_Filter/simd-block.h"
 #include "HashTables/packed_spare.hpp"
 #include "pd256_plus.hpp"
+#include <map>
+#include <unordered_set>
+//#include <map>
+
 
 //#include <compare>
 //#include "compare"
@@ -32,6 +36,7 @@ class Dict256_Ver6 {
 
 
     packed_spare<48, 32, bits_per_item, 4> *spare;
+    hashTable_Aligned<uint64_t, 4> *spare_backup;
     // cuckoofilter::CuckooFilter<uint64_t, 8, cuckoofilter::SingleTable> spare_filter;
 
 
@@ -51,6 +56,8 @@ class Dict256_Ver6 {
     __m256i *pd_array;
     // vector<bool> rand_vec;
     Simd_BF *spare_filter;
+    unordered_multiset<itemType> spare_validator;
+    map<std::tuple<uint64_t, int, int>, bool> items_log;
 
 
 public:
@@ -71,6 +78,12 @@ public:
 
         // spare = new TableType(ceil(1.0 * max_number_of_elements / (1.5 * ceil_log2(max_number_of_elements))),
         spare = new packed_spare<48, 32, bits_per_item, 4>(number_of_pd);
+
+        spare_backup = new hashTable_Aligned<uint64_t, 4>(
+                ceil(2.5 * max_number_of_elements / (1.0 * ceil_log2(max_number_of_elements))),
+                ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)) + 13ul,
+                level2_load_factor);
+
 
         int ok = posix_memalign((void **) &pd_array, 32, 32 * number_of_pd);
         if (ok != 0) {
@@ -93,6 +106,7 @@ public:
         free(pd_array);
         free(spare_filter);
         delete spare;
+        delete spare_backup;
     }
 
 
@@ -144,6 +158,41 @@ public:
     }
 
 
+    /**
+     * Searching in l2 and not in it spare.
+     * @param s
+     * @return
+     */
+    auto lookup_exact(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const int64_t spare_quot = quot_range - 1 - quot;
+        const uint8_t rem = qr;
+        uint64_t spare_val = (pd_index << 13ul) | (spare_quot << bits_per_item) | rem;
+
+
+        bool l1_res = (!pd_name::cmp_qr1(qr, &pd_array[pd_index])) && pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
+        if (l1_res) return true;
+
+        else if (!pd_name::cmp_qr1(qr, &pd_array[pd_index])) {
+            return false;
+        }
+
+        bool cond = spare->find(pd_index, spare_quot, rem);
+        bool cond2 = spare_backup->find(spare_val);
+        assert(cond == cond2);
+        auto key = std::make_tuple<uint64_t, int, int>(pd_index, quot, rem);
+        if (items_log.at(key)) {
+            static int counter = 0;
+            counter++;
+            assert(cond);
+        }
+        return cond;
+    }
+
     inline auto lookup_safe(const itemType s, int result_value) const -> bool {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
@@ -151,12 +200,13 @@ public:
         // const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) (quot_range << 8ul));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
         const int64_t quot = qr >> 8;
+        const int64_t spare_quot = quot_range - 1 - quot;
         const uint8_t rem = qr;
         const uint64_t spare_val = ((uint64_t) pd_index << (13)) | qr;
 
         bool a = pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
         bool b = spare_filter->Find(spare_val);
-        bool b2 = spare->find(pd_index, quot_range - 1 - quot, rem);
+        bool b2 = spare->find(pd_index, spare_quot, rem);
         bool c = pd_name::cmp_qr_smart(qr, &pd_array[pd_index]);
         bool d = (!pd_name::cmp_qr_smart(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index])
                                                                    : (spare_filter->Find(spare_val));
@@ -234,8 +284,135 @@ public:
         return res == pd_name::Yes;
     }
 
-
     void insert(const itemType s) {
+        //        return insert_db(s);
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const int64_t spare_quot = quot_range - 1 - quot;
+        const uint8_t rem = qr;
+        auto key = std::make_tuple<uint64_t, int, int>(pd_index, quot, rem);
+        items_log.insert(std::make_pair<>(key, true));
+        assert(items_log.at(key));
+        // reverse_hashing.insert({pd_index, quot, rem}, s);
+        assert(pd_index < number_of_pd);
+        assert(quot <= quot_range);
+
+        constexpr uint64_t Mask15 = 1ULL << 15;
+        const uint64_t res_qr = pd_name::pd_conditional_add_50(quot, rem, &pd_array[pd_index]);
+
+
+        //insertion succeeds
+        if (res_qr == Mask15) {
+            return;
+        } else if (res_qr == qr) {
+            assert(pd_name::pd_full(&pd_array[pd_index]));
+            insert_to_spare_without_pop(pd_index, spare_quot, rem);
+            spare_validator.insert(s);
+
+
+            uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | qr;
+            assert((res_qr & spare_val) == res_qr);
+            spare_filter->Add(spare_val);
+            assert(spare_filter->Find(spare_val));
+        } else {
+            assert(pd_name::pd_full(&pd_array[pd_index]));
+            const uint64_t new_quot = res_qr >> 8ul;
+            const uint64_t new_spare_quot = quot_range - 1 - new_quot;
+            assert((res_qr >> 8ul) < quot_range);
+
+
+            insert_to_spare_without_pop(pd_index, new_spare_quot, rem);
+            spare_validator.insert(s);
+
+            uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | res_qr;
+            spare_filter->Add(spare_val);
+            assert(spare_filter->Find(spare_val));
+        }
+        assert(lookup_safe(s, 1));
+        assert(lookup(s));
+        assert(lookup_exact(s));
+    }
+
+    inline void remove(const itemType s) {
+        static int counter = 0;
+        counter++;
+        assert(lookup(s));
+        assert(lookup_exact(s));
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const int64_t spare_quot = quot_range - 1 - quot;
+        const uint8_t rem = qr;
+        auto key = std::make_tuple<uint64_t, int, int>(pd_index, quot, rem);
+        assert(items_log.at(key));
+        items_log.at(key) = false;
+
+        assert(pd_index < number_of_pd);
+        assert(quot <= quot_range);
+
+        bool did_pd_overflowed = pd_name::did_pd_overflowed(&pd_array[pd_index]);
+        bool did_deletion_succeed = pd_name::delete_element_wrapper(quot, rem, &pd_array[pd_index]);
+        if (!pd_name::did_pd_overflowed(&pd_array[pd_index]))
+            return;
+
+        if (!did_deletion_succeed) {
+            assert(!l1_lookup(s));
+            assert(lookup_exact(s));
+            spare->remove(pd_index, spare_quot, rem);
+            uint64_t spare_val = (pd_index << 13ul) | (spare_quot << bits_per_item) | rem;
+            spare_backup->remove(spare_val);
+            spare_validator.erase(s);
+            return;
+        }
+
+        uint64_t pop_res = spare->get_pop_next_item(pd_index, spare_quot, rem);
+        if (pop_res == -1) {
+            pd_name::clear_overflow_bit(&pd_array[pd_index]);
+            return;
+        }
+        uint64_t pop_rem = pop_res & MASK(bits_per_item);
+        uint64_t pop_quot = quot_range - 1 - (pop_res >> 8ul);    
+        uint64_t pop_qr = (pop_quot << bits_per_item) | pop_rem;
+        uint64_t pop_spare_val = (pd_index << 13ul) | pop_qr;
+        bool find_in_spare_backup = spare_backup->find(pop_spare_val);
+        assert(find_in_spare_backup);
+        assert(pop_qr >= qr); 
+        pd_name::pd_pop_add(pop_quot, pop_rem, quot, rem, &pd_array[pd_index]);
+    }
+
+    inline void insert_to_spare_without_pop(uint64_t pd_index, uint8_t quot, uint8_t rem) {
+        uint64_t spare_val = (pd_index << 13ul) | (quot << bits_per_item) | rem;
+        spare->insert(pd_index, quot, rem);
+        assert(spare->find(pd_index, quot, rem));
+        spare_backup->insert(spare_val);
+        assert(spare_backup->find(spare_val));
+
+        /* if (!spare->insert(pd_index, quot, rem)) {
+            std::cout << "spare failed. Collecting Data" << std::endl;
+            auto ss = get_extended_info();
+            std::cout << ss.str();
+            assert(false);
+        } */
+    }
+
+
+    bool l1_lookup(const itemType s) const {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+
+        return (!pd_name::cmp_qr1(qr, &pd_array[pd_index])) && (pd_name::pd_find_25(quot, rem, &pd_array[pd_index]));
+    }
+
+    void insert_db(const itemType s) {
         // static int counter = 0;
         // static int c1 = 0;
         // static int c2 = 0;
@@ -273,7 +450,8 @@ public:
             insert_to_spare_without_pop(pd_index, quot_range - 1 - quot, rem);
             assert(spare->find(pd_index, quot_range - 1 - quot, rem));
 
-            uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | ((uint64_t) rem);
+            uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) |
+                                 ((uint64_t) rem);
             assert((res_qr & spare_val) == res_qr);
             spare_filter->Add(spare_val);
             assert(spare_filter->Find(spare_val));
@@ -304,39 +482,6 @@ public:
         }
     }
 
-
-    inline void remove(const itemType s) {
-        assert(false);
-        // total_capacity--;
-        assert(false);
-        // uint64_t hash_res = Hasher(s);
-
-        // uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        // const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
-        // const uint8_t rem = out2 & MASK(bits_per_item);
-        // assert(pd_index < number_of_pd);
-        // assert(quot <= 50);
-
-        // if (pd_name::conditional_remove(quot, rem, &pd_array[pd_index])) {
-        //     // l1_capacity--;
-        //     // (pd_capacity_vec[pd_index]) -= 2;
-        //     return;
-        // }
-
-        // uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
-        // spare->remove(spare_val);
-    }
-
-    inline void insert_to_spare_without_pop(uint64_t pd_index, uint8_t quot, uint8_t rem) {
-        spare->insert(pd_index, quot, rem);
-        /* if (!spare->insert(pd_index, quot, rem)) {
-            std::cout << "spare failed. Collecting Data" << std::endl;
-            auto ss = get_extended_info();
-            std::cout << ss.str();
-            assert(false);
-        } */
-    }
 
     // void insert_to_spare_with_pop(spareItemType hash_val) {
     //     uint32_t b1 = -1, b2 = -1;

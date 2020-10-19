@@ -37,6 +37,9 @@
  * @copyright Copyright (c) 2020
  * 
  */
+//todo: find result should be a mask containing a single contiguous sequence of ones. (possibly empty).
+// Currently it is likely that this is not the case, since elements are inserted to MainBucket only by lexicographic order of the remainder
+// while disregarding the location bitmask order. Fixing this should not be too hard.
 #ifndef FILTERS_L2_BUCKET_HPP
 #define FILTERS_L2_BUCKET_HPP
 
@@ -823,13 +826,17 @@ class alignas(64) MainBucket {
     static_assert(max_capacity <= 64, "max_capacity is too big");
     static_assert(max_capacity + batch_size <= 128, "pd_index header does not fit inside 128 bit");
 
-    const size_t bucket_size{get_l2_bucket_size<max_capacity, batch_size, bits_per_item>()};
+    // const size_t bucket_size{get_l2_bucket_size<max_capacity, batch_size, bits_per_item>()};
+    // uint64_t pd[8] __attribute__((aligned(64)));
     uint64_t *pd;
+    // uint64_t pd[8] __attribute__((aligned(64)));
+
 public:
     // __attribute__((aligned(64)));
 
     MainBucket() {
-        int ok1 = posix_memalign((void **) &pd, 64, 64 * bucket_size);
+        int ok1 = posix_memalign((void **) &pd, 64, 8 * get_l2_bucket_size<max_capacity, batch_size, bits_per_item>());
+        assert(ok1 == 0);
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
 
         constexpr unsigned bit_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>() * 64;
@@ -844,18 +851,18 @@ public:
         assert(cmp_res2 == -1);
     }
 
-    ~MainBucket(){
+    ~MainBucket() {
         free(pd);
     }
 
-    void init(){
+    void init() {
         constexpr unsigned bit_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>() * 64;
         constexpr uint64_t empty_pd[get_l2_bucket_size<max_capacity, batch_size, bits_per_item>()] = {MASK(batch_size)};
         memcpy(pd, empty_pd, (bit_size + 7) / 8);
     }
 
     MainBucket(const MainBucket &temp_bucket) {
-        for (size_t i = 0; i < bucket_size; i++) {
+        for (size_t i = 0; i < get_l2_bucket_size<max_capacity, batch_size, bits_per_item>(); i++) {
             pd[i] = temp_bucket.pd[i];
         }
     }
@@ -950,6 +957,17 @@ public:
         write_new_location_bitmask(new_dest);
     }
 
+    bool validate_find_mask_res_is_a_continguos_sequence_of_set_bits(uint64_t mask) {
+        if (!mask)
+            return true;
+        const uint64_t begin = _tzcnt_u64(mask);
+        const uint64_t end = 64 - _lzcnt_u64(mask);
+        const uint64_t length = end - begin;
+        const uint64_t pop = _mm_popcnt_u64(mask);
+        return (length == pop);
+    }
+
+
     uint64_t find_naive(uint64_t pd_index, uint8_t rem, bool is_primary_location) {
         assert(pd_index < batch_size);
         //        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
@@ -993,6 +1011,25 @@ public:
         uint64_t location_mask = get_location_bitmask(is_primary_location);
         auto res = v & pd_mask & location_mask;
         auto naive_res = find_naive(pd_index, rem, is_primary_location);
+        if (!validate_find_mask_res_is_a_continguos_sequence_of_set_bits(res)) {
+            std::cout << "naive_res:     \t";
+            print_memory::print_word_LE(naive_res, GAP);
+            std::cout << "res            \t";
+            print_memory::print_word_LE(((uint64_t) res), GAP);
+            print_location_mask();
+            std::cout << std::string(80, '~') << std::endl;
+            std::cout << "pd_mask:     \t";
+            print_memory::print_word_LE((uint64_t) pd_mask, GAP);
+            std::cout << "v:           \t";
+            print_memory::print_word_LE(v, GAP);
+            std::cout << std::string(80, '~') << std::endl;
+
+            print_find_arg(pd_index, rem, is_primary_location);
+            print_pd();
+            // find_naive(pd_index, rem, is_primary_location);
+            // find_naive(pd_index, rem, is_primary_location);
+            assert(0);
+        }
         if (naive_res != res) {
             std::cout << "naive_res:     \t";
             print_memory::print_word_LE(naive_res, GAP);
@@ -1034,7 +1071,7 @@ public:
         std::cout << "nsh_pdMask:  \t";
         print_memory::print_word_LE((uint64_t) get_pd_header_mask(pd_index), GAP);
         std::cout << "sh_header:   \t";
-        print_memory::print_word_LE((uint64_t) (get_pd_header() >> pd_index), GAP);
+        print_memory::print_word_LE((uint64_t)(get_pd_header() >> pd_index), GAP);
         std::cout << "pd_mask:     \t";
         print_memory::print_word_LE((uint64_t) pd_mask, GAP);
         std::cout << "v:           \t";
@@ -1184,14 +1221,24 @@ public:
 
 
         constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
-        constexpr unsigned size0fPd =
-                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
+        constexpr unsigned size0fPd = (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
         uint64_t i = begin_fingerprint;
         for (; i < end_fingerprint; ++i) {
             if (rem <= ((const uint8_t *) pd)[firstBodyByte + i])
                 break;
         }
+
+        // auto pre_i = i;
+        if (is_primary_location) {
+            while ((i < end_fingerprint) && (rem == ((const uint8_t *) pd)[firstBodyByte + i]) && (!test_location_on_bitmask(i))) {
+                i++;
+            }
+        }
+        assert(i <= end_fingerprint);
+        assert(i < max_capacity);
+        // assert(find())
+
 
         assert((i == end_fingerprint) || (rem <= ((const uint8_t *) pd)[firstBodyByte + i]));
 
@@ -1261,27 +1308,28 @@ public:
         assert(begin_fingerprint <= end_fingerprint);
         assert(end_fingerprint <= max_capacity);
 
-        constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
-        constexpr unsigned size0fPd =
-                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
-        uint64_t i = begin_fingerprint;
-        for (; i < end_fingerprint; ++i) {
-            if ((rem <= ((const uint8_t *) pd)[firstBodyByte + i])) {
-                //add test here.
-                break;
-            }
-        }
-        if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[firstBodyByte + i])) {
-            assert(0);
-            return false;
-        }
+        // uint64_t i = begin_fingerprint;
+        // for (; i < end_fingerprint; ++i) {
+        //     if ((rem > ((const uint8_t *) pd)[firstBodyByte + i])) {
+        //         //add test here.
+        //         break;
+        //     }
+        // }
+        // if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[firstBodyByte + i])) {
+        //     assert(0);
+        //     return false;
+        // }
+
         uint64_t find_res = find(pd_index, rem, is_primary_location);
         auto find_res_i = _tzcnt_u64(find_res);
-        i = find_res_i;
+        uint64_t i = find_res_i;
 
         assert(popcount128(new_header) == batch_size);
         memcpy(pd, &new_header, kBytes2copy);
+
+        constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
+        constexpr unsigned size0fPd = (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
         memmove(&((uint8_t *) pd)[firstBodyByte + i],
                 &((const uint8_t *) pd)[firstBodyByte + i + 1],
@@ -1329,9 +1377,7 @@ public:
         return true;
     }
 
-
     auto conditional_remove(int64_t pd_index, uint8_t rem, bool is_primary_location) -> bool {
-        assert(0);
         assert(pd_index < ((int64_t) batch_size));
 
         unsigned __int128 header = get_pd_header();
@@ -1361,24 +1407,24 @@ public:
         assert(begin_fingerprint <= end_fingerprint);
         assert(end_fingerprint <= max_capacity);
 
-        constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
-        constexpr unsigned size0fPd =
-                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
-        uint64_t i = begin_fingerprint;
-        for (; i < end_fingerprint; ++i) {
-            if (rem <= ((const uint8_t *) pd)[firstBodyByte + i])
-                break;
-        }
-        if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[firstBodyByte + i])) {
-            return false;
-        }
+        // uint64_t i = begin_fingerprint;
+        // for (; i < end_fingerprint; ++i) {
+        //     if (rem <= ((const uint8_t *) pd)[firstBodyByte + i])
+        //         break;
+        // }
+        // if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[firstBodyByte + i])) {
+        //     return false;
+        // }
         uint64_t find_res = find(pd_index, rem, is_primary_location);
         auto find_res_i = _tzcnt_u64(find_res);
-        i = find_res_i;
+        uint64_t i = find_res_i;
 
         assert(popcount128(new_header) == batch_size);
         memcpy(pd, &new_header, kBytes2copy);
+
+        constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
+        constexpr unsigned size0fPd = (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
 
         memmove(&((uint8_t *) pd)[firstBodyByte + i],
                 &((const uint8_t *) pd)[firstBodyByte + i + 1],
@@ -1388,7 +1434,7 @@ public:
         return true;
     }
 
-    void remove_by_index(int64_t pd_index, uint8_t rem, bool is_primary_location, size_t index) {
+    void remove_by_index_safe(int64_t pd_index, uint8_t rem, bool is_primary_location, size_t index) {
         assert(find(pd_index, rem, is_primary_location) & (1ULL << index));
 
         // updating the pd_index header
@@ -1420,6 +1466,66 @@ public:
         remove_bit_from_location_bitmask(index);
     }
 
+    uint8_t pop_read_body_by_index(size_t index) {
+        constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
+        return ((uint8_t *) pd)[firstBodyByte + index];
+    }
+
+    /**
+     * @brief This function is used during a pop operation.
+     * It computes a mask used by the matching Quotient, to find the maximal (that is actually the minimal) quot this pd_index contain. 
+     * //todo this can be done while trying to delete the element if it exists.
+     * @param pd_index 
+     * @param is_primary_location 
+     * @return uint64_t 
+     */
+    uint64_t pop_get_mask(uint64_t pd_index, bool is_primary_location) {
+        u128 pd_mask = get_pd_header_mask(pd_index) >> pd_index;
+        uint64_t location_mask = get_location_bitmask(is_primary_location);
+        return pd_mask & location_mask;
+    }
+
+    /**
+     * @brief This function is used during a pop operation.
+     * After the quot of the element (with pd_index) was computed, we can delete it from this bucket, using the index of the quot. 
+     * 
+     * @param pd_index 
+     * @param index 
+     */
+    uint8_t pop_remove_by_index(int64_t pd_index, size_t index) {
+
+        // updating the pd_index header
+        unsigned __int128 header = get_pd_header();
+        constexpr unsigned kBytes2copy = (get_pd_header_size() + CHAR_BIT - 1) / CHAR_BIT;
+
+        assert(popcount128(header) == batch_size);
+        const uint64_t begin = pd_index ? (select128(header, pd_index - 1) + 1) : 0;
+        const uint64_t end = select128(header, pd_index);
+        assert(begin <= end);
+        assert(end < get_pd_header_size());
+
+        unsigned __int128 new_header = header & ((((unsigned __int128) 1) << begin) - 1);
+        new_header |= ((header >> end) << (end - 1));
+        assert(popcount128(new_header) == batch_size);
+        memcpy(pd, &new_header, kBytes2copy);
+
+
+        // updating the body
+        constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
+        constexpr unsigned size0fPd =
+                (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
+
+        uint8_t removed_rem = ((uint8_t *) pd)[firstBodyByte + index];
+        memmove(&((uint8_t *) pd)[firstBodyByte + index],
+                &((const uint8_t *) pd)[firstBodyByte + index + 1],
+                size0fPd - (firstBodyByte + index + 1));
+
+        //updating the location_bitmask
+        remove_bit_from_location_bitmask(index);
+        return removed_rem;
+    }
+
+
     auto get_pd_index_capacity(uint64_t pd_index) {
         u128 header = get_pd_header();
         auto temp = count_zeros_up_to_the_kth_one(header, pd_index);
@@ -1431,7 +1537,7 @@ public:
 
     void print_location_mask() {
         uint64_t location_mask = get_location_bitmask(1);
-        std::cout << "location mask:     \t";
+        std::cout << "locMask:     \t";
         print_memory::print_word_LE(location_mask, GAP);
     }
 
@@ -1569,7 +1675,7 @@ public:
         std::fill(Q_list, Q_list + Q_list_size, 0);
     }
 
-    void init(){
+    void init() {
         std::fill(Q_list, Q_list + Q_list_size, 0);
     }
     ~Quotients() {
@@ -1676,6 +1782,14 @@ public:
         const uint64_t end = 64 - _lzcnt_u64(mask);
         const uint64_t length = end - begin;
         const uint64_t pop = _mm_popcnt_u64(mask);
+        if (length != pop) {
+            std::cout << "length:   \t" << length << std::endl;
+            std::cout << "pop:      \t" << pop << std::endl;
+            std::cout << "quot:     \t" << pop << std::endl;
+            std::cout << "mask:     \t";
+            print_memory::print_word_LE(mask, GAP);
+            assert(0);
+        }
         assert(length == pop);
         uint64_t unpack_array[max_capacity] = {0};
         unpack_Q_list(unpack_array);
@@ -1859,47 +1973,154 @@ public:
 
 
     /**
-     * @brief Get the minimal quot object
+     * @brief Get the maximal quot object
      *
      * @param mask representing the relevant quotients.
      * mask should be a continguos sequence (possibly empty) of ones.
      * @return size_t
      */
-    size_t get_minimal_quot(uint64_t mask) {
-        //mask validation:
+    size_t get_maximal_quot(uint64_t mask) {
         if (!mask) {
-            std::cout << "*** " << __FILE__ << ":" << __LINE__ << " *** " << std::endl;
             assert(0);
+            //Reach here does not indicate wrong flow of the program.
+            //The assertion here appear because in case the mask is 0, reading this object is redundant.
         }
-        const uint64_t begin = _tzcnt_u64(mask);
-        const uint64_t end = 63 - _lzcnt_u64(mask);
-        const uint64_t length = end - begin;
-        const uint64_t pop = _mm_popcnt_u64(mask);
-        assert(length == pop);
 
-        uint64_t my_mask = MASK(end) ^MASK(begin);
-        assert(my_mask == mask);
+        const uint64_t old_mask = mask;
+        uint8_t max_q = 0;
+        uint8_t max_index = 0;
+        static_assert(quot_length == 4, "quot_length is not 4");
+        constexpr unsigned word_capacity = slot_size / quot_length;
+        constexpr unsigned number_of_words = max_capacity / word_capacity;
+        // constexpr unsigned mask = MASK(quot_length);
 
-        return get_minimal_quot(begin, end);
-    }
 
-    size_t get_minimal_quot_naive(uint64_t begin, uint64_t end) {
-        uint64_t unpack_array[max_capacity] = {0};
-        unpack_Q_list(unpack_array);
-        uint64_t min_q = unpack_array[begin];
-        uint64_t min_index = begin;
-        // todo: check limits
-        for (size_t i = begin; i < end; i++) {
-            if (unpack_array[i] < min_q) {
-                min_q = unpack_array[i];
-                min_index = i;
+        for (size_t j = 0; j < number_of_words; j++) {
+            uint64_t temp = Q_list[j];
+            for (size_t i = 0; i < word_capacity; i++) {
+                uint8_t temp_val = temp & MASK(quot_length);
+                if (mask && (max_q < temp_val)) {
+                    max_q = temp_val;
+                    max_index = i + j * number_of_words;
+                }
+                temp >>= quot_length;
+                mask >>= 1ul;
+                if (!mask)
+                    return (max_index << 8) | max_q;
             }
         }
-        return (min_index << quot_length) | min_q;
+        auto res = (max_index << 8) | max_q;
+        auto v_res = get_maximal_quot_naive(old_mask);
+        assert(res == v_res);
+        return res;
     }
 
-    size_t get_minimal_quot(uint64_t begin, uint64_t end) {
+    size_t get_maximal_quot_naive(uint64_t mask) {
+        uint64_t unpack_array[max_capacity] = {0};
+        unpack_Q_list(unpack_array);
+        uint64_t max_q = 0;
+        uint64_t max_index = 0;
+        // todo: check limits
+        for (size_t i = 0; i < max_capacity; i++) {
+            if (mask && (max_q < unpack_array[i])) {
+                max_q = unpack_array[i];
+                max_index = i;
+            }
+            mask >>= 1ul;
+            if (!mask)
+                break;
+        }
+        return (max_index << 8) | max_q;
+    }
+
+    inline auto fast_max(int x, int y) -> int {
+        return x - ((x - y) & ((x - y) >> (sizeof(int) * CHAR_BIT - 1)));
+    }
+
+    inline auto fast_max(uint8_t x, uint8_t y) -> uint8_t {
+        return x - ((x - y) & ((x - y) >> (CHAR_BIT - 1)));
+    }
+
+    inline auto get_packed_max_helper(uint32_t word) -> uint8_t {
+        constexpr unsigned shift = quot_length;
+        constexpr unsigned mask = MASK(quot_length);
+        uint8_t temp_max1 = fast_max(word & mask, (word >> shift) & mask);
+        uint8_t temp_max2 = fast_max((word >> (shift * 2)) & mask, (word >> (shift * 3)) & mask);
+        uint8_t temp_max3 = fast_max((word >> (shift * 4)) & mask, (word >> (shift * 5)) & mask);
+        uint8_t temp_max4 = fast_max((word >> (shift * 6)) & mask, (word >> (shift * 7)) & mask);
+        return fast_max(fast_max(temp_max1, temp_max2), fast_max(temp_max3, temp_max4));
+    }
+
+    auto get_packed_max(uint64_t word, size_t bytes) -> uint8_t {
+        return find_max(get_packed_max_helper(word, word >> 32ul));
+    }
+
+    uint8_t get_maximal_quot_aligned(uint64_t begin, uint64_t end) {
+
+        if (begin == end) {
+            return 0;
+        }
+        assert(begin < end);
+        auto bytes = (end - begin) / 2;
+        assert((end - begin) % 2 == 0);
+        if (bytes <= 8) {
+            uint64_t temp = 0;
+            memcpy(&temp, &((uint8_t *) Q_list)[begin / 2], bytes);
+            return get_packed_max(temp, bytes);
+        } else if (bytes <= 16) {
+            uint64_t temp[2] = {0};
+            memcpy(temp, &((uint8_t *) Q_list)[begin / 2], bytes);
+            return find_max(get_packed_max(temp[0], 8), get_packed_max(temp[1], bytes - 8));
+        } else {
+            assert(0);
+        }
+    }
+
+    /**
+     * @brief Get the maximal quot object maximal because when the quot is inserted to the spare it value "flipped". 
+     * Meaning, maximal quot becomes zero, and vice versa.
+     * 
+     * @param begin 
+     * @param end 
+     * @return size_t 
+     */
+    uint8_t get_maximal_quot_no_index(uint64_t begin, uint64_t end) {
+        assert(0);
+        if (begin == end)
+            return 1ULL << quot_length;
+
+        static_assert(quot_length == 4, "quot_length is not 4");
+        constexpr unsigned word_capacity = slot_size / quot_length;
+        size_t begin_word_index = begin / word_capacity;
+        size_t begin_rel_index = (begin * quot_length) % slot_size;
+        size_t end_word_index = end / word_capacity;
+        size_t end_rel_index = (end * quot_length) % slot_size;
+
+        uint64_t old_begin = begin;
+        uint64_t old_end = end;
+
+        uint8_t begin_temp = 0;
+        if (begin & 1) {
+            begin_temp = (Q_list[begin_word_index] >> begin_rel_index) & MASK(quot_length);
+            begin += 1;
+        }
+        uint8_t end_temp = 0;
+        if (end & 1) {
+            end -= 1;
+            end_temp = (Q_list[end_word_index] >> end_rel_index) & MASK(quot_length);
+        }
+
+        uint8_t edges_temp = fast_max(begin_temp, end_temp);
+        uint8_t temp = get_maximal_quot_aligned(begin, end);
+        uint8_t res = fast_max(temp, edges_temp);
         return -1;
+        // assert(res == get_minimal_quot_naive(begin, end));
+        // return res;
+        // uint8_t begin_temp = (pd[begin_word_index] >> begin_rel_index) & MASK(quot_length);
+        // uint8_t end_temp = (pd[end_word_index] >> end_rel_index) & MASK(quot_length);
+        // // uin
+
+                // return -1;
     }
 
 
@@ -2256,7 +2477,7 @@ namespace MainBucket_tests {
 
         // auto before_last_quot = pd512_plus::decode_last_quot_wrapper(pd);
         auto res = temp_pd.insert(pd_index, rem, is_prime_location);
-        assert(res);
+        assert(res != max_capacity);
         auto lookup_res = temp_pd.find(pd_index, rem, is_prime_location);
         assert(lookup_res);
         return true;
@@ -2288,7 +2509,7 @@ namespace MainBucket_tests {
             uint64_t r = rand() & 255;
             bool location_mask = rand() & 1;
             auto res = temp_pd.insert(pd_index, r, location_mask);
-            assert(res);
+            assert(res != max_capacity);
             assert(temp_pd.find(pd_index, r, location_mask));
         }
         return true;
@@ -2302,7 +2523,7 @@ namespace MainBucket_tests {
             uint64_t r = rand() & 255;
             bool location_mask = rand() & 1;
             auto res = temp_pd.insert(pd_index, r, location_mask);
-            assert(res);
+            assert(res != max_capacity);
             assert(temp_pd.find(pd_index, r, location_mask));
         }
         return true;
@@ -2328,7 +2549,7 @@ namespace MainBucket_tests {
             //prevents insertion of an element that is already in the pd again.
             if (!pd->find(pd_index, rem, location_mask)) {
                 auto res = pd->insert(pd_index, rem, location_mask);
-                assert(res);
+                assert(res != max_capacity);
                 assert(pd->find(pd_index, rem, location_mask));
             }
             recursive_add_delete_core(pd, reps, depth + 1);
@@ -2357,7 +2578,7 @@ namespace MainBucket_tests {
 
             if (!pd.find(pd_index, rem, location_mask)) {
                 auto res = pd.insert(pd_index, rem, location_mask);
-                assert(res);
+                assert(res != max_capacity);
                 assert(pd.find(pd_index, rem, location_mask));
             }
             recursive_add_delete_core(&pd, &counter, 1);
@@ -2438,7 +2659,7 @@ namespace MainBucket_tests {
             if (!pd->find(pd_index, rem, location_mask)) {
                 my_map->insert(std::pair<key, size_t>(temp_key, 42));
                 auto res = pd->insert(pd_index, rem, location_mask);
-                assert(res);
+                assert(res != max_capacity);
                 assert(pd->find(pd_index, rem, location_mask));
                 rec_cmp_single(pd, my_map, temp_key);
             }

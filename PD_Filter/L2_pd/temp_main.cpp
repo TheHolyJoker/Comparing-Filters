@@ -1,4 +1,4 @@
-#include "L2Bucket_mq.hpp"
+#include "twoDimPD.hpp"
 
 void simplest_test() {
     auto b = MainBucket<48, 32, 8>();
@@ -27,19 +27,31 @@ void leading_trailing_zeros() {
     std::cout << "_tzcnt_u64(2)  :" << _tzcnt_u64(2) << std::endl;
     std::cout << "_tzcnt_u64(4)  :" << _tzcnt_u64(4) << std::endl;
     std::cout << "_tzcnt_u64(m63):" << _tzcnt_u64(1ULL << 63) << std::endl;
+
+
+    // _lzcnt_u64(0)     :64
+    // _lzcnt_u64(1)     :63
+    // _lzcnt_u64(2)     :62
+    // _lzcnt_u64(4)     :61
+    // _lzcnt_u64(m63)   :0
+    // _tzcnt_u64(0)     :64
+    // _tzcnt_u64(1)     :0
+    // _tzcnt_u64(2)     :1
+    // _tzcnt_u64(4)     :2
+    // _tzcnt_u64(m63)   :63
 }
 
 int old_main() {
-    uint64_t a[4] = {0};
-    a[0] = 0x1234'1334'1334'1334;
-    a[1] = 0x1334'1234'1334'1334;
-    a[2] = 0x1334'1334'1234'1334;
-    a[3] = 0x1334'1334'1334'1234;
+    // uint64_t a[4] = {0};
+    // a[0] = 0x1234'1334'1334'1334;
+    // a[1] = 0x1334'1234'1334'1334;
+    // a[2] = 0x1334'1334'1234'1334;
+    // a[3] = 0x1334'1334'1334'1234;
 
-    auto res1 = bits_memcpy::my_cmp_epu<16, 4>(0x1234, a);
+    // auto res1 = bits_memcpy::my_cmp_epu<16, 4>(0x1234, a);
 
-    std::cout << "res1: " << res1 << std::endl;
-    print_memory::print_word_LE(res1, GAP);
+    // std::cout << "res1: " << res1 << std::endl;
+    // print_memory::print_word_LE(res1, GAP);
 
     // att();
 
@@ -54,11 +66,11 @@ int old_main() {
     }
     std::cout << "pass1" << std::endl;
 
-    MainBucket_tests::recursive_add_delete<48, 32, 8>(1 << 25);
+    MainBucket_tests::recursive_add_delete<48, 32, 8>(1 << 20);
     //    assert(res);
     std::cout << "pass2" << std::endl;
 
-    res = MainBucket_tests::recursive_add_delete_with_map<48, 32, 8>(1 << 25);
+    res = MainBucket_tests::recursive_add_delete_with_map<48, 32, 8>(1 << 20);
     assert(res);
     std::cout << "pass3" << std::endl;
     res = MainBucket_tests::rand_test1<48, 32, 8>();
@@ -70,7 +82,7 @@ int old_main() {
     return 0;
 }
 
-void Q_tests_main(){
+void Q_tests_main() {
     bool res = Quotients_tests::true_negative_lookup_test<48, 32, 4>();
     assert(res);
 
@@ -96,12 +108,13 @@ void Q_tests_main(){
 
     res = Quotients_tests::recursive_add_delete_with_map<48, 32, 4>(1 << 10);
     assert(res);
-
 }
 
 int main() {
     std::cout << "Temp_Main" << std::endl;
-//    leading_trailing_zeros();
+
+    // old_main();
+    leading_trailing_zeros();
 
 
     return 0;

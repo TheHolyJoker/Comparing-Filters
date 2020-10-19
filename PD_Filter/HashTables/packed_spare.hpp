@@ -2,8 +2,8 @@
 // Created by tomer on 8/18/20.
 //
 /* This implementation rely on
- * 1) Every element in the hashTable consists of three parts (msb to lsb) pd_index, quot, rem.
- * 2) quot is an integer in range [0,51). More specificity, quot != 63.
+ * 1) Every element in the hashTable consists of three parts (msb to lsb) pd_index, spare_quot, rem.
+ * 2) spare_quot is an integer in range [0,51). More specificity, spare_quot != 63.
  * 3) number of bits for rem is 8. (not a must).
  * 4) The empty slot can be seen is equal to (63 << 8). 
  empty slot in a way tha */
@@ -12,9 +12,10 @@
 
 
 #include "../../hashutil.h"
-#include "../L2_pd/L2Bucket_mq.hpp"
+#include "../L2_pd/twoDimPD.hpp"
 #include "../basic_function_util.h"
 #include "../macros.h"
+#include <unordered_set>
 #include <vector>
 
 
@@ -38,17 +39,23 @@ class packed_spare {
     MainBucket<bucket_capacity, batch_size, bits_per_item> *main_buckets;
     Quotients<bucket_capacity, batch_size, quot_length> *q_buckets;
 
+    unordered_set<uint64_t> big_quots_set;
+    vector<size_t> capacity_vec;
 
 public:
     explicit packed_spare(size_t number_of_buckets_in_l1)
         : number_of_buckets((number_of_buckets_in_l1 + batch_size - 1) / batch_size),
           max_spare_capacity(((number_of_buckets_in_l1 + batch_size - 1) / batch_size) * bucket_capacity),
-          Hasher() {
+          Hasher(),
+          big_quots_set() {
         assert(number_of_buckets <= MASK32);
+        assert(64 < number_of_buckets);
+
 
         //        std::cout << "sizeof(MainBucket()): " << sizeof(MainBucket<bucket_capacity, batch_size, bits_per_item>()) << std::endl;
         main_buckets = new MainBucket<bucket_capacity, batch_size, bits_per_item>[number_of_buckets];
         q_buckets = new Quotients<bucket_capacity, batch_size, quot_length>[number_of_buckets];
+        capacity_vec.resize(number_of_buckets);
         /* int ok1 = posix_memalign((void **) &main_buckets, 64, 64 * number_of_buckets);
                int ok2 = posix_memalign((void **) &q_buckets, 8, 8 * number_of_buckets);
                if (ok1 == 0) {
@@ -65,92 +72,227 @@ public:
                    return;
                }
  */
-        
+
         for (size_t i = 0; i < number_of_buckets; ++i) {
             main_buckets[i].init();
             q_buckets[i].init();
         }
-        
     }
 
     virtual ~packed_spare() {
-        delete[] main_buckets; 
-        delete[] q_buckets; 
+        delete[] main_buckets;
+        delete[] q_buckets;
         // free(main_buckets);
         // free(q_buckets);
     }
 
-    auto find(uint64_t pd_index, uint8_t quot, uint8_t rem) const -> bool {
+
+    auto find(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) const -> bool {
+        if (spare_quot > MASK(quot_length)) {
+            uint64_t set_key = (pd_index << 16ul) | (spare_quot << 8ul) | rem;
+            return big_quots_set.count(set_key) != 0;
+        }
         const uint32_t b1 = pd_index / batch_size;
         uint64_t rel_pd_index = pd_index % batch_size;
-        const uint32_t b2 = reduce32(Hasher(pd_index), (uint32_t) number_of_buckets);
+        const uint32_t b2 = (b1 + 1 + rel_pd_index) % number_of_buckets;
         assert(b1 < number_of_buckets);
         assert(b2 < number_of_buckets);
-        return find_helper(rel_pd_index, quot, rem, 1, b1) ||
-               find_helper(rel_pd_index, quot, rem, 0, b2);
+        return find_helper(rel_pd_index, spare_quot, rem, 1, b1) ||
+               find_helper(rel_pd_index, spare_quot, rem, 0, b2);
     }
 
-    auto find_helper(uint64_t pd_index, uint8_t quot, uint8_t rem, bool is_primary_bucket,
+    auto find_helper(uint64_t pd_index, uint8_t spare_quot, uint8_t rem, bool is_primary_bucket,
                      size_t bucket_index) const -> bool {
 
         uint64_t mask = main_buckets[bucket_index].find(pd_index, rem, is_primary_bucket);
-        return mask && q_buckets[bucket_index].find(mask, quot);
+        return mask && q_buckets[bucket_index].find(mask, spare_quot);
     }
 
 
-    void insert(uint64_t pd_index, uint8_t quot, uint8_t rem) {
+    void insert(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) {
+        capacity++;
+        if (spare_quot > MASK(quot_length)) {
+            uint64_t set_key = (pd_index << 16ul) | (spare_quot << 8ul) | rem;
+            big_quots_set.insert(set_key);
+            return;
+        }
         if (capacity >= max_spare_capacity) {
             std::cout << "Trying to insert into fully loaded hash table" << std::endl;
             assert(false);
         }
         const uint32_t b1 = pd_index / batch_size;
         uint64_t rel_pd_index = pd_index % batch_size;
-        const uint32_t b2 = reduce32(Hasher(pd_index), (uint32_t) number_of_buckets);
+        const uint32_t b2 = (b1 + 1 + rel_pd_index) % number_of_buckets;
         assert(b1 < number_of_buckets);
         assert(b2 < number_of_buckets);
+        assert(validate_capacity_of_bucket(b1));
+        assert(validate_capacity_of_bucket(b2));
 
 
         assert(!(main_buckets[b1].is_full() && main_buckets[b2].is_full()));
 
-        (main_buckets[b1].get_capacity() < main_buckets[b2].get_capacity()) ? insert_helper(rel_pd_index, quot, rem, 1,
-                                                                                            b1)
-                                                                            : insert_helper(rel_pd_index, quot, rem, 0,
-                                                                                            b2);
+        bool toWhichBucketToInsert = (main_buckets[b1].get_capacity() < main_buckets[b2].get_capacity());
+        toWhichBucketToInsert ? insert_helper(rel_pd_index, spare_quot, rem, 1, b1) : insert_helper(rel_pd_index, spare_quot, rem, 0, b2);
+
+        if (toWhichBucketToInsert)
+            capacity_vec.at(b1) += 1;
+        else {
+            capacity_vec.at(b2) += 1;
+        }
     }
 
-    auto insert_helper(uint64_t pd_index, uint8_t quot, uint8_t rem, bool is_primary_bucket,
+    auto insert_helper(uint64_t pd_index, uint8_t spare_quot, uint8_t rem, bool is_primary_bucket,
                        size_t bucket_index) -> bool {
 
         size_t index = main_buckets[bucket_index].insert(pd_index, rem, is_primary_bucket);
-        q_buckets[bucket_index].add(index, quot);
+        q_buckets[bucket_index].add(index, spare_quot);
         return index != bucket_capacity;
     }
 
 
-    void remove(uint64_t pd_index, uint8_t quot, uint8_t rem) {
-        assert(find(pd_index, quot, rem));
+    void remove(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) {
+        assert(find(pd_index, spare_quot, rem));
+        if (spare_quot > MASK(quot_length)) {
+            uint64_t set_key = (pd_index << 16ul) | (spare_quot << 8ul) | rem;
+            auto erase_res = big_quots_set.erase(set_key);
+            assert(erase_res);
+            return;
+        }
         if (capacity == 0) {
             std::cout << "Trying to delete from empty hash table" << std::endl;
         }
         const uint32_t b1 = pd_index / batch_size;
         uint64_t rel_pd_index = pd_index % batch_size;
-        const uint32_t b2 = reduce32(Hasher(pd_index), (uint32_t) number_of_buckets);
+        const uint32_t b2 = (b1 + 1 + rel_pd_index) % number_of_buckets;
         assert(b1 < number_of_buckets);
         assert(b2 < number_of_buckets);
 
-        const bool res = remove_helper(rel_pd_index, quot, rem, 1, b1) || remove_helper(rel_pd_index, quot, rem, 0, b2);
+        const bool res = remove_helper(rel_pd_index, spare_quot, rem, 1, b1) ||
+                         remove_helper(rel_pd_index, spare_quot, rem, 0, b2);
         assert(res);
     }
 
-    auto remove_helper(uint64_t pd_index, uint8_t quot, uint8_t rem, bool is_primary_bucket,
+    auto remove_helper(uint64_t pd_index, uint8_t spare_quot, uint8_t rem, bool is_primary_bucket,
                        size_t bucket_index) -> bool {
 
         uint64_t mask = main_buckets[bucket_index].find(pd_index, rem, is_primary_bucket);
         if (!mask) {
             return false;
         }
-        size_t index = q_buckets[bucket_index].conditional_remove(mask, quot);
-        main_buckets[bucket_index].remove_by_index(pd_index, rem, is_primary_bucket, index);
+        size_t index = q_buckets[bucket_index].conditional_remove(mask, spare_quot);
+        main_buckets[bucket_index].pop_remove_by_index(pd_index, index);
+        return true;
+    }
+
+
+    /**
+     * @brief Get an element from bucket index which is the pop nominee of this bucket, according to rel_pd_index. 
+     * 
+     * @param rel_pd_index 
+     * @param is_primary_bucket 
+     * @param bucket_index 
+     * @return uint64_t 
+     */
+    uint64_t get_pop_next_item_helper(uint8_t rel_pd_index, bool is_primary_bucket, size_t bucket_index) {
+        uint64_t pd_pop_mask = main_buckets[bucket_index].pop_get_mask(rel_pd_index, is_primary_bucket);
+        if (!pd_pop_mask) {
+            return -1;
+        }
+        return q_buckets[bucket_index].get_maximal_quot(pd_pop_mask);
+    }
+
+    //    uint64_t process_invalid_pop_nominees(uint64_t pop_nom1, uint64_t pop_nom2){
+    //
+    //    }
+
+
+    uint64_t get_pop_next_item(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) {
+        //todo:did not dealt with
+
+        const uint32_t b1 = pd_index / batch_size;
+        uint64_t rel_pd_index = pd_index % batch_size;
+        const uint32_t b2 = (b1 + 1 + rel_pd_index) % number_of_buckets;
+        assert(b1 < number_of_buckets);
+        assert(b2 < number_of_buckets);
+
+        uint64_t pop_nom1 = get_pop_next_item_helper(rel_pd_index, 1, b1);
+        uint64_t pop_nom2 = get_pop_next_item_helper(rel_pd_index, 0, b2);
+
+
+        if ((pop_nom1 == -1) && (pop_nom2 == -1)) {
+            return pop_from_big_quots_set(pd_index, spare_quot, rem);
+        }
+
+        auto pop_nom1_quot = (pop_nom1 & MASK(quot_length));
+        auto pop_nom2_quot = pop_nom2 & MASK(quot_length);
+
+        if (pop_nom1 == -1) {
+            pop_nom1_quot = 0;
+        }
+        if (pop_nom2 == -1) {
+            pop_nom2_quot = 0;
+        }
+        //        bool c1 = (spare_quot >= pop_nom1_quot);
+        //        bool c2 = spare_quot >= pop_nom2_quot;
+
+        if (pop_nom1_quot > pop_nom2_quot) {
+            assert(pop_nom1 != -1);
+            assert(pop_nom1_quot <= spare_quot);// deleted element quot [flip(spare_quot)] is bigger then pop element quot (pop_nom1_quot).
+            // auto res = pop_from_bucket_with_smaller_pop_nom(rel_pd_index, pop_nom1, b1, 1);
+            return pop_from_bucket_with_smaller_pop_nom(rel_pd_index, pop_nom1, b1, 1);
+        } else if (pop_nom2_quot > pop_nom1_quot) {
+            assert(pop_nom2 != -1);
+            return pop_from_bucket_with_smaller_pop_nom(rel_pd_index, pop_nom2, b2, 0);
+        }
+        assert(pop_nom1 != -1);
+        assert(pop_nom2 != -1);
+
+        // read remainder and then decide from which bucket to pop.
+        auto index1 = pop_nom1 >> 8ul;
+        auto index2 = pop_nom2 >> 8ul;
+
+        uint8_t rem1 = main_buckets[b1].pop_read_body_by_index(index1);
+        uint8_t rem2 = main_buckets[b2].pop_read_body_by_index(index2);
+
+        if (rem1 < rem2) {
+            return pop_from_bucket_with_smaller_pop_nom(rel_pd_index, pop_nom1, b1,1);
+        }
+        return pop_from_bucket_with_smaller_pop_nom(rel_pd_index, pop_nom2, b2, 0);
+    }
+
+    /**
+     * @brief The actual pop operation on the correct bucket. returns qr denoting the pop element spare_quot and rem. 
+     * 
+     * @param rel_pd_index 
+     * @param popnom 
+     * @param bucket_index 
+     * @param is_primary for validation.
+     * @return uint64_t
+     *
+     */
+    auto pop_from_bucket_with_smaller_pop_nom(uint8_t rel_pd_index, uint64_t popnom, size_t bucket_index,
+                                              bool is_primary) -> uint64_t {
+       auto spare_quot = popnom & MASK(quot_length);
+        auto index = popnom >> 8ul;
+        uint8_t removed_rem = main_buckets[bucket_index].pop_remove_by_index(rel_pd_index, index);
+        q_buckets[bucket_index].conditional_remove_simple_shift_helper(index, 42);// remove_by_index. NOT conditional.
+        return (spare_quot << bits_per_item) | removed_rem;
+    }
+
+    uint64_t pop_from_big_quots_set(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) {
+        assert(0);
+        return 42;
+    }
+
+    bool validate_capacity_of_bucket(size_t bucket_index) {
+        auto temp_capacity = main_buckets[bucket_index].get_capacity();
+        auto v_capacity = capacity_vec.at(bucket_index);
+        if (temp_capacity != v_capacity) {
+            std::cout << "temp_capacity: " << temp_capacity << std::endl;
+            std::cout << "v_capacity: " << v_capacity << std::endl;
+            assert(0);
+        }
+        assert(temp_capacity == v_capacity);
         return true;
     }
 

@@ -72,6 +72,8 @@ public:
         // delete[] Table;
     }
 
+    // inline 
+
     inline auto find(bucket_type x) const -> bool {
         assert((x & MASK(element_length)) == x);
 

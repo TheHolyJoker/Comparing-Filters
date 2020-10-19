@@ -424,7 +424,6 @@ namespace pd256_plus {
         return _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & ((1ULL << 56) - 1);
     }
 
-
     inline uint64_t compute_last_quot_naive(const __m256i *pd) {
         size_t capacity = get_capacity(pd);
         if (capacity == 0)
@@ -432,6 +431,7 @@ namespace pd256_plus {
         return count_ones_up_to_the_kth_zero(pd, capacity);
     }
 
+    uint64_t get_last_quot_after_future_swap_naive(int64_t new_quot, const __m256i *pd);
 
     inline uint64_t get_clean_header(const __m256i *pd) {
         // uint64_t res = (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) >> 6) & ((1ULL << 50) - 1);
@@ -547,6 +547,52 @@ namespace pd256_plus {
 
     auto get_specific_quot_capacity_naive2(int64_t quot, const __m256i *pd) -> int;
 
+    inline auto get_last_quot_capacity_att(const __m256i *pd) -> uint8_t {
+        uint64_t header = get_clean_header(pd) >> 14ul;
+        size_t index = _lzcnt_u64(header);
+        assert(index < 64);
+        uint64_t header2 = ~(header << (index + 1));
+        size_t index2 = _lzcnt_u64(header2);
+        uint64_t header3 = ~(header2 << (index2));
+        auto res = _lzcnt_u64(header3);
+        assert(res != 64);
+        assert(res == get_specific_quot_capacity_wrapper(decode_last_quot(pd), pd));
+        return res;
+
+        // res = (res != 64) ? res : 1;
+        // auto v_res = get_specific_quot_capacity_wrapper(decode_last_quot(pd), pd);
+    }
+
+    inline bool validate_compute_next_last_quot_att(uint8_t res, const __m256i *pd) {
+        size_t capacity = get_capacity(pd);
+        auto v_res = count_ones_up_to_the_kth_zero(get_clean_header(pd), capacity - 1);
+        assert(v_res == res);
+        return true;
+    }
+    /**
+     * @brief an attempt to write a function that does not assume the pd is full
+     * 
+     * @param pd 
+     * @return uint8_t 
+     */
+    inline auto compute_next_last_quot_att(const __m256i *pd) -> uint8_t {
+        uint64_t header = get_clean_header(pd) >> 14ul;
+        size_t index = _lzcnt_u64(header);
+        assert(index < 64);
+        uint64_t header2 = ~(header << (index + 1));
+        size_t index2 = _lzcnt_u64(header2);// counting empty ones + 1 from the end.
+        uint64_t header3 = (header2 << (index2 + 1));
+        size_t index3 = _lzcnt_u64(header3);//connting second sequence of ones.
+        auto res = QUOT_SIZE25 - 1 - index2 - index3;
+        assert(validate_compute_next_last_quot_att(res, pd));
+//        assert(get_last_quot_after_future_swap_naive(0, pd));
+        return res;
+
+        // res = (res != 64) ? res : 1;
+        // auto v_res = get_specific_quot_capacity_wrapper(decode_last_quot(pd), pd);
+    }
+
+
     /**
      * @brief Get the last quot capacity object
      * returns the capacity of the highest non empty quot.
@@ -556,7 +602,8 @@ namespace pd256_plus {
      */
     inline auto get_last_quot_capacity(int64_t last_quot, const __m256i *pd) -> uint8_t {
         //todo: fix this:
-        return get_specific_quot_capacity_wrapper(last_quot, pd);
+        return get_last_quot_capacity_att(pd);
+        // return get_specific_quot_capacity_wrapper(last_quot, pd);
 
         /* //         assert(pd_full(pd));
 //         assert(last_quot < QUOT_SIZE25);
@@ -583,13 +630,6 @@ namespace pd256_plus {
 //         return res; */
     }
 
-    inline auto get_last_quot_capacity(const __m256i *pd) -> uint8_t {
-        assert(pd_full(pd));
-        assert(0);
-        const int64_t last_quot = get_header_last_byte(pd);
-        // const int64_t last_quot = (lhb & (255 - 31)) ? Lookup_Table[lhb] : get_last_byte(pd);
-        return get_last_quot_capacity(last_quot, pd);
-    }
 
     inline bool pd_empty(const __m256i *pd) {
         assert(0);
@@ -1080,7 +1120,7 @@ namespace pd256_plus {
 
         const uint64_t h0 = get_clean_header(pd);
         const uint64_t new_v = (v << quot) & ~h0;
-        const uint64_t v_mask = (quot) ? mask_between_bits_naive5(_pdep_u64(3ul << (quot - 1), h0)): (_blsmsk_u64(h0) >> 1ul);
+        const uint64_t v_mask = (quot) ? mask_between_bits_naive5(_pdep_u64(3ul << (quot - 1), h0)) : (_blsmsk_u64(h0) >> 1ul);
         return v_mask & new_v;
     }
 
@@ -1094,7 +1134,7 @@ namespace pd256_plus {
             return false;
         const uint64_t h0 = get_clean_header(pd);
         const uint64_t new_v = ((v >> 7ul) << quot) & ~h0;
-        const uint64_t v_mask = (quot) ? mask_between_bits_naive5(_pdep_u64(3ul << (quot - 1), h0)): (_blsmsk_u64(h0) >> 1ul);
+        const uint64_t v_mask = (quot) ? mask_between_bits_naive5(_pdep_u64(3ul << (quot - 1), h0)) : (_blsmsk_u64(h0) >> 1ul);
         return v_mask & new_v;
     }
 
@@ -1196,11 +1236,10 @@ namespace pd256_plus {
     }
 
     inline void clear_overflow_bit(__m256i *pd) {
-        assert(false);
-        // uint64_t *h_array = ((uint64_t *) pd);
-        // assert(did_pd_overflowed(pd));
-        // h_array[1] ^= (1ULL) << (103 - 64);
-        // assert(!did_pd_overflowed(pd));
+        uint64_t *h_array = ((uint64_t *) pd);
+        h_array[0] |= 32;
+        // h_array[0] ^= 32;
+        assert(!did_pd_overflowed(pd));
     }
 
 
@@ -1456,7 +1495,7 @@ namespace pd256_plus {
     }
 
 
-    inline void write_header(uint64_t begin, uint64_t end, int64_t quot, __m256i *pd) {
+    inline void write_header_with_comments(uint64_t begin, uint64_t end, int64_t quot, __m256i *pd) {
         // auto temp = get_capacity(pd);
         assert(get_capacity(pd) < CAPACITY25);
         // validate_number_of_quotient(pd);
@@ -1510,6 +1549,64 @@ namespace pd256_plus {
 
         assert(validate_number_of_quotient(new_header));
         memcpy(pd, &new_header, 7);
+        assert(validate_number_of_quotient(pd));
+    }
+
+
+    /**
+     * @brief adds a single zero after the (quot - 1 )'th one. i.e in begin index.
+     * 
+     * @param begin 
+     * @param end 
+     * @param quot 
+     * @param pd 
+     */
+    inline void write_header(uint64_t begin, uint64_t end, int64_t quot, __m256i *pd) {
+        return write_header_with_comments(begin, end, quot, pd);
+        assert(get_capacity(pd) < CAPACITY25);
+        const uint64_t hMetaBits = get_header_meta_bits(pd);
+        const uint64_t old_header = get_clean_header(pd);
+
+        uint64_t new_header = old_header & MSK(begin);
+
+
+        new_header |= ((old_header >> end) << (end + 1));
+        new_header <<= 6;
+
+
+        uint64_t new_quot = MAX(hMetaBits & 31, quot);
+        uint64_t new_mBits = new_quot + (hMetaBits & 32);
+        assert(BITWISE_DISJOINT(new_mBits, new_header));
+
+        new_header |= new_mBits;
+        assert(new_header < MSK(56));
+
+        assert(validate_number_of_quotient(new_header));
+        memcpy(pd, &new_header, 7);
+        assert(validate_number_of_quotient(pd));
+    }
+
+    inline void delete_from_header_without_updating_max_quot(uint64_t begin, uint64_t end, int64_t quot, __m256i *pd) {
+        assert(begin < end);
+        const uint64_t hMetaBits = get_header_meta_bits(pd);
+        const uint64_t old_header = get_clean_header(pd);
+
+        const uint64_t header = get_header(pd);
+        const uint64_t mask = MSK(begin + 6);
+        uint64_t lo = header & mask;
+        uint64_t hi = (header >> 1ul) & ~mask;
+        uint64_t new_header = lo | hi;
+
+        assert(BITWISE_DISJOINT(hi, lo));
+        assert(new_header < MSK(56));
+        auto curr_pop = _mm_popcnt_u64(new_header >> 6ul);
+        auto old_pop = _mm_popcnt_u64(old_header);
+        assert(curr_pop == old_pop);
+        //        assert(validate_number_of_quotient(pd));
+        assert(validate_number_of_quotient(new_header));
+
+        memcpy(pd, &new_header, 7);
+
         assert(validate_number_of_quotient(pd));
     }
 
@@ -1624,29 +1721,25 @@ namespace pd256_plus {
         // assert(pd_find_25(quot, rem, pd));
         // assert(pd_full(pd));
         // constexpr uint64_t maskNonHeaderBits = ~(((1ULL << 25) - 1) << 6);
-        uint64_t last_zero_index = get_last_zero_index(pd);
         // uint64_t full_header = get_header(pd);
-        uint64_t header = get_clean_header(pd);
         // std::cout << "old_h:         \t\t";
         // v_pd256_plus::p_format_word(full_header);
-
         // std::cout << "old_ch:        \t\t";
         // v_pd256_plus::p_format_word(header);
 
+        uint64_t last_zero_index = get_last_zero_index(pd);
+        uint64_t header = get_clean_header(pd);
         assert(BITWISE_DISJOINT(header, (1ULL << last_zero_index)));
         bool curr_quot_still_pos = !(header & (1ULL << (last_zero_index - 1)));
         const uint64_t mask = MSK(last_zero_index);
         uint64_t lo = header & mask;
         uint64_t hi = ((header >> 1ul) & ~mask);// | (1ULL << last_zero_index);
+        assert(BITWISE_DISJOINT(lo, hi));
 
         // std::cout << "hi:            \t\t";
         // v_pd256_plus::p_format_word(hi);
-
         // std::cout << "lo:            \t\t";
         // v_pd256_plus::p_format_word(lo);
-        assert(BITWISE_DISJOINT(lo, hi));
-
-
         // size_t p1 = _mm_popcnt_u64(lo);
         // size_t p2 = _mm_popcnt_u64(hi);
         // uint64_t temp_h = (hi | lo) | (1ULL << last_zero_index);
@@ -1665,25 +1758,21 @@ namespace pd256_plus {
         // assert(validate_number_of_quotient_from_clean_header(new_clean_h));
 
         uint64_t new_header = (((hi | lo) << 6) | get_header_meta_bits(pd)) & MSK(55);
+        memcpy(pd, &new_header, 7);
+        return curr_quot_still_pos;
         // new_header
         // size_t p5 = _mm_popcnt_u64(new_header);
         // assert(p5 == QUOT_SIZE25);
-
         // new_header = new_header | get_header_meta_bits(pd);
         // new_header &= MSK(55);
         // size_t p6 = _mm_popcnt_u64(new_header);
         // assert(p6 + 1 == QUOT_SIZE25);
-
-        memcpy(pd, &new_header, 7);
         // std::cout << "new_ch:        \t\t";
         // v_pd256_plus::p_format_word(new_clean_h);
-
         // std::cout << "new_h:         \t\t";
         // v_pd256_plus::p_format_word(new_header);
-
         // v_pd256_plus::p_format_header(pd);
         // std::cout << std::string(80, '*') << std::endl;
-        return curr_quot_still_pos;
     }
 
     inline uint64_t pd_swap_short(int64_t quot, uint8_t rem, __m256i *pd) {
@@ -1705,7 +1794,7 @@ namespace pd256_plus {
         } else if (last_quot == quot) {
             // c2++;
             const uint64_t old_rem = get_last_byte(pd);
-            if (old_rem < rem)
+            if (old_rem < rem)//todo can be <= instead of <.
                 return (quot << 8u) | ((uint64_t) rem);
 
             size_t quot_capacity = get_last_quot_capacity(quot, pd);
@@ -1823,6 +1912,184 @@ namespace pd256_plus {
             assert(validate_number_of_quotient(pd));
             assert(validate_decoding(pd));
             return res;
+        }
+    }
+
+
+    inline bool delete_from_non_overflowing_pd_core(int64_t quot, uint8_t rem, __m256i *pd) {
+        assert(quot < QUOT_SIZE25);
+        constexpr unsigned kBytes2copy = 7;
+        const uint64_t header = get_clean_header(pd);
+
+        const uint64_t begin = quot ? (select64(header, quot - 1) + 1) : 0;
+        const uint64_t end = select64(header, quot);
+        assert(begin <= end);
+        assert(end <= CAPACITY25 + QUOT_SIZE25);
+
+        const uint64_t begin_fingerprint = begin - quot;
+        const uint64_t end_fingerprint = end - quot;
+        assert(begin_fingerprint <= end_fingerprint);
+        assert(end_fingerprint <= CAPACITY25);
+
+        uint64_t i = begin_fingerprint;
+        for (; i < end_fingerprint; ++i) {
+            if (rem == ((const uint8_t *) pd)[kBytes2copy + i])
+                break;
+        }
+        if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[kBytes2copy + i])) {
+            if (pd_find_25(quot, rem, pd)) assert(false);
+            return false;
+        }
+
+        assert(validate_number_of_quotient(pd));
+        delete_from_header_without_updating_max_quot(begin, end, quot, pd);
+        assert(validate_number_of_quotient(pd));
+
+        memmove(&((uint8_t *) pd)[kBytes2copy + i],
+                &((const uint8_t *) pd)[kBytes2copy + i + 1],
+                sizeof(*pd) - (kBytes2copy + i + 1));
+        return true;
+    }
+
+    inline bool delete_from_non_overflowing_pd(int64_t quot, uint8_t rem, __m256i *pd) {
+        assert(!did_pd_overflowed(pd));
+        const uint64_t last_quot = decode_last_quot(pd);
+        if (last_quot > quot) {
+            return delete_from_non_overflowing_pd_core(quot, rem, pd);
+        } else if (last_quot == quot) {
+            const uint64_t valid_after_swap_quot = compute_next_last_quot_att(pd);
+            bool res = delete_from_non_overflowing_pd_core(quot, rem, pd);
+            if (res && (valid_after_swap_quot != quot))
+                encode_last_quot_new(valid_after_swap_quot, pd);
+            return res;
+        }
+        assert(0);
+        return -42;
+    }
+
+    inline bool delete_from_overflowing_pd(int64_t quot, uint8_t rem, __m256i *pd) {
+        bool find_res = pd_find_25(quot, rem, pd);
+        const uint64_t last_quot = decode_last_quot(pd);
+        if (quot < last_quot) {
+            std::cout << "Del OF 1" << std::endl;
+            auto res = delete_from_non_overflowing_pd_core(quot, rem, pd);
+            if (find_res && !res) {
+                auto res2 = delete_from_non_overflowing_pd_core(quot, rem, pd);
+                assert(0);
+            }
+            if (!res) {
+                assert(!find_res);
+                //                assert(!pd_find_25(quot, rem, pd));
+            }
+            assert(res || (!pd_find_25(quot, rem, pd)));
+            return res;
+        } else if (last_quot == quot) {
+            uint8_t last_rem = get_last_byte(pd);
+            if (last_rem < rem) {
+                std::cout << "Del OF 2.1" << std::endl;
+
+                return false;
+            }
+
+            const __m256i target = _mm256_set1_epi8(rem);
+            const uint32_t v = (_mm256_cmpeq_epu8_mask(target, *pd));
+            if (!v) {
+                std::cout << "Del OF 2.2" << std::endl;
+                return false;
+            }
+
+            /*uint64_t header = get_clean_header(pd) >> 14ul;
+            size_t index = _lzcnt_u64(header);
+            assert(index < 64);
+            uint64_t header2 = ~(header << (index + 1));
+            size_t index2 = _lzcnt_u64(header2);// counting empty ones + 1 from the end.
+            size_t index2_att = QUOT_SIZE25 - last_quot;
+            assert(index2 == index2_att);
+            uint64_t header3 = (header2 << (index2 + 1));
+            size_t index3 = _lzcnt_u64(header3);//connting second sequence of ones.
+            auto res = QUOT_SIZE25 - 1 - index2 - index3;
+*/
+            uint64_t aligned_header = get_clean_header(pd) << (14ul + QUOT_SIZE25 - last_quot);
+//            uint32_t aligned_v = (v) << (32ul - CAPACITY25);
+            bool fast_find_res = _lzcnt_u32(v) < _lzcnt_u64(aligned_header);
+            if (fast_find_res != pd_find_25(quot, rem, pd)) {
+                std::cout << std::string(80, '~') << std::endl;
+                std::cout << "header:    \t";
+                v_pd256_plus::p_format_word(get_clean_header(pd));
+                std::cout << "header_alg:\t";
+                v_pd256_plus::p_format_word(aligned_header);
+                std::cout << "v:         \t";
+                v_pd256_plus::p_format_word(v);
+//                std::cout << "v_alg:     \t";
+//                v_pd256_plus::p_format_word(aligned_v);
+                std::cout << std::string(80, '-') << std::endl;
+                std::cout << "_lzcnt_u32(v):     \t" << _lzcnt_u32(v) << std::endl;
+                std::cout << "_lzcnt_u64(alg_h): \t" << _lzcnt_u64(aligned_header) << std::endl;
+                std::cout << "last_quot: " << last_quot << std::endl;
+
+                std::cout << std::string(80, '~') << std::endl;
+                assert(0);
+            }
+            assert(fast_find_res == pd_find_25(quot, rem, pd));
+            if (fast_find_res) {
+                //This function is an overkill.
+
+                // no need to update last quot, because this will be done during the pop operation.
+                // 'remove_biggest_element' only updates the header, does dot not actually removes the last remainder.
+                // Therefore, it can be called if the element '(quot, rem)' match the last only by the quot.
+                auto res = remove_biggest_element(quot, rem, pd);
+            }
+            std::cout << "Del OF 2.3" << std::endl;
+            return fast_find_res;
+        }
+        assert(0);
+        return 0;
+    }
+
+    inline bool delete_element_wrapper(int64_t quot, uint8_t rem, __m256i *pd) {
+        bool find_res = pd_find_25(quot, rem, pd);
+        const uint64_t last_quot = decode_last_quot(pd);
+        if (quot > last_quot) {
+            std::cout << "Del wrap 1" << std::endl;
+            assert(!find_res);
+            return false;
+        } else if (!did_pd_overflowed(pd)) {
+            std::cout << "Del wrap 2" << std::endl;
+            auto res = delete_from_non_overflowing_pd(quot, rem, pd);
+            if (!res) assert(!find_res);
+            return res;
+        } else {
+            std::cout << "Del wrap 3" << std::endl;
+            auto res = delete_from_overflowing_pd(quot, rem, pd);
+            if (!res) assert(!find_res);
+            return res;
+        }
+    }
+
+    /**
+     * @brief Adding an element that was popped right after a deletion of an element from the pd.
+     * Todo: This function can be much more efficient because of the following assumption: removed_quot <= quot.
+     * 
+     * Assuming that:
+     * 1) removed_quot >= last_quot
+     * 2) During the pop deletion the header was not updated.
+     * 
+     * Using 'quot' and 'removed_quot' one could easily update the header by: 
+     * 1) fliping exactly two bits. (removed_quot < quot). 
+     * 2) Doing nothing (removed_quot == quot). 
+     * 
+     * 
+     * @param quot 
+     * @param rem 
+     * @param removed_quot 
+     * @param removed_rem 
+     * @param pd 
+     */
+    inline void pd_pop_add(int64_t quot, uint8_t rem, int64_t removed_quot, uint8_t removed_rem, __m256i *pd) {
+        assert(quot >= removed_quot);
+        pd_add_25_core(quot, rem, pd);
+        if (quot > removed_quot) {
+            encode_last_quot_new(quot, pd);
         }
     }
 

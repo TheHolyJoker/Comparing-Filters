@@ -71,9 +71,56 @@ auto get_fp_ratios() -> bool {
     return true;
 }
 
+void heavy_validation(){
+    using itemType = uint64_t;
+    using Table_Dict256_Ver6 = Dict256_Ver6<itemType>;
+    bool temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x1111,0x1111);
+    assert(temp);
+    std::cout << "passed:  \t" << 0x1111 << std::endl;
+
+    temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x1'1111,0x1'1111);
+    assert(temp);
+    std::cout << "passed   \t" << 0x11111 << std::endl;
+
+    // temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x2'1111,0x2'1111);
+    // assert(temp);
+    // std::cout << "passed   \t" << 0x21111 << std::endl;
+
+    // temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x4'1111,0x4'1111);
+    // assert(temp);
+    // std::cout << "passed   \t" << 0x41111 << std::endl;
+
+    // temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x8'1111,0x8'1111);
+    // assert(temp);
+    // std::cout << "passed   \t" << 0x81111 << std::endl;
+
+    temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x11'1111,0x11'1111);
+    assert(temp);
+    std::cout << "passed   \t" << 0x11'1111 << std::endl;
+
+    temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x21'1111,0x21'1111);
+    assert(temp);
+    std::cout << "passed   \t" << 0x21'1111 << std::endl;
+
+    temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x41'1111,0x41'1111);
+    assert(temp);
+    std::cout << "passed   \t" << 0x41'1111 << std::endl;
+
+    temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x81'1111,0x81'1111);
+    assert(temp);
+    std::cout << "passed   \t" << 0x81'1111 << std::endl;
+
+    for (size_t i = 0; i < 16; i++)
+    {
+        temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x111'1111,0x111'1111);
+        assert(temp);
+        std::cout << "passed   \t" << 0x81'1111 << std::endl;
+    }
+    
+}
 
 // void attempt_to_use_simd_bf(){
-    
+
 // }
 int main(int argc, char **argv) {
     // std::cout << "Here!" << std::endl;
@@ -102,13 +149,28 @@ int main(int argc, char **argv) {
 
 
     // assert((default_validation_test_single<Table_TC256, itemType>()));
-    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
-    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
-    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
-    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+    
+
+    // temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x111'1111,0x111'1111);
+    // assert(temp);
+    // std::cout << "passed   \t" << 0x1111111 << std::endl;
+
+//    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+//    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+//    assert((default_validation_test_single<Table_Dict256_Ver6, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_Dict256_Ver6, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_Dict256_Ver6, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_Dict256_Ver6, itemType>()));
+    assert(print_pass());
+    return 0;
     // assert((default_validation_test_single<SimdBlockFilter<>, itemType>()));
     // assert((default_validation_test_single<Table_Dict256_Ver4, itemType>()));
-    // assert((default_validation_test_single<Table_Dict256_Ver5, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver5, itemType>()));
+
+    bool temp = validation_test_single<Table_Dict256_Ver5, itemType>(0x41'1111,0x41'1111);
+    assert(temp);
+    temp = validation_test_single<Table_Dict256_Ver6, itemType>(0x41'1111,0x41'1111);
+    assert(temp);
     // assert((default_validation_test_single<Table_Fixed_Dict, itemType>()));
     // assert((default_validation_test_single<Table_Fixed_Dict_Ver2, itemType>()));
     //    assert((default_validation_test_single<Table_Dict512_Ver4, itemType>()));
@@ -124,7 +186,7 @@ int main(int argc, char **argv) {
     // return 0;
 
 
-    get_fp_ratios();
+    // get_fp_ratios();
 
     const size_t max_filter_capacity = 62411242;
     const size_t lookup_reps = 124822484;
@@ -141,10 +203,13 @@ int main(int argc, char **argv) {
     // single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
 
 
+    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_TC256, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_TC256, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_TC256, itemType>(max_filter_capacity, bench_precision, false, &elements);
@@ -157,8 +222,13 @@ int main(int argc, char **argv) {
     // single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
     
-    // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // while (true) {
+    //     single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    //     single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    //     single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    //     single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // }
+    
     // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);

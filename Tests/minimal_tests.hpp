@@ -11,6 +11,14 @@ auto default_validation_test_single() -> bool {
 }
 
 template<typename Table, typename itemType>
+auto default_validation_test_single_with_deletions() -> bool {
+    std::stringstream ss;
+    // return w_validate_filter<Table, itemType>(1000ul, 2000ul, 8ul, 42.0, 42.0, &ss);
+    return w_validate_filter<Table, itemType>(100000ul, 200000ul, 8ul, 42.0, 42.0, &ss, true);
+}
+
+
+template<typename Table, typename itemType>
 auto validation_test_single(size_t filter_max_capacity, size_t lookup_reps) -> bool {
     std::stringstream ss;
     return w_validate_filter<Table, itemType>(filter_max_capacity, lookup_reps, 8ul, 42.0, 42.0, &ss);
