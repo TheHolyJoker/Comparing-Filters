@@ -21,6 +21,8 @@
 #include "Dict320/Dict256_Ver4.hpp"
 #include "Dict320/Dict256_Ver5.hpp"
 #include "Dict320/Dict256_Ver6.hpp"
+#include "Dict320/Dict256_Ver6_DB.hpp"
+#include "Dict320/Dict256_Ver7.hpp"
 #include "Dict320/twoChoicer256.hpp"
 // #include "Dict512/Dict512.hpp"
 // #include "Dict512/Dict512_SparseSpare.hpp"
@@ -67,6 +69,8 @@ enum filter_id {
     d256_ver4,
     d256_ver5,
     d256_ver6,
+    d256_ver7,
+    d256_ver6_db,
     att_d512_id,
     fixed_dict_id,
     fixed_dict_v2,
@@ -667,6 +671,152 @@ struct FilterAPI<Dict256_Ver6<itemType>> {
         return d256_ver6;
     }
 };
+
+template<
+        typename itemType>
+struct FilterAPI<Dict256_Ver6_DB<itemType>> {
+    using Table = Dict256_Ver6_DB<itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        std::cout << "Lower workload" << std::endl;
+        return Table(add_count, .90, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        // throw std::runtime_error("Unsupported");
+        // std::cout << "Remove in Wrapper!" << std::endl;
+        table->remove_db_l2(key);
+    }
+
+    // Todo return const here:
+    // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+#ifdef COUNT
+        return table->lookup_count(key);
+#endif// COUNT \
+
+        return table->lookup(key);
+        // return table->lookup_count(key);
+        // return table->lookup_minimal(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        return table->get_extended_info();
+    }
+
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+#ifdef COUNT
+        table->lookup_count(0, 2);
+        table->lookup_count(0, 1);
+#endif// COUNT \
+
+        return 3;
+    }
+
+    static auto get_ID(Table *table) -> filter_id {
+        return d256_ver6_db;
+    }
+};
+
+
+template<
+        typename itemType>
+struct FilterAPI<Dict256_Ver7<itemType>> {
+    using Table = Dict256_Ver7<itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        std::cout << "Lower workload" << std::endl;
+        return Table(add_count, .90, .5);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        // throw std::runtime_error("Unsupported");
+        // std::cout << "Remove in Wrapper!" << std::endl;
+        table->remove_db_l2(key);
+    }
+
+    // Todo return const here:
+    // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+#ifdef COUNT
+        return table->lookup_count(key);
+#endif// COUNT \
+
+        return table->lookup(key);
+        // return table->lookup_count(key);
+        // return table->lookup_minimal(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        return table->get_extended_info();
+    }
+
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+#ifdef COUNT
+        table->lookup_count(0, 2);
+        table->lookup_count(0, 1);
+#endif// COUNT \
+
+        return 3;
+    }
+
+    static auto get_ID(Table *table) -> filter_id {
+        return d256_ver7;
+    }
+};
+
 
 
 template<typename itemType>

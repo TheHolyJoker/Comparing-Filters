@@ -135,6 +135,7 @@ bool test_bit(const uint64_t *a, size_t bit_index) {
 
 namespace packing_helper {
 
+//    template<typename T>
     void unpack_array(uint64_t *unpacked_array, size_t unpack_size, const uint64_t *pack_array, size_t pack_size, size_t el_length) {
         static constexpr unsigned slot_size = sizeof(uint64_t) * CHAR_BIT;
         uint64_t word_capacity = slot_size / el_length;
@@ -192,10 +193,10 @@ namespace packing_helper {
         return true;
     }
 
-    bool validate_unpack_pack(uint64_t *packed_array, size_t packed_size, size_t el_length) {
-        uint64_t slot_size = sizeof(uint64_t) * CHAR_BIT;
-        uint64_t quots_in_word = slot_size / el_length;
-        size_t unpack_size = quots_in_word * packed_size;
+    bool validate_unpack_pack(uint64_t *packed_array,const size_t packed_size, size_t el_length) {
+        constexpr uint64_t slot_size = sizeof(uint64_t) * CHAR_BIT;
+        const uint64_t quots_in_word = slot_size / el_length;
+        const size_t unpack_size = quots_in_word * packed_size;
         uint64_t temp_unpack_array[unpack_size] = {0};
         uint64_t temp_packed_array[packed_size] = {0};
         // std::cout << std::string(80, '=') << std::endl;

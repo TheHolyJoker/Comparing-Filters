@@ -168,6 +168,7 @@ auto uset_deleting(Table *wrap_filter, unordered_set<itemType> *to_be_deleted_se
             continue;
         counter++;
         try {
+            assert(FilterAPI<Table>::Contain(el, wrap_filter));
             FilterAPI<Table>::Remove(el, wrap_filter);
         } catch (std::runtime_error &msg) {
             break;
@@ -287,7 +288,7 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     *ss << temp2.str();
     //    cout << "filter_max_capacity: " << filter_max_capacity << endl;
     //    cout << "\nnumber of false-positive is out of total number of lookups: " << fp_counter << "/ " << lookup_reps << endl;
-    //    cout << "Expected FP count: " << (lookup_set.size() >> error_power_inv) << endl;
+    //    cout << "Expected FP reps: " << (lookup_set.size() >> error_power_inv) << endl;
 
     // std::cout << "deletion validation" << std::endl;
     counter = 0;
@@ -372,7 +373,7 @@ auto v_filter_core_with_deletions(Table *wrap_filter, size_t filter_max_capacity
     *ss << temp2.str();
     cout << "filter_max_capacity: " << filter_max_capacity << endl;
     cout << "\nnumber of false-positive is out of total number of lookups: " << fp_counter << "/ " << lookup_reps << endl;
-    cout << "Expected FP count: " << (lookup_set.size() >> error_power_inv) << endl;
+    cout << "Expected FP reps: " << (lookup_set.size() >> error_power_inv) << endl;
 
     // std::cout << "deletion validation" << std::endl;
     counter = 0;

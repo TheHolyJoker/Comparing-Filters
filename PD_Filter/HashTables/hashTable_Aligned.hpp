@@ -328,19 +328,19 @@ public:
         return sizeof(bucket_type) * bucket_size * num_of_buckets;
     }
 
-    auto get_table_size() const -> const size_t {
+    auto get_table_size() const -> size_t {
         return num_of_buckets;
     }
 
-    auto get_max_capacity() const -> const size_t {
+    auto get_max_capacity() const -> size_t {
         return max_capacity;
     }
 
-    auto get_element_length() const -> const size_t {
+    auto get_element_length() const -> size_t {
         return element_length;
     }
 
-    auto get_bucket_size() const -> const size_t {
+    auto get_bucket_size() const -> size_t {
         return bucket_size;
     }
 
@@ -348,7 +348,7 @@ public:
         return capacity;
     }
 
-    auto get_max_load_factor() const -> const double {
+    auto get_max_load_factor() const -> double {
         return max_load_factor;
     }
 

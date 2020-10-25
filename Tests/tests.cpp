@@ -129,7 +129,7 @@ auto CF_rates_wrapper<s_dict32>(size_t filter_max_capacity, size_t lookup_reps,
     using Table = s_dict32;
     Table filter(filter_max_capacity, error_power_inv, level1_load_factor, level2_load_factor);
     auto t1 = chrono::high_resolution_clock::now();
-    auto init_time = chrono::duration_cast<ns>(t1 - t0).count();
+    auto init_time = chrono::duration_cast<ns>(t1 - t0).reps();
 
     print_name(std::string("s_dict32"));
     CF_rates_core<Table>(&filter, filter_max_capacity, lookup_reps, init_time, error_power_inv, os);

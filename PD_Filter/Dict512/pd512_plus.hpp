@@ -245,10 +245,10 @@ namespace pd512_plus {
 
     inline auto get_last_zero_index(const __m512i *pd) -> uint8_t {
         //Q:How many ones are there before the 51th zero? A:last_quot
-        //Therefore, the index of the 51th zero is last_quot + 51 (-1 because we are starting to count from zero).
+        //Therefore, the index of the 51th zero is last_quot + 51 (-1 because we are starting to reps from zero).
         assert(pd_full(pd));
-        auto res = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)] + 50;// starting to count from 0.
-        // uint64_t res2 = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];// starting to count from 0.
+        auto res = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)] + 50;// starting to reps from 0.
+        // uint64_t res2 = Lookup_Table[(_mm_extract_epi8(_mm512_castsi512_si128(*pd), 12) & 127)];// starting to reps from 0.
         // uint64_t v_res = get_last_zero_index_naive(pd);
         // assert(res2 == v_res);
         assert(res == get_last_zero_index_naive(pd));

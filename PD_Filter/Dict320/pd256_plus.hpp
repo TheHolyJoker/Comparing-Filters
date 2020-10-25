@@ -529,10 +529,10 @@ namespace pd256_plus {
      */
     inline auto get_last_zero_index(const __m256i *pd) -> uint8_t {
         //Q:How many ones are there before the 51th zero? A:last_quot
-        //Therefore, the index of the 51th zero is last_quot + 51 (-1 because we are starting to count from zero).
+        //Therefore, the index of the 51th zero is last_quot + 51 (-1 because we are starting to reps from zero).
         assert(pd_full(pd));
-        auto res = decode_last_quot(pd) + CAPACITY25 - 1;// starting to count from 0.
-        // uint64_t res2 = Lookup_Table[(_mm_extract_epi8(_mm256_castsi256_si128(*pd), 12) & 127)];// starting to count from 0.
+        auto res = decode_last_quot(pd) + CAPACITY25 - 1;// starting to reps from 0.
+        // uint64_t res2 = Lookup_Table[(_mm_extract_epi8(_mm256_castsi256_si128(*pd), 12) & 127)];// starting to reps from 0.
         // uint64_t v_res = get_last_zero_index_naive(pd);
         // assert(res2 == v_res);
         assert(res == get_last_zero_index_naive(pd));
@@ -585,11 +585,23 @@ namespace pd256_plus {
         size_t index3 = _lzcnt_u64(header3);//connting second sequence of ones.
         auto res = QUOT_SIZE25 - 1 - index2 - index3;
         assert(validate_compute_next_last_quot_att(res, pd));
-//        assert(get_last_quot_after_future_swap_naive(0, pd));
+        //        assert(get_last_quot_after_future_swap_naive(0, pd));
         return res;
 
         // res = (res != 64) ? res : 1;
         // auto v_res = get_specific_quot_capacity_wrapper(decode_last_quot(pd), pd);
+    }
+    inline auto compute_curr_last_quot_att(const __m256i *pd) -> uint8_t {
+        uint64_t header = get_clean_header(pd) >> 14ul;
+        size_t index = _lzcnt_u64(header);
+        assert(index < 64);
+        uint64_t header2 = ~(header << (index + 1));
+        size_t index2 = _lzcnt_u64(header2) + 1;// counting empty ones + 1 from the end.
+
+        auto res = QUOT_SIZE25 - index2;
+        auto v_res = compute_last_quot_naive(pd);
+        assert(v_res == res);
+        return res;
     }
 
 
@@ -644,15 +656,15 @@ namespace pd256_plus {
         return count_ones_up_to_the_kth_zero(pd);
     }
 
-    inline uint8_t get_last_qr_in_pd(const __m256i *pd) {
-        assert(0);
-        return -1;
-        uint64_t quot = 50 - decode_last_quot(pd);
-        constexpr int imm1 = 3;
-        constexpr int imm2 = 15;
-        const uint64_t rem = _mm_extract_epi8(_mm256_extracti64x2_epi64(*pd, imm1), imm2);
-        return (quot << 8ul) | rem;
-    }
+    //    inline uint8_t get_last_qr_in_pd(const __m256i *pd) {
+    //        assert(0);
+    //        return -1;
+    //        uint64_t quot = 50 - decode_last_quot(pd);
+    //        constexpr int imm1 = 3;
+    //        constexpr int imm2 = 15;
+    //        const uint64_t rem = _mm_extract_epi8(_mm256_extracti64x2_epi64(*pd, imm1), imm2);
+    //        return (quot << 8ul) | rem;
+    //    }
 
     inline uint64_t get_last_quot_after_future_swap_ext_slow(int64_t new_quot, const __m256i *pd) {
         assert(pd_full(pd));
@@ -1383,6 +1395,14 @@ namespace pd256_plus {
         // assert((old_qr < qr) == cmp_qr_naive(qr, pd));
         return old_qr < qr;
     }
+    /**
+     * @brief indicate if we should solely look for the element in the next level. 
+     * 
+     * @param qr 
+     * @param pd 
+     * @return true Look only in the second level.
+     * @return false Look only in this PD.
+     */
     inline bool cmp_qr1(uint16_t qr, const __m256i *pd) {
         if (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32) {
             return false;
@@ -2010,7 +2030,7 @@ namespace pd256_plus {
             auto res = QUOT_SIZE25 - 1 - index2 - index3;
 */
             uint64_t aligned_header = get_clean_header(pd) << (14ul + QUOT_SIZE25 - last_quot);
-//            uint32_t aligned_v = (v) << (32ul - CAPACITY25);
+            //            uint32_t aligned_v = (v) << (32ul - CAPACITY25);
             bool fast_find_res = _lzcnt_u32(v) < _lzcnt_u64(aligned_header);
             if (fast_find_res != pd_find_25(quot, rem, pd)) {
                 std::cout << std::string(80, '~') << std::endl;
@@ -2020,8 +2040,8 @@ namespace pd256_plus {
                 v_pd256_plus::p_format_word(aligned_header);
                 std::cout << "v:         \t";
                 v_pd256_plus::p_format_word(v);
-//                std::cout << "v_alg:     \t";
-//                v_pd256_plus::p_format_word(aligned_v);
+                //                std::cout << "v_alg:     \t";
+                //                v_pd256_plus::p_format_word(aligned_v);
                 std::cout << std::string(80, '-') << std::endl;
                 std::cout << "_lzcnt_u32(v):     \t" << _lzcnt_u32(v) << std::endl;
                 std::cout << "_lzcnt_u64(alg_h): \t" << _lzcnt_u64(aligned_header) << std::endl;
@@ -2091,8 +2111,20 @@ namespace pd256_plus {
         if (quot > removed_quot) {
             encode_last_quot_new(quot, pd);
         }
+        assert(pd_find_25(quot, rem, pd));
     }
 
+
+    /**
+     * @brief This function is called after a deletion causing a pd to become not full. 
+     * (and therefore to not be marked as overflowing pd as well.)  
+     * 
+     * @param pd 
+     */
+    inline void update_quot_after_pop(__m256i *pd) {
+        uint64_t last_quot = compute_curr_last_quot_att(pd);
+        encode_last_quot_new(last_quot, pd);
+    }
     void print512(const __m256i *var);
 
     auto get_name() -> std::string;
