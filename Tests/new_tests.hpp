@@ -6,13 +6,11 @@
 #define FILTERS_NEW_TESTS_HPP
 
 #include "tests.hpp"
-#include "wrappers.hpp"
-#include <unistd.h>
-// #include <Validation/validate_hash_table.hpp>
-#include <chrono>
-#include <set>
+// #include "wrappers.hpp"
+#include <unistd.h> // For perf.
 
-typedef chrono::nanoseconds ns;
+// #include <Validation/validate_hash_table.hpp>
+// typedef chrono::nanoseconds ns;
 
 
 ////////////// Declarations:

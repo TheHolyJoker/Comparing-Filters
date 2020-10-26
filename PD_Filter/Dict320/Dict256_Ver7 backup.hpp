@@ -1,3 +1,15 @@
+/**
+ * @file Dict256_Ver7 backup.hpp
+ * @author your name (you@domain.com)
+ * @brief 
+ * @version 0.1
+ * @date 2020-10-26
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ * Backing up before removing the debbuging settings of this class
+ */
+
 
 #ifndef FILTERS_DICT256_VER7_HPP
 #define FILTERS_DICT256_VER7_HPP
@@ -15,9 +27,6 @@
 
 //#include <compare>
 //#include "compare"
-
-
-// static size_t op_count = 0;
 
 #define DICT256_VER71 (true)
 #define DICT256_VER72 (true & DICT256_VER71)
@@ -39,14 +48,14 @@ class Dict256_Ver7 {
 
 
     packed_spare<48, 32, bits_per_item, 4> *spare;
-    // HistoryLog *Level2_Log;
-    // HistoryLog *Level1_Log;
+    HistoryLog *Level2_Log;
+    HistoryLog *Level1_Log;
 
 
     const size_t filter_max_capacity;
     const size_t number_of_pd;
-    // const size_t pd_index_length;
-    // const size_t spare_element_length;
+    const size_t pd_index_length;
+    const size_t spare_element_length;
 
     const size_t remainder_length{bits_per_item},
             quotient_range{quot_range},
@@ -59,20 +68,19 @@ class Dict256_Ver7 {
     __m256i *pd_array;
     Simd_BF *spare_filter;
 
-
 public:
     Dict256_Ver7(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
         : filter_max_capacity(max_number_of_elements),
           number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
-          //   pd_index_length(
-          //           ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
-          //   spare_element_length(pd_index_length + quotient_length + remainder_length),
+          pd_index_length(
+                  ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
+          spare_element_length(pd_index_length + quotient_length + remainder_length),
           Hasher() {
-        op_count = 0;
+
         expected_pd_capacity = max_capacity * level1_load_factor;
         spare = new packed_spare<48, 32, bits_per_item, 4>(number_of_pd);
-        // Level2_Log = new HistoryLog(number_of_pd, false);
-        // Level1_Log = new HistoryLog(number_of_pd, false);
+        Level2_Log = new HistoryLog(number_of_pd, false);
+        Level1_Log = new HistoryLog(number_of_pd, false);
         //        spare_valid = new Spare_Validator(number_of_pd);
 
 
@@ -96,30 +104,12 @@ public:
         free(pd_array);
         free(spare_filter);
         delete spare;
-        std::cout << std::string(80, '!') << std::endl;
-        std::cout << std::string(80, '!') << std::endl;
-        op_count = 0;
-        // delete Level2_Log;
-        // delete Level1_Log;
+        delete Level2_Log;
+        delete Level1_Log;
         //        delete spare_valid;
     }
 
-    item_key_t get_hash_res_as_key(const itemType s) const {
-        uint64_t hash_res = Hasher(s);
-        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        const uint64_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
-        const uint64_t quot = qr >> bits_per_item;
-        const uint64_t rem = qr & MASK(bits_per_item);
-        item_key_t key = {pd_index, quot, rem};
-        return key;
-    }
-
-    bool is_bad_element(const itemType s) const {
-        return s == 372622566;
-    }
-
-    auto lookup_l2(const itemType s, lookup_correct_val correct_val) const -> bool {
+    auto lookup_l2_safe(const itemType s, lookup_correct_val correct_val) const -> bool {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
@@ -127,36 +117,37 @@ public:
         const int64_t quot = qr >> bits_per_item;
         const int64_t spare_quot = (QUOT_SIZE25 - 1) - quot;
         const uint8_t rem = qr;
-        return lookup_l2(pd_index, spare_quot, rem, correct_val);
+        return lookup_l2_safe(pd_index, spare_quot, rem, correct_val);
     }
 
     auto
-    lookup_l2(uint64_t pd_index, uint8_t spare_quot, uint8_t rem, lookup_correct_val correct_val) const -> bool {
-        // bool log_res = Level2_Log->Find(pd_index, quot, rem);
-        // assert(!Level2_Log->using_flipped_quot);
-        bool spare_res = spare->find(pd_index, spare_quot, rem);
+    lookup_l2_safe(uint64_t pd_index, uint8_t spare_quot, uint8_t rem, lookup_correct_val correct_val) const -> bool {
+        const int64_t quot = (QUOT_SIZE25 - 1) - spare_quot;
+        //        bool spare_res = spare->find(pd_index, spare_quot, rem);
+        bool log_res = Level2_Log->Find(pd_index, quot, rem);
+        assert(!Level2_Log->using_flipped_quot);
+
         bool test_res = !(correct_val == IDK);
         if (test_res) {
-            assert(spare_res == correct_val);
+            assert(log_res == correct_val);
         }
         //        assert(spare_res || (!log_res)); // No false negative.
         //        assert(log_res == spare_res);
 
-        const uint64_t quot = (QUOT_SIZE25 - 1) - spare_quot;
-        uint64_t qr = (quot << bits_per_item) | static_cast<uint64_t>(rem);
+        uint64_t qr = (static_cast<uint64_t>(quot) << bits_per_item) | static_cast<uint64_t>(rem);
         uint64_t spare_filter_key = (static_cast<uint64_t>(pd_index) << 13ul) | qr;
         bool spare_filter_res = spare_filter->Find(spare_filter_key);
 
         if (!spare_filter_res) {
-            assert(!spare_res);
+            assert(!log_res);
         }
         //        if (correct_val == Yes) {
         //            assert(spare_res);
         //        }
-        return spare_res;
+        return log_res;
     }
 
-    auto lookup_l1(const itemType s, lookup_correct_val correct_val) const -> bool {
+    auto lookup_l1_safe(const itemType s, lookup_correct_val correct_val) const -> bool {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
@@ -164,67 +155,47 @@ public:
         const int64_t quot = qr >> bits_per_item;
         const uint8_t rem = qr;
 
-        return lookup_l1(pd_index, quot, rem, correct_val);
+        return lookup_l1_safe(pd_index, quot, rem, correct_val);
     }
 
-    auto lookup_l1(uint64_t pd_index, uint8_t quot, uint8_t rem, lookup_correct_val correct_val) const -> bool {
+    auto lookup_l1_safe(uint64_t pd_index, uint8_t quot, uint8_t rem, lookup_correct_val correct_val) const -> bool {
+        static int ll1_safe_c = 0;
+        ll1_safe_c++;
         bool res = pd_name::pd_find_25(quot, rem, &pd_array[pd_index]);
         bool test_res = !(correct_val == IDK);
         if (test_res) {
             assert(res == correct_val);
         }
-        // bool v_res = Level1_Log->Find(pd_index, quot, rem);
-        // if (v_res != res) {
-        //     Level1_Log->print_bucket_log(pd_index);
-        // }
-        // assert(v_res == res);
+        bool v_res = Level1_Log->Find(pd_index, quot, rem);
+        if (v_res != res) {
+            Level1_Log->print_bucket_log(pd_index);
+        }
+        assert(v_res == res);
         return res;
     }
 
-    auto lookup_naive(uint64_t pd_index, uint8_t quot, uint8_t rem, lookup_correct_val correct_val) const -> bool {
+    auto lookup(uint64_t pd_index, uint8_t quot, uint8_t rem, lookup_correct_val correct_val) const -> bool {
         uint64_t qr = (static_cast<uint64_t>(quot) << bits_per_item) | static_cast<uint64_t>(rem);
         bool should_look_in_l1 = !pd_name::cmp_qr1(qr, &pd_array[pd_index]);
 
         if (should_look_in_l1)
-            return lookup_l1(pd_index, quot, rem, correct_val);
+            return lookup_l1_safe(pd_index, quot, rem, correct_val);
 
         auto spare_quot = 24 - quot;
-        return lookup_l2(pd_index, spare_quot, rem, correct_val);
+        return lookup_l2_safe(pd_index, spare_quot, rem, correct_val);
     }
 
-    auto lookup_naive(const itemType s, lookup_correct_val correct_val = IDK) const -> bool {
+    auto lookup(const itemType s, lookup_correct_val correct_val = IDK) const -> bool {
         return lookup_with_l2_filter(s);
     }
-
-    inline auto lookup(const itemType s) const -> bool {
-        return lookup_with_l2_filter(s);
-        uint64_t hash_res = Hasher(s);
-        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        assert(validate_lowers_quot_are_in_l1(pd_index));
-        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
-        const int64_t quot = qr >> 8;
-        const uint64_t spare_quot = 24 - quot;
-        const uint8_t rem = qr;
-        return (!pd_name::cmp_qr1(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index])
-                                                            : (spare->find(((uint64_t) pd_index) ,spare_quot , rem));
-        
-    }
-
     inline auto lookup_with_l2_filter(const itemType s) const -> bool {
-        // op_count++;
-        // bool bpc = is_bad_element(s);
-        // if (bpc) {
-        //     std::cout << "lookup. ";
-        //     std::cout << "op_count: \t" << op_count << std::endl;
-        // }
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        assert(validate_lowers_quot_are_in_l1(pd_index));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
         const int64_t quot = qr >> 8;
         const uint8_t rem = qr;
+
         return (!pd_name::cmp_qr1(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index])
                                                             : (spare_filter->Find(((uint64_t) pd_index << (13)) | qr));
     }
@@ -264,9 +235,9 @@ public:
         spare->insert(pd_index, spare_quot, rem);
         assert(spare->find(pd_index, spare_quot, rem));
 
-        // Level2_Log->Add(pd_index, quot, rem);
-        // assert(Level2_Log->Find(pd_index, quot, rem));
-        // assert(!Level2_Log->using_flipped_quot);
+        Level2_Log->Add(pd_index, quot, rem);
+        assert(Level2_Log->Find(pd_index, quot, rem));
+        assert(!Level2_Log->using_flipped_quot);
 
         uint64_t qr = (static_cast<uint64_t>(quot) << bits_per_item) | rem;
         uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | qr;
@@ -275,7 +246,7 @@ public:
     }
 
     void spare_remove(const itemType s) {
-        assert(lookup_naive(s, Yes));
+        assert(lookup_l2_safe(s, Yes));
 
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
@@ -291,30 +262,23 @@ public:
 
     void spare_remove(uint64_t pd_index, uint8_t quot, uint8_t rem) {
         uint64_t spare_quot = 24 - static_cast<uint64_t>(quot);
-        assert(lookup_l2(pd_index, spare_quot, rem, Yes));
+        assert(lookup_l2_safe(pd_index, spare_quot, rem, Yes));
 
         spare->remove(pd_index, spare_quot, rem);
-        // Level2_Log->Remove(pd_index, quot, rem);
-        // assert(!Level2_Log->using_flipped_quot);
+        Level2_Log->Remove(pd_index, quot, rem);
+        assert(!Level2_Log->using_flipped_quot);
     }
 
     void insert(const itemType s) {
-        // op_count++;
-        // bool bpc = is_bad_element(s);
-        // if (bpc) {
-        //     std::cout << "insert. ";
-        //     std::cout << "op_count: \t" << op_count << std::endl;
-        // }
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        assert(validate_lowers_quot_are_in_l1(pd_index));
         if (pd_name::pd_full(&pd_array[pd_index])) {
             insert_into_full_pd_helper(s);
-            assert(lookup_naive(s, Yes));
+            assert(lookup(s, Yes));
         } else {
             insert_into_not_full_pd_helper(s);
-            assert(lookup_naive(s, Yes));
+            assert(lookup(s, Yes));
         }
     }
 
@@ -333,9 +297,9 @@ public:
         constexpr uint64_t Mask15 = 1ULL << 15ULL;
         assert(res_qr == Mask15);
 
-        // Level1_Log->Add(pd_index, quot, rem);
-        // assert(Level1_Log->Find(pd_index, quot, rem));
-        // assert(lookup(s, Yes));
+        Level1_Log->Add(pd_index, quot, rem);
+        assert(Level1_Log->Find(pd_index, quot, rem));
+        assert(lookup(s, Yes));
     }
 
     void insert_into_full_pd_helper(const itemType s) {
@@ -361,29 +325,34 @@ public:
         /** PD did not change!
          * Element is bigger then pd's biggest_element
          * */
+        // static int item_add_repetition_counter = 0;
+        // item_add_repetition_counter++;
 
         assert(pd_name::pd_full(&pd_array[pd_index]));
         insert_to_spare_without_pop(pd_index, spare_quot, rem);
-        // Level2_Log->Add(pd_index, quot, rem);
-        // assert(Level2_Log->Find(pd_index, quot, rem));
-        // assert(!Level2_Log->using_flipped_quot);
+        Level2_Log->Add(pd_index, quot, rem);
+        assert(Level2_Log->Find(pd_index, quot, rem));
+        assert(!Level2_Log->using_flipped_quot);
 
         uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | qr;
         assert((res_qr & spare_val) == res_qr);
         spare_filter->Add(spare_val);
         assert(spare_filter->Find(spare_val));
 
-        assert(lookup_naive(s, Yes));
-        // assert(lookup_l2_safe(s, Yes));
+        assert(lookup(s, Yes));
+        assert(lookup_l2_safe(s, Yes));
     }
 
     void insertion_swap_case(const itemType s, uint64_t pd_index, uint8_t l1_quot, uint8_t l1_rem,
                              uint64_t pd_add_qr_result) {
+        // static int item_add_swap_counter = 0;
+        // item_add_swap_counter++;
+
         assert(pd_name::pd_full(&pd_array[pd_index]));
 
-        // Level1_Log->Add(pd_index, l1_quot, l1_rem);
-        // assert(Level1_Log->Find(pd_index, l1_quot, l1_rem));
-        // assert(!Level1_Log->using_flipped_quot);
+        Level1_Log->Add(pd_index, l1_quot, l1_rem);
+        assert(Level1_Log->Find(pd_index, l1_quot, l1_rem));
+        assert(!Level1_Log->using_flipped_quot);
 
 
         const uint64_t new_quot = pd_add_qr_result >> bits_per_item;
@@ -392,38 +361,44 @@ public:
         assert(new_quot < QUOT_SIZE25);
 
         insert_to_spare_without_pop(pd_index, new_spare_quot, new_rem);
-        // Level2_Log->Add(pd_index, new_quot, new_rem);
-        // assert(Level2_Log->Find(pd_index, new_quot, new_rem));
-        // assert(!Level2_Log->using_flipped_quot);
+        Level2_Log->Add(pd_index, new_quot, new_rem);
+        assert(Level2_Log->Find(pd_index, new_quot, new_rem));
+        assert(!Level2_Log->using_flipped_quot);
 
 
         uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | pd_add_qr_result;
         spare_filter->Add(spare_val);
         assert(spare_filter->Find(spare_val));
-        assert(lookup_naive(s, Yes));
-        // assert(lookup_l1_safe(s, Yes));
+        assert(lookup(s, Yes));
+        assert(lookup_l1_safe(s, Yes));
 
-        assert(lookup_naive(pd_index, new_quot, new_rem, Yes));
-        // assert(lookup_l2_safe(pd_index, new_spare_quot, new_rem, Yes));
+        assert(lookup(pd_index, new_quot, new_rem, Yes));
+        assert(lookup_l2_safe(pd_index, new_spare_quot, new_rem, Yes));
     }
 
+    /**
+     * Removing only elements from the second level.
+     * @param s
+     */
+    void remove_db_l2(const itemType s) {
+        static int counter = 0;
+        counter++;
+        assert(lookup(s, Yes));
+        int found_level = get_find_level(s);
+        if (found_level != 2)
+            return;
+        spare_remove(s);
+    }
 
     void remove(const itemType s) {
-        // op_count++;
-        // static int remove_counter = 0;
-        // remove_counter++;
-        // bool bpc = is_bad_element(s);
-        // if (bpc) {
-        //     std::cout << "remove. ";
-        //     std::cout << "op_count: \t" << op_count << std::endl;
-        // }
-
-        assert(lookup_naive(s, Yes));
-
+        // static int counter = 0;
+        // counter++;
+        assert(lookup(s, Yes));
+        // int found_level = get_find_level(s);
+        //        assert(lookup_exact(s, true));
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
-        assert(validate_lowers_quot_are_in_l1(pd_index));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
         const int64_t quot = qr >> bits_per_item;
         const uint8_t rem = qr;
@@ -434,18 +409,21 @@ public:
         bool did_pd_overflowed = pd_name::did_pd_overflowed(&pd_array[pd_index]);
         if (!did_pd_overflowed) {
             auto res = pd_name::delete_element_wrapper(quot, rem, &pd_array[pd_index]);
+            Level1_Log->Remove(pd_index, quot, rem);
             assert(res);
-            // Level1_Log->Remove(pd_index, quot, rem);
             return;
         }
 
         bool did_deletion_succeed = pd_name::delete_element_wrapper(quot, rem, &pd_array[pd_index]);
+
         if (!did_deletion_succeed) {
+            // todo: counting inside pd for validations.
+            // assert(lookup_l1_safe(s, No));
             spare_remove(s);
             return;
         }
 
-        // Level1_Log->Remove(pd_index, quot, rem);
+        Level1_Log->Remove(pd_index, quot, rem);
         pop_obtain_element_and_insert_into_l1(pd_index, quot, rem);
     }
 
@@ -453,9 +431,9 @@ public:
         assert(item.pd_index == pd_index);
         assert(removed_quot <= item.quot);
         pd_name::pd_pop_add(item.quot, item.rem, removed_quot, removed_rem, &pd_array[pd_index]);
-        // Level1_Log->Add(pd_index, item.quot, item.rem);
-        // assert(lookup(pd_index, item.quot, item.rem, Yes));
-        // assert(lookup_l1_safe(pd_index, item.quot, item.rem, Yes));
+        Level1_Log->Add(pd_index, item.quot, item.rem);
+        assert(lookup(pd_index, item.quot, item.rem, Yes));
+        assert(lookup_l1_safe(pd_index, item.quot, item.rem, Yes));
     }
 
     item_key_t spare_pop(uint64_t pd_index) {
@@ -482,7 +460,7 @@ public:
     }
 
 
-    /* item_key_t test_for_equality_of_the_pop_item(uint64_t pd_index) const {
+    item_key_t test_for_equality_of_the_pop_item(uint64_t pd_index) const {
         static int eq_c = 0;
         eq_c++;
 
@@ -500,41 +478,10 @@ public:
         assert(pop_item == v_pop_item);
         return pop_item;
     }
- */
 
     inline void insert_to_spare_without_pop(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) {
         spare->insert(pd_index, spare_quot, rem);
         assert(spare->find(pd_index, spare_quot, rem));
-    }
-
-
-    bool validate_lowers_quot_are_in_l1(uint64_t pd_index) const {
-        // const __m256i *pd = &((const __m256i *)pd_array)[pd_index];
-
-        item_key_t pop_item = spare->get_pop_element(pd_index);
-        if (pop_item.pd_index == static_cast<uint64_t>(-1))
-            return true;
-
-        if (!pd_name::did_pd_overflowed(&pd_array[pd_index]))
-            return true;
-
-        flip_quot(&pop_item);
-
-        const __m256i *pd = &pd_array[pd_index];
-        uint64_t pd_quot = pd_name::decode_last_quot(pd);
-        uint64_t pd_rem = pd_name::read_last_rem(pd);
-        item_key_t pd_last_item = {pd_index, pd_quot, pd_rem};
-
-        if (pd_last_item.pd_index != pop_item.pd_index) {
-            size_t b1 = pd_index / 32;
-            size_t b2 = (pd_index / 32) + (pd_index & 31) + 1;
-            bool validation = ((pop_item.pd_index == b1) && (pop_item.pd_index == b2));
-            assert(validation);
-            pd_last_item.pd_index = pop_item.pd_index;
-            // std::cout << "pop_item.pd_index: " << pop_item.pd_index << std::endl;
-        }
-        assert(pd_last_item <= pop_item);
-        return true;
     }
 
     /*void insert_old(const itemType s) {
@@ -589,7 +536,7 @@ public:
 
         }
         assert(lookup(s, Yes));
-//        assert(lookup_naive(s, 1));
+//        assert(lookup_safe(s, 1));
 //        assert(lookup_exact(s));
     }*/
 
@@ -621,7 +568,7 @@ public:
         //insertion succeeds
         if (res_qr == Mask15) {
             // c1++;
-            assert(lookup_naive(s, 1));
+            assert(lookup_safe(s, 1));
             assert(lookup(s));
             return;
         } else if (res_qr == temp_qr) {
@@ -637,7 +584,7 @@ public:
             spare_filter->Add(spare_val);
             assert(spare_filter->Find(spare_val));
 
-            assert(lookup_naive(s, 1));
+            assert(lookup_safe(s, 1));
             assert(lookup(s));
         } else {
             // c3++;
@@ -658,7 +605,7 @@ public:
             uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | res_qr;
             spare_filter->Add(spare_val);
             assert(spare_filter->Find(spare_val));
-            assert(lookup_naive(s, 1));
+            assert(lookup_safe(s, 1));
             assert(lookup(s));
         }
     }
@@ -670,7 +617,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /* void pop_helper_too_complex(uint64_t pd_index, uint64_t removed_quot, uint8_t removed_rem) {
+    void pop_helper_too_complex(uint64_t pd_index, uint64_t removed_quot, uint8_t removed_rem) {
         static int pop_helper_c = 0;
         pop_helper_c++;
 
@@ -696,7 +643,6 @@ public:
         assert(lookup(pd_index, pop_item.quot, pop_item.rem, Yes));
         assert(lookup_l1_safe(pd_index, pop_item.quot, pop_item.rem, Yes));
     }
- */
 
     auto squared_chi_test_basic() -> double {
         double res = 0;
@@ -757,7 +703,7 @@ public:
         ss << "spare load factor is: " << spare->get_load_factor() << std::endl;
         double ratio = 1.0 * spare->get_capacity() / (double) temp_capacity;
         ss << "l2/l1 capacity ratio is: " << ratio << std::endl;
-        // ss << "spare_element_length is: " << spare_element_length << std::endl;
+        ss << "spare_element_length is: " << spare_element_length << std::endl;
 
 
         // if (insert_existing_counter) {

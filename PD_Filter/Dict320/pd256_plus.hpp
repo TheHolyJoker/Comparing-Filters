@@ -398,6 +398,18 @@ namespace pd256_plus {
         // return _mm_extract_epi8(_mm256_extracti64x2_epi64(*pd, 3), 15);
     }
 
+    inline auto read_rem_by_index(size_t index, const __m256i *pd) -> uint8_t {
+
+        // uint64_t *arr = ((uint64_t *) pd);
+        // v_pd256_plus::p_format_word(arr[0]);
+        // v_pd256_plus::p_format_word(arr[1]);
+        // v_pd256_plus::p_format_word(arr[2]);
+        // v_pd256_plus::p_format_word(arr[3]);
+        assert(index < CAPACITY25);
+        return ((uint8_t *) pd)[7U + index];
+    }
+
+
     /**
      * @brief Get the header last byte object
      * This name was chosen for historical reasons. It actually returns header first byte.
@@ -576,7 +588,9 @@ namespace pd256_plus {
      * @return uint8_t 
      */
     inline auto compute_next_last_quot_att(const __m256i *pd) -> uint8_t {
-        uint64_t header = get_clean_header(pd) >> 14ul;
+        // int static t_counter = 0;
+        // t_counter++;
+        uint64_t header = get_clean_header(pd) << 14ul;
         size_t index = _lzcnt_u64(header);
         assert(index < 64);
         uint64_t header2 = ~(header << (index + 1));
@@ -584,6 +598,12 @@ namespace pd256_plus {
         uint64_t header3 = (header2 << (index2 + 1));
         size_t index3 = _lzcnt_u64(header3);//connting second sequence of ones.
         auto res = QUOT_SIZE25 - 1 - index2 - index3;
+
+        // size_t capacity = get_capacity(pd);
+        // auto v_res = count_ones_up_to_the_kth_zero(get_clean_header(pd), capacity - 1);
+        // if(v_res != res){
+        //     v_pd256_plus::p_format_header(pd);
+        // }
         assert(validate_compute_next_last_quot_att(res, pd));
         //        assert(get_last_quot_after_future_swap_naive(0, pd));
         return res;
@@ -1630,6 +1650,39 @@ namespace pd256_plus {
         assert(validate_number_of_quotient(pd));
     }
 
+    inline void remove_one_zero_from_last_quot(int64_t quot, __m256i *pd) {
+        // static int counter = 0;
+        // counter++;
+        // static int quot20_counter = 0;
+        // if (quot == 20){
+        //     quot20_counter++;
+        // }
+        assert(pd_full(pd));
+        const uint64_t old_header = get_clean_header(pd);
+        const uint64_t header = get_header(pd);
+
+        const uint64_t mask_index = 6 + CAPACITY25 + quot - 1;
+        bool zero_in_index = !((1ULL << mask_index) & header);
+        if (!zero_in_index) {
+            bool zero_in_index2 = !((1ULL << (mask_index + 1)) & header);
+            bool zero_in_index3 = !((1ULL << (mask_index + 2)) & header);
+            v_pd256_plus::p_format_word(((uint64_t *) pd)[0]);
+            assert(0);
+        }
+        assert(zero_in_index);
+        const uint64_t mask = MSK(mask_index);
+
+        uint64_t lo = header & mask;
+        uint64_t hi = (header >> 1ul) & ~mask;
+        uint64_t new_header = lo | hi;
+        auto curr_pop = _mm_popcnt_u64(new_header >> 6ul);
+        auto old_pop = _mm_popcnt_u64(old_header);
+        assert(curr_pop == old_pop);
+        assert(validate_number_of_quotient(new_header));
+        memcpy(pd, &new_header, 7);
+        assert(validate_number_of_quotient(pd));
+    }
+
     /**
      * @brief 
      * This function is "private" i.e should not be called before saving relevant data. 
@@ -1777,7 +1830,7 @@ namespace pd256_plus {
         //suppose to fail (because the last bit) . [maybe?]
         // assert(validate_number_of_quotient_from_clean_header(new_clean_h));
 
-        uint64_t new_header = (((hi | lo) << 6) | get_header_meta_bits(pd)) & MSK(55);
+        uint64_t new_header = (((hi | lo) << 6) | get_header_meta_bits(pd)) & MSK(56);
         memcpy(pd, &new_header, 7);
         return curr_quot_still_pos;
         // new_header
@@ -1987,11 +2040,68 @@ namespace pd256_plus {
         return -42;
     }
 
+    inline bool delete_from_overflowing_pd_quot_equal_to_last_helper(int64_t quot, uint8_t rem, __m256i *pd) {
+        static int counter = 0;
+        counter++;
+        uint8_t last_rem = get_last_byte(pd);
+        if (last_rem < rem) {
+            // std::cout << "Del OF 2.1" << std::endl;
+            return false;
+        } else if (last_rem == rem) {
+            auto res = remove_biggest_element(quot, rem, pd);
+            return true;
+        }
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint32_t v = (_mm256_cmpeq_epu8_mask(target, *pd));
+        if (!v) {
+            // std::cout << "Del OF 2.2" << std::endl;
+            return false;
+        }
+
+        /*uint64_t header = get_clean_header(pd) >> 14ul;
+            size_t index = _lzcnt_u64(header);
+            assert(index < 64);
+            uint64_t header2 = ~(header << (index + 1));
+            size_t index2 = _lzcnt_u64(header2);// counting empty ones + 1 from the end.
+            size_t index2_att = QUOT_SIZE25 - last_quot;
+            assert(index2 == index2_att);
+            uint64_t header3 = (header2 << (index2 + 1));
+            size_t index3 = _lzcnt_u64(header3);//connting second sequence of ones.
+            auto res = QUOT_SIZE25 - 1 - index2 - index3;
+*/
+
+        uint64_t aligned_header = get_clean_header(pd) << (14ul + QUOT_SIZE25 - quot);
+        bool fast_find_res = _lzcnt_u32(v) < _lzcnt_u64(aligned_header);
+        assert(fast_find_res == pd_find_25(quot, rem, pd));
+        if (!fast_find_res) {
+            // std::cout << "Del OF 2.4" << std::endl;
+            return false;
+        }
+
+        // std::cout << "Del OF 2.5" << std::endl;
+        // std::cout << "quot: " << quot << std::endl;
+        // v_pd256_plus::p_format_word(((uint64_t *)pd)[0]);
+        remove_one_zero_from_last_quot(quot, pd);
+        // v_pd256_plus::p_format_word(((uint64_t *)pd)[0]);
+        const size_t index = 31 - _lzcnt_u32(v) - 7;
+        assert(read_rem_by_index(index, pd) == rem);
+        memmove(&((uint8_t *) pd)[7U + index],
+                &((const uint8_t *) pd)[7U + index + 1],
+                sizeof(*pd) - (7U + index + 1));
+        return true;
+        // std::cout << "Del OF 2.3" << std::endl;
+        // return fast_find_res;
+    }
+
     inline bool delete_from_overflowing_pd(int64_t quot, uint8_t rem, __m256i *pd) {
+        //todo: remove this call
         bool find_res = pd_find_25(quot, rem, pd);
         const uint64_t last_quot = decode_last_quot(pd);
         if (quot < last_quot) {
-            std::cout << "Del OF 1" << std::endl;
+            //todo: remove validations
+
+            // std::cout << "Del OF 1" << std::endl;
             auto res = delete_from_non_overflowing_pd_core(quot, rem, pd);
             if (find_res && !res) {
                 auto res2 = delete_from_non_overflowing_pd_core(quot, rem, pd);
@@ -2004,63 +2114,7 @@ namespace pd256_plus {
             assert(res || (!pd_find_25(quot, rem, pd)));
             return res;
         } else if (last_quot == quot) {
-            uint8_t last_rem = get_last_byte(pd);
-            if (last_rem < rem) {
-                std::cout << "Del OF 2.1" << std::endl;
-
-                return false;
-            }
-
-            const __m256i target = _mm256_set1_epi8(rem);
-            const uint32_t v = (_mm256_cmpeq_epu8_mask(target, *pd));
-            if (!v) {
-                std::cout << "Del OF 2.2" << std::endl;
-                return false;
-            }
-
-            /*uint64_t header = get_clean_header(pd) >> 14ul;
-            size_t index = _lzcnt_u64(header);
-            assert(index < 64);
-            uint64_t header2 = ~(header << (index + 1));
-            size_t index2 = _lzcnt_u64(header2);// counting empty ones + 1 from the end.
-            size_t index2_att = QUOT_SIZE25 - last_quot;
-            assert(index2 == index2_att);
-            uint64_t header3 = (header2 << (index2 + 1));
-            size_t index3 = _lzcnt_u64(header3);//connting second sequence of ones.
-            auto res = QUOT_SIZE25 - 1 - index2 - index3;
-*/
-            uint64_t aligned_header = get_clean_header(pd) << (14ul + QUOT_SIZE25 - last_quot);
-            //            uint32_t aligned_v = (v) << (32ul - CAPACITY25);
-            bool fast_find_res = _lzcnt_u32(v) < _lzcnt_u64(aligned_header);
-            if (fast_find_res != pd_find_25(quot, rem, pd)) {
-                std::cout << std::string(80, '~') << std::endl;
-                std::cout << "header:    \t";
-                v_pd256_plus::p_format_word(get_clean_header(pd));
-                std::cout << "header_alg:\t";
-                v_pd256_plus::p_format_word(aligned_header);
-                std::cout << "v:         \t";
-                v_pd256_plus::p_format_word(v);
-                //                std::cout << "v_alg:     \t";
-                //                v_pd256_plus::p_format_word(aligned_v);
-                std::cout << std::string(80, '-') << std::endl;
-                std::cout << "_lzcnt_u32(v):     \t" << _lzcnt_u32(v) << std::endl;
-                std::cout << "_lzcnt_u64(alg_h): \t" << _lzcnt_u64(aligned_header) << std::endl;
-                std::cout << "last_quot: " << last_quot << std::endl;
-
-                std::cout << std::string(80, '~') << std::endl;
-                assert(0);
-            }
-            assert(fast_find_res == pd_find_25(quot, rem, pd));
-            if (fast_find_res) {
-                //This function is an overkill.
-
-                // no need to update last quot, because this will be done during the pop operation.
-                // 'remove_biggest_element' only updates the header, does dot not actually removes the last remainder.
-                // Therefore, it can be called if the element '(quot, rem)' match the last only by the quot.
-                auto res = remove_biggest_element(quot, rem, pd);
-            }
-            std::cout << "Del OF 2.3" << std::endl;
-            return fast_find_res;
+            return delete_from_overflowing_pd_quot_equal_to_last_helper(quot, rem, pd);
         }
         assert(0);
         return 0;
@@ -2070,16 +2124,16 @@ namespace pd256_plus {
         bool find_res = pd_find_25(quot, rem, pd);
         const uint64_t last_quot = decode_last_quot(pd);
         if (quot > last_quot) {
-            std::cout << "Del wrap 1" << std::endl;
+            // std::cout << "Del wrap 1" << std::endl;
             assert(!find_res);
             return false;
         } else if (!did_pd_overflowed(pd)) {
-            std::cout << "Del wrap 2" << std::endl;
+            // std::cout << "Del wrap 2" << std::endl;
             auto res = delete_from_non_overflowing_pd(quot, rem, pd);
             if (!res) assert(!find_res);
             return res;
         } else {
-            std::cout << "Del wrap 3" << std::endl;
+            // std::cout << "Del wrap 3" << std::endl;
             auto res = delete_from_overflowing_pd(quot, rem, pd);
             if (!res) assert(!find_res);
             return res;
@@ -2114,7 +2168,6 @@ namespace pd256_plus {
         assert(pd_find_25(quot, rem, pd));
     }
 
-
     /**
      * @brief This function is called after a deletion causing a pd to become not full. 
      * (and therefore to not be marked as overflowing pd as well.)  
@@ -2125,6 +2178,13 @@ namespace pd256_plus {
         uint64_t last_quot = compute_curr_last_quot_att(pd);
         encode_last_quot_new(last_quot, pd);
     }
+
+
+    inline auto read_last_rem(const __m256i *pd) -> uint8_t {
+        auto capacity = get_capacity(pd);
+        return read_rem_by_index(capacity - 1, pd);
+    }
+
     void print512(const __m256i *var);
 
     auto get_name() -> std::string;

@@ -41,7 +41,7 @@ public:
     MainBucket<bucket_capacity, batch_size, bits_per_item> *main_buckets;
     Quotients<bucket_capacity, batch_size, quot_length> *q_buckets;
 
-    unordered_set <uint64_t> big_quots_set;
+    unordered_set<uint64_t> big_quots_set;
     vector<size_t> capacity_vec;
     vector<size_t> pd_index_input_to_add_counter;
 
@@ -50,9 +50,9 @@ public:
     HistoryLog *psLog;
 
     explicit packed_spare(size_t number_of_buckets_in_l1)
-            : number_of_buckets((number_of_buckets_in_l1 + batch_size - 1) / batch_size),
-              max_spare_capacity(((number_of_buckets_in_l1 + batch_size - 1) / batch_size) * bucket_capacity),
-              big_quots_set() {
+        : number_of_buckets((number_of_buckets_in_l1 + batch_size - 1) / batch_size),
+          max_spare_capacity(((number_of_buckets_in_l1 + batch_size - 1) / batch_size) * bucket_capacity),
+          big_quots_set() {
         assert(number_of_buckets <= MASK32);
         assert(64 < number_of_buckets);
 
@@ -258,9 +258,7 @@ public:
         assert(!(main_buckets[b1].is_full() && main_buckets[b2].is_full()));
 
         bool toWhichBucketToInsert = (main_buckets[b1].get_capacity() < main_buckets[b2].get_capacity());
-        toWhichBucketToInsert ? insert_helper(rel_pd_index, spare_quot, rem, 1, b1) : insert_helper(rel_pd_index,
-                                                                                                    spare_quot, rem, 0,
-                                                                                                    b2);
+        toWhichBucketToInsert ? insert_helper(rel_pd_index, spare_quot, rem, 1, b1) : insert_helper(rel_pd_index, spare_quot, rem, 0, b2);
 
         if (toWhichBucketToInsert)
             capacity_vec.at(b1) += 1;
@@ -322,7 +320,6 @@ public:
         bool both = f1 && f2;
         if (both)
             return remove_from_fuller(rel_pd_index, spare_quot, rem, b1, b2);
-
         const bool res = remove_helper(rel_pd_index, spare_quot, rem, 1, b1) ||
                          remove_helper(rel_pd_index, spare_quot, rem, 0, b2);
         assert(res);
@@ -355,9 +352,7 @@ public:
 
     void remove_from_fuller(size_t rel_pd_index, uint8_t spare_quot, uint8_t rem, size_t b1, size_t b2) {
         bool fromWhichBucketToRemove = (main_buckets[b1].get_capacity() >= main_buckets[b2].get_capacity());
-        fromWhichBucketToRemove ? remove_helper(rel_pd_index, spare_quot, rem, 1, b1) : remove_helper(rel_pd_index,
-                                                                                                      spare_quot, rem,
-                                                                                                      0, b2);
+        fromWhichBucketToRemove ? remove_helper(rel_pd_index, spare_quot, rem, 1, b1) : remove_helper(rel_pd_index, spare_quot, rem, 0, b2);
     }
 
 
@@ -496,6 +491,15 @@ public:
     }
 */
 
+    item_key_t pop_nom_to_item(uint64_t pop_nom, size_t bucket_index) const {
+        if (pop_nom == static_cast<uint64_t>(-1))
+            return {static_cast<uint64_t>(-1), static_cast<uint64_t>(-1), static_cast<uint64_t>(-1)};
+        auto pop_nom1_spare_quot = pop_nom & MASK(quot_length);
+        auto index = pop_nom >> 8ul;
+        uint8_t rem1 = main_buckets[bucket_index].pop_read_body_by_index(index);
+
+        return {0, static_cast<uint64_t>(pop_nom1_spare_quot), static_cast<uint64_t>(rem1)};
+    }
 
     item_key_t get_pop_element(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) const {
         // static int counter = 0;
@@ -507,14 +511,15 @@ public:
     item_key_t pop(uint64_t pd_index, uint8_t spare_quot, uint8_t rem) {
         auto pop_item = get_pop_element(pd_index, spare_quot, rem);
         if (pop_item.pd_index != -1)
-            psLog->Remove(pop_item);
+            remove(pop_item);
         return pop_item;
     }
 
     item_key_t pop(uint64_t pd_index) {
-        auto pop_item = get_pop_element(pd_index);
+        item_key_t pop_item = get_pop_element(pd_index);
         if (pop_item.pd_index != -1)
-            psLog->Remove(pop_item);
+            remove(pop_item);
+            
         return pop_item;
     }
 
@@ -529,6 +534,9 @@ public:
 
         uint64_t pop_nom1 = get_pop_next_item_helper(rel_pd_index, 1, b1);
         uint64_t pop_nom2 = get_pop_next_item_helper(rel_pd_index, 0, b2);
+        item_key_t nom1_item = pop_nom_to_item(pop_nom1, b1);
+        item_key_t nom2_item = pop_nom_to_item(pop_nom2, b2);
+
 
         if ((pop_nom1 == static_cast<uint64_t>(-1)) && (pop_nom2 == static_cast<uint64_t>(-1))) {
             return pop_from_big_quots_set(pd_index);
@@ -734,7 +742,7 @@ public:
             std::cout << std::string(80, '*') << std::endl;
             std::cout << std::string(80, '*') << std::endl;
             std::cout << "secondary PD: " << std::endl;
-            size_t alt_b = b0 ^b1 ^b2;
+            size_t alt_b = b0 ^ b1 ^ b2;
             assert((alt_b == b1) || (alt_b == b2));
             main_buckets[alt_b].print_pd();
             std::cout << "Q list screened: " << std::endl;

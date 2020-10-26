@@ -511,8 +511,8 @@ namespace pd256_plus {
     }
 
     auto get_capacity(const __m256i *pd) -> int {
-        static int counter = 0;
-        counter++;
+        // static int counter = 0;
+        // counter++;
         // return count_ones_up_to_the_kth_zero(pd);
         //todo: this case analysis does not have to be efficient, because this function is only used for debugging.
         const uint64_t header = get_clean_header(pd);
@@ -520,16 +520,16 @@ namespace pd256_plus {
         assert(temp >= 14);
         assert(temp <= 39);
         uint64_t res = CAPACITY25 - (temp - 14);
-        auto v_res = get_capacity_naive(pd);
-        if (res != get_capacity_naive(pd)) {
-            std::cout << std::string(80, '^') << std::endl;
-            std::cout << "res: " << res << std::endl;
-            std::cout << "v_cap: " << get_capacity_naive(pd) << std::endl;
-            v_pd256_plus::p_format_header(pd);
-            std::cout << std::string(80, '^') << std::endl;
+        // auto v_res = get_capacity_naive(pd);
+        // if (res != get_capacity_naive(pd)) {
+        //     std::cout << std::string(80, '^') << std::endl;
+        //     std::cout << "res: " << res << std::endl;
+        //     std::cout << "v_cap: " << get_capacity_naive(pd) << std::endl;
+        //     v_pd256_plus::p_format_header(pd);
+        //     std::cout << std::string(80, '^') << std::endl;
 
-            assert(0);
-        }
+        //     assert(0);
+        // }
         assert(res == get_capacity_naive(pd));
         return res;
     }

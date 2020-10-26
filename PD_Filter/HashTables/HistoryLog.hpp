@@ -8,17 +8,16 @@
 //#include "../basic_function_util.h"
 //#include "../macros.h"
 //#include "Spare_Validator.hpp"
-#include <cstring>
-#include <unordered_map>
-#include <unordered_set>
 #include <cassert>
 #include <climits>
+#include <cstdio>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <random>
-#include <cstdio>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
-
 
 
 enum operations {
@@ -61,9 +60,10 @@ struct item_key_t {
     uint64_t rem;
 };
 
+constexpr item_key_t emptyItem = {static_cast<uint64_t>(-1), static_cast<uint64_t>(-1), static_cast<uint64_t>(-1)};
+
 void flip_quot(item_key_t *item);
 //bool test_for_equality(const item_key_t &item1, const item_key_t &item2);
-
 
 
 struct item_val_t {
@@ -125,7 +125,8 @@ public:
     size_t *bucket_array_time_stamp;
 
     HistoryLog(size_t number_of_buckets_in_l1, bool should_use_flipped_quot) : number_of_buckets(
-            number_of_buckets_in_l1), using_flipped_quot(should_use_flipped_quot) {
+                                                                                       number_of_buckets_in_l1),
+                                                                               using_flipped_quot(should_use_flipped_quot) {
         bucket_umap_array = new bucket_map::bucket_umap_t[number_of_buckets_in_l1];
         bucket_array_time_stamp = new size_t[number_of_buckets_in_l1];
     }
@@ -135,7 +136,7 @@ public:
         delete[] bucket_array_time_stamp;
     }
 
-//    validate_quot
+    //    validate_quot
 
     void add_to_all_history(size_t pd_index, int64_t quot, uint8_t rem) {
         item_key_t temp_key = {pd_index, static_cast<uint64_t>(quot), static_cast<uint64_t>(rem)};
@@ -168,7 +169,7 @@ public:
             item_val_t new_val = {1, new_vec};
             auto temp_pair = std::make_pair(temp_key, new_val);
             temp_bmap->insert(temp_pair);
-//            temp_bmap->at(temp_key) = new_val;
+            //            temp_bmap->at(temp_key) = new_val;
         } else {
             auto *count_pointer = &temp_bmap->at(temp_key).reps;
             *count_pointer += 1;
@@ -177,7 +178,6 @@ public:
             std::vector<operation_t> *vec = &temp_bmap->at(temp_key).history_log_vec;
             vec->emplace_back(vec_val);
         }
-
     }
 
     void Add(size_t pd_index, int64_t quot, uint8_t rem) {
@@ -212,13 +212,12 @@ public:
     int Find(size_t pd_index, int64_t quot, uint8_t rem) const {
         item_key_t temp_key = {pd_index, static_cast<uint64_t>(quot), static_cast<uint64_t>(rem)};
         return Find(temp_key);
-
     }
 
     void remove_from_all_history(size_t pd_index, int64_t quot, uint8_t rem, operations op_kind) {
         item_key_t temp_key = {pd_index, static_cast<uint64_t>(quot), static_cast<uint64_t>(rem)};
         assert(all_history.count(temp_key));
-/*
+        /*
         bool is_new_item = (all_history.reps(temp_key) == 0);
         if (is_new_item) {
             operation_t vec_val = {time_stamp, Add_op};
@@ -249,7 +248,6 @@ public:
         operation_t vec_val = {relative_time_stamp, op_kind};
         std::vector<operation_t> *vec = &temp_bmap->at(temp_key).history_log_vec;
         vec->emplace_back(vec_val);
-
     }
 
     void Remove(item_key_t temp_key, operations op_kind = operations::Remove_op) {
@@ -320,7 +318,7 @@ public:
         std::cout << std::string(80, '=') << std::endl;
         std::cout << "current time stamp is: " << time_stamp << std::endl;
         std::cout << "time_stamp\t\t Kind " << std::endl;
-        for (const auto &op: item_vec) {
+        for (const auto &op : item_vec) {
             std::cout << op.time_stamp << "\t\t" << op.kind << std::endl;
         }
         std::cout << std::string(80, '=') << std::endl;
@@ -329,7 +327,7 @@ public:
     void print_bucket_log(uint64_t pd_index) const {
         assert(pd_index < number_of_buckets);
         bucket_map::bucket_umap_t bucket_map = bucket_umap_array[pd_index];
-        for (const auto &temp_pair: bucket_map) {
+        for (const auto &temp_pair : bucket_map) {
             std::cout << std::string(80, '*') << std::endl;
             std::cout << "quot: \t" << ((uint64_t) temp_pair.first.quot) << std::endl;
             std::cout << "rem: \t" << ((uint64_t) temp_pair.first.rem) << std::endl;
@@ -347,7 +345,7 @@ public:
         std::cout << std::string(32, '.') << std::endl;
         std::cout << "time_stamp\t\t Kind " << std::endl;
         size_t c = 0;
-        for (const auto &op: item_vec) {
+        for (const auto &op : item_vec) {
             std::cout << c++ << ")\t" << op.time_stamp << "\t\t" << op.kind << std::endl;
         }
         std::cout << "current reps: \t" << val.reps << std::endl;
@@ -366,7 +364,6 @@ public:
 
 
 private:
-
     static bool cmp_helper(int64_t q1, uint8_t r1, int64_t q2, uint8_t r2) {
         return (q1 != q2) ? q1 < q2 : r1 < r2;
     }
@@ -434,14 +431,13 @@ private:
         return get_max_element(pd_index);
     }
 
-//    auto get_bucket_history(size_t pd_index) const -> vector<log_vec_key_t> {
-//        return pd_log_vec_array[pd_index];
-//    }
-//
-//    auto get_element_history(size_t pd_index, int64_t quot, uint8_t rem) const -> vector<log_vec_key_t> {
-//        auto temp_history = pd_log_vec_array[pd_index];
-//    }
-
+    //    auto get_bucket_history(size_t pd_index) const -> vector<log_vec_key_t> {
+    //        return pd_log_vec_array[pd_index];
+    //    }
+    //
+    //    auto get_element_history(size_t pd_index, int64_t quot, uint8_t rem) const -> vector<log_vec_key_t> {
+    //        auto temp_history = pd_log_vec_array[pd_index];
+    //    }
 };
 
 inline auto spare_pop_res_to_item_key_t(uint64_t pop_res) -> item_key_t {
@@ -450,7 +446,6 @@ inline auto spare_pop_res_to_item_key_t(uint64_t pop_res) -> item_key_t {
     assert(pop_spare_quot <= 25);
     auto pop_quot = 24 - pop_spare_quot;
     return {0, pop_quot, pop_rem};
-
 }
 
 const item_key_t rand_item_key_simple(item_key_t lim_key);

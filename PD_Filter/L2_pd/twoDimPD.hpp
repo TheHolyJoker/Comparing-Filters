@@ -1555,14 +1555,14 @@ public:
         const uint64_t begin = pd_index ? (select128(header, pd_index - 1)) + 1 : 0;
         const uint64_t end = select128(header, pd_index);
         assert(begin <= end);
-        bool BPC = end - begin >= 7;
-        if (BPC) {
-            std::cout << std::string(80, '*') << std::endl;
-            std::cout << "pd_index:    \t" << pd_index << std::endl;
-            print_pd();
-            std::cout << std::string(80, '*') << std::endl;
+        // bool BPC = end - begin >= 7;
+        // if (BPC) {
+        //     std::cout << std::string(80, '*') << std::endl;
+        //     std::cout << "pd_index:    \t" << pd_index << std::endl;
+        //     print_pd();
+        //     std::cout << std::string(80, '*') << std::endl;
 
-        }
+        // }
 //        assert(begin <= end)
         assert(begin >= pd_index);
         const uint64_t begin_fingerprint = begin - pd_index;
@@ -1894,6 +1894,7 @@ public:
     }
 
     bool find_naive(uint64_t mask, uint8_t quot) {
+        assert(0);
         if (!mask)
             return false;
 
@@ -1916,6 +1917,21 @@ public:
         for (size_t i = begin; i < end; i++) {
             if (unpack_array[i] == quot)
                 return true;
+        }
+        return false;
+    }
+
+    bool find_naive0(uint64_t mask, uint8_t quot) {
+        if (!mask)
+            return false;
+
+        uint64_t unpack_array[max_capacity] = {0};
+        unpack_Q_list(unpack_array);
+
+        for (size_t i = 0; i < max_capacity; i++) {
+            if ((mask & 1) && (unpack_array[i] == quot))
+                return true;
+            mask >>= 1ul;
         }
         return false;
     }
@@ -1965,7 +1981,7 @@ public:
     }
 
     bool find_true_db(uint64_t mask, uint8_t quot) {
-        auto v_find = find_naive(mask, quot);
+        auto v_find = find_naive0(mask, quot);
         auto att_find = find1(mask, quot);
         assert(v_find == (!!att_find));
 
@@ -2009,14 +2025,16 @@ public:
      * @param quot which quot we are looking for.
      */
     bool find(uint64_t mask, uint8_t quot) {
-        auto v_find = find_naive(mask, quot);
+        auto v_find0 = find_naive0(mask, quot);
         auto att_find = find1(mask, quot);
-        bool cond = v_find == (!!att_find);
-        if (!cond) {
-            v_find = find_naive(mask, quot);
-            att_find = find1(mask, quot);
-        }
-        assert(v_find == (!!att_find));
+        assert(v_find0 == !!att_find);
+        // auto v_find = find_naive(mask, quot);
+        // bool cond = v_find == (!!att_find);
+        // if (!cond) {
+        //     v_find = find_naive(mask, quot);
+        //     att_find = find1(mask, quot);
+        // }
+        // assert(v_find == (!!att_find));
         return att_find;
     }
 
