@@ -179,7 +179,7 @@ namespace packing_helper {
         }
     }
 
-    bool validate_pack_unpack(uint64_t *unpacked_array, size_t unpack_size, size_t el_length) {
+    bool validate_pack_unpack(const uint64_t *unpacked_array, size_t unpack_size, size_t el_length) {
         uint64_t slot_size = sizeof(uint64_t) * CHAR_BIT;
         uint64_t quots_in_word = slot_size / el_length;
         size_t pack_size = quots_in_word;
@@ -193,7 +193,7 @@ namespace packing_helper {
         return true;
     }
 
-    bool validate_unpack_pack(uint64_t *packed_array,const size_t packed_size, size_t el_length) {
+    bool validate_unpack_pack(const uint64_t *packed_array, size_t packed_size, size_t el_length) {
         constexpr uint64_t slot_size = sizeof(uint64_t) * CHAR_BIT;
         const uint64_t quots_in_word = slot_size / el_length;
         const size_t unpack_size = quots_in_word * packed_size;

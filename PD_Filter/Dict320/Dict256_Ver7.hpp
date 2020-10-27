@@ -68,7 +68,7 @@ public:
           //           ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
           //   spare_element_length(pd_index_length + quotient_length + remainder_length),
           Hasher() {
-        op_count = 0;
+        // op_count = 0;
         expected_pd_capacity = max_capacity * level1_load_factor;
         spare = new packed_spare<48, 32, bits_per_item, 4>(number_of_pd);
         // Level2_Log = new HistoryLog(number_of_pd, false);
@@ -96,9 +96,9 @@ public:
         free(pd_array);
         free(spare_filter);
         delete spare;
-        std::cout << std::string(80, '!') << std::endl;
-        std::cout << std::string(80, '!') << std::endl;
-        op_count = 0;
+        // std::cout << std::string(80, '!') << std::endl;
+        // std::cout << std::string(80, '!') << std::endl;
+        // op_count = 0;
         // delete Level2_Log;
         // delete Level1_Log;
         //        delete spare_valid;

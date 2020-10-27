@@ -507,7 +507,7 @@ namespace pd256_plus {
 
     auto get_capacity_naive(const __m256i *x) -> size_t {
         uint64_t header = get_clean_header(x);
-        return count_zeros_up_to_the_kth_one(header, 25);
+        return count_zeros_up_to_the_kth_one(header, 25 - 1);
     }
 
     auto get_capacity(const __m256i *pd) -> int {
@@ -537,15 +537,15 @@ namespace pd256_plus {
         assert(quot < QUOT_SIZE25);
         assert(quot <= _mm_popcnt_u64(get_clean_header(pd)));
         if (quot == 0) {
-            return count_zeros_up_to_the_kth_one(pd, 1);
+            return count_zeros_up_to_the_kth_one(pd, 0);
         }
-        return count_zeros_up_to_the_kth_one(pd, quot + 1) - count_zeros_up_to_the_kth_one(pd, quot);
+        return count_zeros_up_to_the_kth_one(pd, quot) - count_zeros_up_to_the_kth_one(pd, quot - 1);
     }
 
     auto get_specific_quot_capacity_naive(int64_t quot, const __m256i *pd) -> int {
         assert(quot < 25);
         if (quot == 0) {
-            return count_zeros_up_to_the_kth_one(pd, 1);
+            return count_zeros_up_to_the_kth_one(pd, 0);
         }
         const uint64_t header = get_clean_header(pd);
         assert(quot < _mm_popcnt_u64(header));
@@ -584,9 +584,9 @@ namespace pd256_plus {
         static int counter = 0;
         assert(quot < 25);
         if (quot == 0) {
-            return count_zeros_up_to_the_kth_one(pd, 1);
+            return count_zeros_up_to_the_kth_one(pd, 0);
         } else if (quot == 1) {
-            return count_zeros_up_to_the_kth_one(pd, 2) - count_zeros_up_to_the_kth_one(pd, 1);
+            return count_zeros_up_to_the_kth_one(pd, 1) - count_zeros_up_to_the_kth_one(pd, 0);
         }
         counter++;
         const uint64_t header = get_clean_header(pd);
@@ -704,9 +704,31 @@ namespace pd256_plus {
 
 
     auto count_ones_up_to_the_kth_zero(uint64_t word, size_t k) -> size_t {
-        if (k == 0){
+        int zero_count = -1;
+        int one_count = 0;
+        uint64_t b = 1ULL;
+        for (size_t i = 0; i < 64; i++) {
+            if (b & word) {
+                one_count++;
+            } else {
+                zero_count++;
+                assert((int) (i - zero_count) == one_count);
+                if (zero_count == ((int) k)) {
+                    // auto res = i - k;
+                    // assert(res == zero_count);
+                    return i - k;
+                }
+            }
+            b <<= 1ul;
+        }
+        v_pd256_plus::p_format_word(word);
+        std::cout << one_count << std::endl;
+        std::cout << zero_count << std::endl;
+        assert(false);
+        return -1;
+        /* if (k == 0) {
             assert(word != -1);
-            return _tzcnt_u64(~word); // If word == 1 then _tzcnt_u64(word) == 0;
+            return _tzcnt_u64(~word);// If word == 1 then _tzcnt_u64(word) == 0;
         }
         assert(k <= QUOT_SIZE25);
 
@@ -722,24 +744,48 @@ namespace pd256_plus {
             }
             b <<= 1ul;
         }
-        
+
         std::cout << zero_count << std::endl;
         std::cout << one_count << std::endl;
         return -1;
-        assert(false);
+        assert(false); */
     }
 
 
     auto count_zeros_up_to_the_kth_one(uint64_t word, size_t k) -> size_t {
-        // #ifdef NDEBUG
+        assert(k <= CAPACITY25);
+        size_t pop = _mm_popcnt_u64(word);
+        assert(k < pop);
+        // assert(__mpop);
+        int one_count = -1;
+        int zero_count = 0;
+        uint64_t b = 1ULL;
+        for (size_t i = 0; i < 64; i++) {
+            if (b & word) {
+                one_count++;
+                assert(((int) i - one_count) == zero_count);
+                if (one_count == (int) k) {
+                    // auto res = i - k;
+                    // assert(res == zero_count);
+                    return i - k;
+                }
+            } else {
+                zero_count++;
+            }
+            b <<= 1ul;
+        }
+        std::cout << one_count << std::endl;
+        std::cout << zero_count << std::endl;
+        assert(false);
+        return -1;
+        /* // #ifdef NDEBUG
         //         std::cout << "called count_zeros_up_to_the_kth_one with -O3" << std::endl;
         // #endif// !NDEBUG
         // assert(k > 0);
-        if (k == 0){
+        if (k == 0) {
             assert(word);
-            return _tzcnt_u64(word); // If word == 1 then _tzcnt_u64(word) == 0;
+            return _tzcnt_u64(word);// If word == 1 then _tzcnt_u64(word) == 0;
         }
-        assert(k <= CAPACITY25);
         // assert(_mm_popcnt_u64(word) >= k);
         assert(_mm_popcnt_u64(word) >= k);
         size_t zero_count = 0, one_count = 0;
@@ -757,7 +803,7 @@ namespace pd256_plus {
         std::cout << zero_count << std::endl;
         std::cout << one_count << std::endl;
         return -1;
-        assert(false);
+        assert(false); */
     }
 
     auto count_ones_up_to_the_kth_zero(const __m256i *x, size_t k) -> size_t {

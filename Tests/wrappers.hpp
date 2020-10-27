@@ -756,8 +756,10 @@ struct FilterAPI<Dict256_Ver7<itemType>> {
     using Table = Dict256_Ver7<itemType>;
 
     static Table ConstructFromAddCount(size_t add_count) {
-        std::cout << "Lower workload" << std::endl;
-        return Table(add_count, .90, .5);
+        constexpr float load = .94;
+        if (load < .95)
+            std::cout << "Lower workload" << std::endl;
+        return Table(add_count, load, .5);
     }
 
     static void Add(itemType key, Table *table) {
@@ -814,11 +816,32 @@ struct FilterAPI<Dict256_Ver7<itemType>> {
         table->lookup_count(0, 1);
 #endif// COUNT \
 
-        return 3;
+        return 7;
     }
 
     static auto get_ID(Table *table) -> filter_id {
         return d256_ver7;
+    }
+
+    static int generic_function(itemType key, Table *table, int op_index) {
+        if (op_index == 1) {
+            static int c = 0;
+            c++;
+            item_key_t itemKey = table->get_hash_res_as_key(key);
+            if (itemKey.pd_index == 4245) {
+                std::cout << "counter: " << c << std::endl;
+                std::cout << "itemKey: " << itemKey << std::endl;
+            }
+
+            return 42;
+        }
+        item_key_t itemKey = table->get_hash_res_as_key(key);
+        std::cout << "itemKey: " << itemKey << std::endl;
+        return 42;
+        if (itemKey.pd_index == 3216) {
+            return 1;
+        }
+        return 0;
     }
 };
 

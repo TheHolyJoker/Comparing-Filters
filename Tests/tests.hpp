@@ -9,7 +9,7 @@
 #ifdef SPEC
 #include "wrappers_for_debugging.hpp"
 #else
-static_assert(0);
+// static_assert(0);
 #include "wrappers.hpp"
 #endif// SPEC
 
@@ -50,17 +50,28 @@ void set_init(size_t size, unordered_set<itemType> *mySet) {
 
 template<typename itemType>
 auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
-    // std::cout << "G3" << std::endl;
+    srand(time(NULL));
     vec->resize(number_of_elements);
-    for (int i = 0; i < number_of_elements; ++i)
+    for (int i = 0; i < number_of_elements; ++i) {
         vec->at(i) = ((uint64_t) rand());
-    // vec->at(i) = rand_item<uint64_t>();
-    /*unordered_set<itemType> temp_set(vec->begin(), vec->end());
-    if (temp_set.size() < 0.95 * vec->size()) {
-        std::cout << "unique size is: " << temp_set.size() << "( " << temp_set.size() / ((double) vec->size()) << ")"
-                  << std::endl;
-    }*/
+    }
 }
+
+template<typename itemType>
+auto fill_vec_better_but_slower_randomness(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, INT64_MAX);
+
+    vec->resize(number_of_elements);
+    for (int i = 0; i < number_of_elements; ++i) {
+        vec->at(i) = dist(rng);
+        if (i % 500000 == 0) {
+            std::cout << i << "/" << number_of_elements << std::endl;
+        }
+    }
+}
+
 
 /*
 auto fill_vec(std::vector<uint64_t> *vec, size_t number_of_elements, ulong universe_mask) -> void {
@@ -175,7 +186,6 @@ auto uset_deleting_db(Table *wrap_filter, unordered_set<itemType> *to_be_deleted
         return true;
     }
 
-    hashing::TwoIndependentMultiplyShift Hasher(42, 24);
 
     size_t counter = 0;
     for (auto el : *to_be_deleted_set) {
@@ -189,7 +199,6 @@ auto uset_deleting_db(Table *wrap_filter, unordered_set<itemType> *to_be_deleted
     // auto bad_el_item = dont_use_this_function_to_get_item_key(bad_el);
     // bool was_removed = false;
     for (auto el : *to_be_deleted_set) {
-        auto hash_res = Hasher(el);
         item_key_t temp_item = dont_use_this_function_to_get_item_key(el);
         // std::cout << "counter: " << counter << std::endl;
         // std::cout << "element: " << el << std::endl;
@@ -213,7 +222,7 @@ auto uset_deleting_db(Table *wrap_filter, unordered_set<itemType> *to_be_deleted
         //     was_removed = true;
         // if ((temp_item.pd_index == bad_el_item.pd_index) && (temp_item == bad_el_item))
         //     was_removed = true;
-        
+
 
         // assert((was_removed) || FilterAPI<Table>::Contain(bad_el, wrap_filter));
     }

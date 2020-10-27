@@ -90,6 +90,7 @@ namespace all_map {
     typedef std::unordered_map<const item_key_t, item_val_t, key_hash, key_equal> umap_t;
     typedef std::unordered_map<const item_key_t, bool, key_hash, key_equal> umapset_t;
     typedef std::unordered_map<const item_key_t, int, key_hash, key_equal> umap_multiset_t;
+    typedef std::vector<const item_key_t> vector_t;
 
     typedef std::unordered_set<const item_key_t, key_hash, key_equal> uset_t;
 };// namespace all_map

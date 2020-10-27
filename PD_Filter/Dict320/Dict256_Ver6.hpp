@@ -176,7 +176,7 @@ public:
         bool cond2 = spare_backup->find(spare_val);
         assert(cond == cond2);
         if (cond != correct_val){
-            spare->find_db_aid(pd_index, spare_quot, rem);
+            // spare->find_db_aid(pd_index, spare_quot, rem);
             spare->find(pd_index, spare_quot, rem);
         }
         assert(cond == correct_val);

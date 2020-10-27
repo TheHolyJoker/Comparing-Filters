@@ -182,12 +182,16 @@ int main(int argc, char **argv) {
     //    }
     assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
     assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single<Table_CF , itemType>()));
+    assert((default_validation_test_single<Table_CF , itemType>()));
     // assert((default_validation_test_single<Table_Dict256_Ver6_db, itemType>()));
     // assert((default_validation_test_single<Table_Dict256_Ver6_db, itemType>()));
     // assert((default_validation_test_single<Table_Dict256_Ver6_db, itemType>()));
     // std::cout << "Passed no deletions" << std::endl;
     assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
     assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_CF, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_CF, itemType>()));
     // assert((default_validation_test_single_with_deletions<Table_Dict256_Ver6_db, itemType>()));
     // assert((default_validation_test_single_with_deletions<Table_Dict256_Ver6_db, itemType>()));
     // assert((default_validation_test_single_with_deletions<Table_Dict256_Ver6_db, itemType>()));
@@ -237,8 +241,8 @@ int main(int argc, char **argv) {
     vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
     fill_vec(elements.at(0), max_filter_capacity);
     fill_vec(elements.at(1), lookup_reps);
-    size_t del_size = 0;
-    // size_t del_size = 1.0 * max_filter_capacity / (double) bench_precision;
+//    size_t del_size = 0;
+    size_t del_size = 1.0 * max_filter_capacity / (double) bench_precision;
     fill_vec(elements.at(2), del_size);
 
     // single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
@@ -248,10 +252,13 @@ int main(int argc, char **argv) {
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    // single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);

@@ -98,6 +98,9 @@ class CuckooFilter {
     }
     victim_.used = false;
     table_ = new TableType<bits_per_item>(num_buckets);
+    std::cout << "load is: " << frac << std::endl;
+    // std::cout << "Here!" << std::endl;
+    // std::cout << __LINE__ << std::endl;
   }
 
   ~CuckooFilter() { delete table_; }
@@ -130,7 +133,17 @@ Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Add(
   uint32_t tag;
 
   if (victim_.used) {
-    return NotEnoughSpace;
+      std::cout << std::string(80, '=') << std::endl;
+      if (Contain(item) == Ok){
+        std::cout << "Item was already in the set." << std::endl;
+      }
+      else{
+        std::cout << "Item was not already in the set." << std::endl;
+      }
+      std::cout << "Info: ";
+      std::cout << Info();
+      std::cout << std::string(80, '=') << std::endl;
+      return NotEnoughSpace;
   }
 
   GenerateIndexTagHash(item, &i, &tag);

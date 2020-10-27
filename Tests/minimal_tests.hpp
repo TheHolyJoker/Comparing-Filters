@@ -99,7 +99,7 @@ template<typename Table, typename itemType>
 void single_bench(size_t filter_max_capacity, size_t lookup_reps, size_t bench_precision, bool validate_before_benchmarking, bool with_deletions) {
     vector<itemType> v_add, v_find, v_delete;
     vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
-    init_elements(filter_max_capacity, lookup_reps, &elements, with_deletions);
+    init_elements(filter_max_capacity, lookup_reps, &elements, bench_precision, with_deletions);
     return single_bench<Table, itemType>(filter_max_capacity, bench_precision, validate_before_benchmarking, &elements);
 }
 

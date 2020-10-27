@@ -165,7 +165,13 @@ add_executable(Spec ${SPEC_SOURCES})
 target_compile_options(Spec PRIVATE -O0 -g3 -DSPEC)# -fstack-clash-protection -fstack-protector)
 
 add_executable(S3 ${SPEC_SOURCES})
-target_compile_options(S3 PRIVATE -O3 -DNDEBUG -DSPEC -march=icelake-client)# -fstack-clash-protection -fstack-protector)
+target_compile_options(S3 PRIVATE -O3 -DNDEBUG -DSPEC)# -fstack-clash-protection -fstack-protector)
+
+add_executable(S2 ${SPEC_SOURCES})
+target_compile_options(S2 PRIVATE -O2 -DSPEC)# -fstack-clash-protection -fstack-protector)
+
+add_executable(S1 ${SPEC_SOURCES})
+target_compile_options(S1 PRIVATE -O1 -DSPEC)# -fstack-clash-protection -fstack-protector)
 
 
 add_executable(
@@ -173,6 +179,8 @@ add_executable(
   PD_Filter/HashTables/packed_spare.hpp
   PD_Filter/HashTables/HistoryLog.hpp
   PD_Filter/HashTables/HistoryLog.cpp
+  PD_Filter/HashTables/Level3.hpp
+
   PD_Filter/L2_pd/twoDimPD.hpp
   PD_Filter/L2_pd/twoDimPD.cpp
   # PD_Filter/L2_pd/temp_main.cpp

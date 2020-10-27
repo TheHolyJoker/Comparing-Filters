@@ -201,7 +201,6 @@ namespace print_memory {
             std::cout << (i + index_offset) << ": " << a[i] << std::endl;
         }
         std::cout << std::string(32, '&') << std::endl;
-
     }
 
     template<typename T>
@@ -843,7 +842,7 @@ namespace bits_memcpy {
 
 namespace packing_helper {
     template<typename T>
-    bool cmp_array(T *a, T *b, size_t words_to_compare) {
+    bool cmp_array(const T *a,const  T *b, size_t words_to_compare) {
         for (size_t i = 0; i < words_to_compare; i++) {
             bool temp = (a[i] == b[i]);
             if (!temp) return false;
@@ -878,15 +877,14 @@ namespace packing_helper {
         // std::cout << "After:   " << "\t\t";
         // print_memory::print_array(unpacked_array, unpack_size);
         // std::cout << std::string(80, '*') << std::endl;
-
     }
 
     void pack_array(const uint64_t *unpacked_array, size_t unpack_size, uint64_t *pack_array, size_t pack_size,
                     size_t el_length);
 
-    bool validate_pack_unpack(uint64_t *unpacked_array, size_t unpack_size, size_t el_length);
+    bool validate_pack_unpack(const uint64_t *unpacked_array, size_t unpack_size, size_t el_length);
 
-    bool validate_unpack_pack(uint64_t *packed_array, size_t packed_size, size_t el_length);
+    bool validate_unpack_pack(const uint64_t *packed_array, size_t packed_size, size_t el_length);
 
 }// namespace packing_helper
 
@@ -1053,21 +1051,10 @@ public:
         const uint64_t begin = (pd_index ? (select128withPop64(header, pd_index - 1, pop) + 1) : 0) - pd_index;
         const uint64_t end = select128withPop64(header, pd_index, pop) - pd_index;
         if (begin == end) return false;
-        if (begin > end) {
-            print_find_arg(pd_index, rem, is_primary_location);
-            print_pd();
-            std::cout << "pd_index: " << pd_index << std::endl;
-            std::cout << "begin: " << begin << std::endl;
-            std::cout << "end: " << end << std::endl;
-            assert(0);
-        }
         assert(begin <= end);
         assert(end <= max_capacity);
-        // u128 mask = ((u128(1) << end) - 1) ^ ((u128(1) << end) - 1)
         uint64_t mask = (MASK(end) ^ MASK(begin)) | (1ULL << begin);
-        // if (begin)
-        // mask ^= MASK(begin - 1);
-        // uint64_t temp_res = (v & ((UINT64_C(1) << end) - 1)) >> begin;
+
         uint64_t temp_res = v & mask;
         if (!temp_res) return 0;
         return temp_res & get_location_bitmask(is_primary_location);
@@ -1079,46 +1066,47 @@ public:
         u128 pd_mask = get_pd_header_mask(pd_index) >> pd_index;// todo.
         uint64_t location_mask = get_location_bitmask(is_primary_location);
         auto res = v & pd_mask & location_mask;
-        auto naive_res = find_naive(pd_index, rem, is_primary_location);
-        if (!validate_find_mask_res_is_a_continguos_sequence_of_set_bits(res)) {
-            std::cout << "naive_res:     \t";
-            print_memory::print_word_LE(naive_res, GAP);
-            std::cout << "res            \t";
-            print_memory::print_word_LE(((uint64_t) res), GAP);
-            print_location_mask();
-            std::cout << std::string(80, '~') << std::endl;
-            std::cout << "pd_mask:     \t";
-            print_memory::print_word_LE((uint64_t) pd_mask, GAP);
-            std::cout << "v:           \t";
-            print_memory::print_word_LE(v, GAP);
-            std::cout << std::string(80, '~') << std::endl;
+        assert(res == find_naive(pd_index, rem, is_primary_location));
+        assert(validate_find_mask_res_is_a_continguos_sequence_of_set_bits(res));
+        // if (!validate_find_mask_res_is_a_continguos_sequence_of_set_bits(res)) {
+        //     std::cout << "naive_res:     \t";
+        //     print_memory::print_word_LE(naive_res, GAP);
+        //     std::cout << "res            \t";
+        //     print_memory::print_word_LE(((uint64_t) res), GAP);
+        //     print_location_mask();
+        //     std::cout << std::string(80, '~') << std::endl;
+        //     std::cout << "pd_mask:     \t";
+        //     print_memory::print_word_LE((uint64_t) pd_mask, GAP);
+        //     std::cout << "v:           \t";
+        //     print_memory::print_word_LE(v, GAP);
+        //     std::cout << std::string(80, '~') << std::endl;
 
-            print_find_arg(pd_index, rem, is_primary_location);
-            print_pd();
-            // find_naive(pd_index, rem, is_primary_location);
-            // find_naive(pd_index, rem, is_primary_location);
-            assert(0);
-        }
-        if (naive_res != res) {
-            std::cout << "naive_res:     \t";
-            print_memory::print_word_LE(naive_res, GAP);
-            std::cout << "res            \t";
-            print_memory::print_word_LE(((uint64_t) res), GAP);
-            print_location_mask();
-            std::cout << std::string(80, '~') << std::endl;
-            std::cout << "pd_mask:     \t";
-            print_memory::print_word_LE((uint64_t) pd_mask, GAP);
-            std::cout << "v:           \t";
-            print_memory::print_word_LE(v, GAP);
-            std::cout << std::string(80, '~') << std::endl;
+        //     print_find_arg(pd_index, rem, is_primary_location);
+        //     print_pd();
+        //     // find_naive(pd_index, rem, is_primary_location);
+        //     // find_naive(pd_index, rem, is_primary_location);
+        //     assert(0);
+        // }
+        // if (naive_res != res) {
+        //     std::cout << "naive_res:     \t";
+        //     print_memory::print_word_LE(naive_res, GAP);
+        //     std::cout << "res            \t";
+        //     print_memory::print_word_LE(((uint64_t) res), GAP);
+        //     print_location_mask();
+        //     std::cout << std::string(80, '~') << std::endl;
+        //     std::cout << "pd_mask:     \t";
+        //     print_memory::print_word_LE((uint64_t) pd_mask, GAP);
+        //     std::cout << "v:           \t";
+        //     print_memory::print_word_LE(v, GAP);
+        //     std::cout << std::string(80, '~') << std::endl;
 
-            print_find_arg(pd_index, rem, is_primary_location);
-            print_pd();
-            find_naive(pd_index, rem, is_primary_location);
-            find_naive(pd_index, rem, is_primary_location);
-            assert(0);
-        }
-        assert(naive_res == res);
+        //     print_find_arg(pd_index, rem, is_primary_location);
+        //     print_pd();
+        //     find_naive(pd_index, rem, is_primary_location);
+        //     find_naive(pd_index, rem, is_primary_location);
+        //     assert(0);
+        // }
+        // assert(naive_res == res);
         return res;
     }
 
@@ -1140,7 +1128,7 @@ public:
         std::cout << "nsh_pdMask:  \t";
         print_memory::print_word_LE((uint64_t) get_pd_header_mask(pd_index), GAP);
         std::cout << "sh_header:   \t";
-        print_memory::print_word_LE((uint64_t) (get_pd_header() >> pd_index), GAP);
+        print_memory::print_word_LE((uint64_t)(get_pd_header() >> pd_index), GAP);
         std::cout << "pd_mask:     \t";
         print_memory::print_word_LE((uint64_t) pd_mask, GAP);
         std::cout << "v:           \t";
@@ -1219,11 +1207,9 @@ public:
     }
 
     uint64_t body_find(uint8_t rem) const {
-        constexpr bool does_bucket_size_is_512_bit =
-                get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() == 512;
+        constexpr bool does_bucket_size_is_512_bit = get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() == 512;
         if (does_bucket_size_is_512_bit) {
             constexpr unsigned shift = 64 - max_capacity;
-            // const __m512i body = _mm512_load_si512(pd);
             const __m512i target = _mm512_set1_epi8(rem);
             return _mm512_cmpeq_epu8_mask(target, *((__m512i *) pd)) >> shift;
         }
@@ -1239,13 +1225,9 @@ public:
 
     u128 get_pd_header_mask(uint64_t pd_index) const {
         auto res = get_mask_from_header(get_pd_header(), pd_index);
-        uint64_t pop_res = popcount128(res);
-        auto v_res = get_pd_index_capacity(pd_index);
-        if (pop_res != v_res) {
-            print_pd();
-        }
-        assert(pop_res == v_res);
-        // assert(popcount128(res) == get_pd_index_capacity(pd_index));
+        assert(popcount128(res) == get_pd_index_capacity(pd_index));
+        // uint64_t pop_res = popcount128(res);
+        // auto v_res = get_pd_index_capacity(pd_index);
         return res;
     }
 
@@ -1450,7 +1432,8 @@ public:
     }
 
     auto conditional_remove(int64_t pd_index, uint8_t rem, bool is_primary_location) -> bool {
-        assert(pd_index < ((int64_t) batch_size));
+        assert(find(pd_index, rem, is_primary_location));
+        assert(((uint64_t) pd_index) < batch_size);
 
         unsigned __int128 header = get_pd_header();
         constexpr unsigned kBytes2copy = (get_pd_header_size() + CHAR_BIT - 1) / CHAR_BIT;
@@ -1546,8 +1529,8 @@ public:
 
 
     uint64_t pop_get_mask_naive(uint64_t pd_index, bool is_primary_location) const {
-        static int c = 0;
-        c++;
+        // static int c = 0;
+        // c++;
         unsigned __int128 header = get_pd_header();
         constexpr unsigned kBytes2copy = (get_pd_header_size() + CHAR_BIT - 1) / CHAR_BIT;
         assert(popcount128(header) == batch_size);
@@ -1563,7 +1546,7 @@ public:
         //     std::cout << std::string(80, '*') << std::endl;
 
         // }
-//        assert(begin <= end)
+        //        assert(begin <= end)
         assert(begin >= pd_index);
         const uint64_t begin_fingerprint = begin - pd_index;
         const uint64_t end_fingerprint = end - pd_index;
@@ -1585,11 +1568,12 @@ public:
      * @return uint64_t 
      */
     uint64_t pop_get_mask(uint64_t pd_index, bool is_primary_location) const {
-        u128 pd_mask = get_pd_header_mask(pd_index) >> pd_index; // why this shift?
+        u128 pd_mask = get_pd_header_mask(pd_index) >> pd_index;// why this shift?
         uint64_t location_mask = get_location_bitmask(is_primary_location);
         auto res = pd_mask & location_mask;
-        auto v_res = pop_get_mask_naive(pd_index, is_primary_location);
-        assert(v_res == res);
+        assert(res == pop_get_mask_naive(pd_index, is_primary_location));
+        // auto v_res = pop_get_mask_naive(pd_index, is_primary_location);
+        // assert(v_res == res);
         return res;
     }
 
@@ -1601,6 +1585,8 @@ public:
      * @param index 
      */
     uint8_t pop_remove_by_index(int64_t pd_index, size_t index) {
+        // assert(find(pd_index, rem, is_primary_location) & (1ULL << index));
+
         //todo: I think the error is here.
         // updating the pd_index header
         unsigned __int128 header = get_pd_header();
@@ -1635,6 +1621,7 @@ public:
 
 
     auto get_pd_index_capacity(uint64_t pd_index) const {
+        //todo: make more efficient
         u128 header = get_pd_header();
         auto temp = count_zeros_up_to_the_kth_one(header, pd_index);
         if (pd_index) {
@@ -1728,7 +1715,7 @@ public:
     }
 
     void get_rem_list(uint32_t *rem_array, size_t pd_capacity) const {
-//        assert(pd_capacity == get_capacity());
+        //        assert(pd_capacity == get_capacity());
         constexpr unsigned firstBodyByte = (max_capacity * 2 + batch_size + CHAR_BIT - 1) / CHAR_BIT;
         constexpr unsigned size0fPd =
                 (get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() + CHAR_BIT - 1) / CHAR_BIT;
@@ -1757,7 +1744,6 @@ public:
 
         auto length = end - begin;
         print_memory::print_array_in_columns(&rem_array[begin - pd_index], length, begin);
-
     }
 };
 
@@ -1921,7 +1907,7 @@ public:
         return false;
     }
 
-    bool find_naive0(uint64_t mask, uint8_t quot) {
+    bool find_naive0(uint64_t mask, uint8_t quot) const {
         if (!mask)
             return false;
 
@@ -1952,29 +1938,40 @@ public:
         auto v_res = read_quot_by_index_naive(index);
         assert(res == v_res);
         return res;
-
     }
 
-    uint64_t find1(uint64_t mask, uint8_t quot) {
+    bool find1_validator_helper(uint64_t mask, uint8_t quot) const {
         if (!mask)
-            return false;
-
+            return true;
         uint64_t my_mask = bits_memcpy::my_cmp_epu<quot_length, Q_list_size>(quot, Q_list);
         uint64_t v_my_mask = get_quot_mask(quot);
 
         constexpr uint64_t const_mask = MASK(max_capacity);
-        bool cond = ((v_my_mask & const_mask) == (my_mask & const_mask));
-        if (!cond) {
-            std::cout << "quot:       \t" << ((uint16_t) quot) << std::endl;
-            std::cout << "Q_list:     \t";
-            print_Q_list_unpacked();
-            std::cout << "my_mask:     \t";
-            print_memory::print_word_LE(my_mask, GAP);
-            std::cout << "v_my_mask:   \t";
-            print_memory::print_word_LE(v_my_mask, GAP);
-            assert(0);
-        }
+        bool cond = ( (v_my_mask & const_mask) == (my_mask & const_mask));
         assert(cond);
+        return true;
+    }
+
+    uint64_t find1(uint64_t mask, uint8_t quot) const {
+        if (!mask)
+            return false;
+        //todo: This is probably a buttleneck.
+        uint64_t my_mask = bits_memcpy::my_cmp_epu<quot_length, Q_list_size>(quot, Q_list);
+        assert(find1_validator_helper(mask, quot));
+        // uint64_t v_my_mask = get_quot_mask(quot);
+        // constexpr uint64_t const_mask = MASK(max_capacity);
+        // ansert((v_my_mask & const_mask) == (my_mask & const_mask));
+        // if (!cond) {
+        //     std::cout << "quot:       \t" << ((uint16_t) quot) << std::endl;
+        //     std::cout << "Q_list:     \t";
+        //     print_Q_list_unpacked();
+        //     std::cout << "my_mask:     \t";
+        //     print_memory::print_word_LE(my_mask, GAP);
+        //     std::cout << "v_my_mask:   \t";
+        //     print_memory::print_word_LE(v_my_mask, GAP);
+        //     assert(0);
+        // }
+        // assert(cond);
 
         auto temp_res = my_mask & mask;
         return temp_res;
@@ -2024,10 +2021,10 @@ public:
      * @param mask the lookup result of the first part of the lookup, that happened in MainBucket.
      * @param quot which quot we are looking for.
      */
-    bool find(uint64_t mask, uint8_t quot) {
-        auto v_find0 = find_naive0(mask, quot);
+    bool find(uint64_t mask, uint8_t quot) const{
+        // auto v_find0 = find_naive0(mask, quot);
         auto att_find = find1(mask, quot);
-        assert(v_find0 == !!att_find);
+        assert(find_naive0(mask, quot) == !!att_find);
         // auto v_find = find_naive(mask, quot);
         // bool cond = v_find == (!!att_find);
         // if (!cond) {
@@ -2055,14 +2052,14 @@ public:
 
         if (word_index == Q_list_size - 1) {
             conditional_remove_simple_shift_helper_helper(word_index, rel_index, quot);
-//            std::cout << "c_remove case 1 " << std::endl;
+            //            std::cout << "c_remove case 1 " << std::endl;
             return;
         } else if (word_index == Q_list_size - 2) {
             conditional_remove_simple_shift_helper_helper(word_index, rel_index, quot);
             uint64_t temp_hi = Q_list[word_index + 1] << (slot_size - quot_length);
             Q_list[word_index] |= temp_hi;
             Q_list[word_index + 1] >>= quot_length;
-//            std::cout << "c_remove case 2 " << std::endl;
+            //            std::cout << "c_remove case 2 " << std::endl;
             return;
         } else if (word_index == Q_list_size - 3) {
             conditional_remove_simple_shift_helper_helper(word_index, rel_index, quot);
@@ -2073,7 +2070,7 @@ public:
             uint64_t temp_hi2 = Q_list[word_index + 2] << (slot_size - quot_length);
             Q_list[word_index + 1] |= temp_hi2;
             Q_list[word_index + 2] >>= quot_length;
-//            std::cout << "c_remove case 3 " << std::endl;
+            //            std::cout << "c_remove case 3 " << std::endl;
             return;
         } else {
             assert(false);
@@ -2137,8 +2134,9 @@ public:
 
     size_t get_maximal_quot(uint64_t mask) {
         auto res = get_maximal_quot_core(mask);
-        auto v_res = get_maximal_quot_naive(mask);
-        assert(res == v_res);
+        assert(res == get_maximal_quot_naive(mask));
+        // auto v_res = get_maximal_quot_naive(mask);
+        // assert(res == v_res);
         return res;
     }
 
@@ -2180,8 +2178,9 @@ public:
             }
         }
         auto res = (max_index << 8ul) | max_q;
-        auto v_res = get_maximal_quot_naive(old_mask);
-        assert(res == v_res);
+        assert(res == get_maximal_quot_naive(old_mask));
+        // auto v_res = get_maximal_quot_naive(old_mask);
+        // assert(res == v_res);
         return res;
     }
 
@@ -2317,8 +2316,8 @@ public:
     }
 
 
-    uint64_t get_quot_mask(uint64_t quot) {
-        packing_helper::validate_unpack_pack(Q_list, Q_list_size, quot_length);
+    uint64_t get_quot_mask(uint64_t quot) const {
+        assert(packing_helper::validate_unpack_pack(Q_list, Q_list_size, quot_length));
         uint64_t unpack_array[max_capacity] = {0};
         unpack_Q_list(unpack_array);
         uint64_t res = 0;
@@ -3592,12 +3591,12 @@ namespace Joint_bucket {
                 bool is_primary = main_bucket->test_location_on_bitmask(index + 1);
                 std::cout << ", " << is_primary << "]" << std::endl;
             }
-//            pd_index_counter
+            //            pd_index_counter
             curr_pd_index++;
             index += temp_pd_index;
         }
     }
-}
+}// namespace Joint_bucket
 #endif// FILTERS_L2_BUCKET_HPP
 
 
