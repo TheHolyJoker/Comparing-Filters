@@ -2,6 +2,7 @@
 #define FILTERS_MINIMAL_TESTS_HPP
 
 #include "new_tests.hpp"
+#include <unordered_set>
 
 template<typename Table, typename itemType>
 auto default_validation_test_single() -> bool {

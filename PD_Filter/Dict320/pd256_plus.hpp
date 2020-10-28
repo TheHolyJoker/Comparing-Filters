@@ -2176,9 +2176,9 @@ namespace pd256_plus {
      * @param pd 
      */
     inline void pd_pop_add(int64_t quot, uint8_t rem, int64_t removed_quot, uint8_t removed_rem, __m256i *pd) {
-        assert(quot >= removed_quot);
+        assert(removed_quot <= quot);
         pd_add_25_core(quot, rem, pd);
-        if (quot > removed_quot) {
+        if (removed_quot < quot) {
             encode_last_quot_new(quot, pd);
         }
         assert(pd_find_25(quot, rem, pd));

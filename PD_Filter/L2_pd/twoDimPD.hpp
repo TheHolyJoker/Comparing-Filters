@@ -842,7 +842,7 @@ namespace bits_memcpy {
 
 namespace packing_helper {
     template<typename T>
-    bool cmp_array(const T *a,const  T *b, size_t words_to_compare) {
+    bool cmp_array(const T *a, const T *b, size_t words_to_compare) {
         for (size_t i = 0; i < words_to_compare; i++) {
             bool temp = (a[i] == b[i]);
             if (!temp) return false;
@@ -889,21 +889,21 @@ namespace packing_helper {
 }// namespace packing_helper
 
 template<size_t max_capacity, size_t batch_size, size_t bits_per_item>
-class alignas(64) MainBucket {
+class MainBucket {
     static_assert(max_capacity <= 64, "max_capacity is too big");
     static_assert(max_capacity + batch_size <= 128, "pd_index header does not fit inside 128 bit");
 
     // const size_t bucket_size{get_l2_bucket_size<max_capacity, batch_size, bits_per_item>()};
     // uint64_t pd[8] __attribute__((aligned(64)));
-    uint64_t *pd;
-    // uint64_t pd[8] __attribute__((aligned(64)));
+    // uint64_t *pd;
+    uint64_t pd[8]; //__attribute__((aligned(64)));
 
 public:
     // __attribute__((aligned(64)));
 
     MainBucket() {
-        int ok1 = posix_memalign((void **) &pd, 64, 8 * get_l2_bucket_size<max_capacity, batch_size, bits_per_item>());
-        assert(ok1 == 0);
+//        int ok1 = posix_memalign((void **) &pd, 64, 8 * get_l2_bucket_size<max_capacity, batch_size, bits_per_item>());
+//        assert(ok1 == 0);
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
 
         constexpr unsigned bit_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>() * 64;
@@ -918,9 +918,10 @@ public:
         assert(cmp_res2 == -1);
     }
 
-    ~MainBucket() {
-        free(pd);
-    }
+    // ~MainBucket() {
+    //     // delete pd;
+    //     // free(pd);
+    // }
 
     void init() {
         constexpr unsigned bit_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>() * 64;
@@ -943,13 +944,45 @@ public:
         return max_capacity;
     }
 
-    auto get_capacity() const -> size_t {
+    auto get_capacity_naive() const -> size_t {
         auto pd_index_res = count_zeros_up_to_the_kth_one(pd, batch_size - 1);
         return pd_index_res;
     }
 
+    auto get_capacity_att() const -> size_t {
+//        static int c = 0;
+//        c++;
+        size_t capacity = 4242;
+//        size_t v_capacity = get_capacity_naive();
+        const uint64_t w2 = pd[1] & MASK(16ul);
+        if (w2) {
+//            static int c2 = 0;
+//            c2++;
+//            auto lz_rez = _lzcnt_u64(w2);
+            auto temp = (_lzcnt_u64(w2) - (63 - 16)); // todo 64? 63?
+            assert(temp >= 0);
+            capacity = max_capacity - temp + 1;
+            assert(capacity == get_capacity_naive());
+            return capacity;
+        } else {
+            auto temp = 64 - _lzcnt_u64(pd[0]); // todo 64? 63?
+            assert(batch_size <= temp);
+            capacity = temp - batch_size;
+            assert(capacity == get_capacity_naive());
+            return capacity;
+        }
+    }
+
+    auto get_capacity() const -> size_t {
+        return get_capacity_att();
+//        auto pd_index_res = count_zeros_up_to_the_kth_one(pd, batch_size - 1);
+//        return pd_index_res;
+    }
+
     bool is_full() const {
-        return get_capacity() == max_capacity;
+        bool res = (pd[1] & (1ull << 15ul));
+        assert(res == (get_capacity() == max_capacity));
+        return res;
     }
 
 
@@ -968,7 +1001,7 @@ public:
     }
 
 
-    uint64_t get_location_bitmask_header() const {
+    uint64_t get_location_bitmask_header_naive() const {
         constexpr unsigned start = get_pd_header_size();
         constexpr unsigned size = get_location_bitmask_size();
         uint64_t dest = 0;
@@ -976,28 +1009,60 @@ public:
         return dest;
     }
 
+    uint64_t get_location_bitmask_header() const {
+        const uint64_t res = pd[1] >> 16ul;
+        assert(res == get_location_bitmask_header_naive());
+        return res;
+    }
+
+
     /**
      * @brief location bitmask is a bitmask of size max_capacity. It is used to determine if the element there
      * is in its primary location or not. This distinction is important for two reasons.
-     * The first is to reduce the false-positive probability, and the second is for deletions.  
-     * 
-     * @param indedx 
-     * @return true 
-     * @return false 
+     * The first is to reduce the false-positive probability, and the second is for deletions.
+     *
+     * bb - is for black box.
+     * @param indedx
+     * @return true
+     * @return false
      */
-    bool test_location_on_bitmask(uint64_t index) const {
+    bool test_location_on_bitmask_bb(uint64_t index) const {
         assert(index < 64);
         uint64_t dest = get_location_bitmask_header();
         return dest & (1ULL << index);
     }
 
-    void write_new_location_bitmask(uint64_t new_bitmask) {
+    bool test_location_on_bitmask(uint64_t index) const {
+        assert(index < max_capacity);
+        bool res = pd[1] & (1ULL << (index + 16ul));
+        assert(res == test_location_on_bitmask_bb(index));
+        return res;
+    }
+
+    void write_new_location_bitmask_naive(uint64_t new_bitmask) {
         constexpr auto dest_start = get_pd_header_size();
         constexpr auto length = get_location_bitmask_size();
         bits_memcpy::copy(&new_bitmask, pd, 0, dest_start, length);
+
+    }
+
+    void write_new_location_bitmask(uint64_t new_bitmask) {
+        pd[1] = (pd[1] & MASK(16ul)) | (new_bitmask << 16ul);
+        assert(get_location_bitmask_header() == new_bitmask);
     }
 
     void insert_bit_to_location_bitmask(uint64_t index, bool value) {
+        index += 16ul;
+        uint64_t mask = MASK(index);
+//        uint64_t dest = pd[1];
+        uint64_t lo = pd[1] & mask;
+        uint64_t mid = (value) ? (1ULL << index) : 0;
+        uint64_t hi = (pd[1] & (~mask)) << 1ul;
+        uint64_t new_dest = lo | mid | hi;
+        pd[1] = lo | mid | hi;
+    }
+
+    void insert_bit_to_location_bitmask_naive(uint64_t index, bool value) {
         uint64_t mask = MASK(index);
         uint64_t dest = get_location_bitmask_header();
         uint64_t lo = dest & mask;
@@ -1128,7 +1193,7 @@ public:
         std::cout << "nsh_pdMask:  \t";
         print_memory::print_word_LE((uint64_t) get_pd_header_mask(pd_index), GAP);
         std::cout << "sh_header:   \t";
-        print_memory::print_word_LE((uint64_t)(get_pd_header() >> pd_index), GAP);
+        print_memory::print_word_LE((uint64_t) (get_pd_header() >> pd_index), GAP);
         std::cout << "pd_mask:     \t";
         print_memory::print_word_LE((uint64_t) pd_mask, GAP);
         std::cout << "v:           \t";
@@ -1207,7 +1272,11 @@ public:
     }
 
     uint64_t body_find(uint8_t rem) const {
-        constexpr bool does_bucket_size_is_512_bit = get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() == 512;
+        static_assert(get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() == 512);
+        constexpr unsigned shift = 64 - max_capacity;
+        const __m512i target = _mm512_set1_epi8(rem);
+        return _mm512_cmpeq_epu8_mask(target, *((__m512i *) pd)) >> shift;
+        /* constexpr bool does_bucket_size_is_512_bit = get_l2_MainBucket_bit_size<max_capacity, batch_size, bits_per_item>() == 512;
         if (does_bucket_size_is_512_bit) {
             constexpr unsigned shift = 64 - max_capacity;
             const __m512i target = _mm512_set1_epi8(rem);
@@ -1219,7 +1288,7 @@ public:
         uint64_t *address = &(pd[0]) + (bucket_size - 8);
         const __m512i body = _mm512_loadu_si512(address);
         const __m512i target = _mm512_set1_epi8(rem);
-        return _mm512_cmpeq_epu8_mask(target, body) >> shift;
+        return _mm512_cmpeq_epu8_mask(target, body) >> shift; */
     }
 
 
@@ -1756,7 +1825,7 @@ public:
  * @tparam quot_length
  */
 template<size_t max_capacity, size_t batch_size, size_t quot_length>
-class alignas(8) Quotients {
+class Quotients {
     static constexpr unsigned total_bits_size = quot_length * max_capacity;
     static constexpr unsigned slot_size = sizeof(uint64_t) * CHAR_BIT;
     static constexpr unsigned Q_list_size = (total_bits_size + slot_size - 1) / slot_size;
@@ -1783,10 +1852,10 @@ public:
         std::fill(Q_list, Q_list + Q_list_size, 0);
     }
 
-    ~Quotients() {
-        //        delete[] Q_list;
-        // free(Q_list);
-    }
+    // ~Quotients() {
+    //     //        delete[] Q_list;
+    //     // free(Q_list);
+    // }
 
     void add_simple_shift_helper(size_t word_index, size_t rel_index, int64_t quot) {
         //        constexpr unsigned word_capacity = slot_size / quot_length;
@@ -1947,7 +2016,7 @@ public:
         uint64_t v_my_mask = get_quot_mask(quot);
 
         constexpr uint64_t const_mask = MASK(max_capacity);
-        bool cond = ( (v_my_mask & const_mask) == (my_mask & const_mask));
+        bool cond = ((v_my_mask & const_mask) == (my_mask & const_mask));
         assert(cond);
         return true;
     }
@@ -2021,7 +2090,7 @@ public:
      * @param mask the lookup result of the first part of the lookup, that happened in MainBucket.
      * @param quot which quot we are looking for.
      */
-    bool find(uint64_t mask, uint8_t quot) const{
+    bool find(uint64_t mask, uint8_t quot) const {
         // auto v_find0 = find_naive0(mask, quot);
         auto att_find = find1(mask, quot);
         assert(find_naive0(mask, quot) == !!att_find);

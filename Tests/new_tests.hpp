@@ -8,9 +8,12 @@
 #include "tests.hpp"
 // #include "wrappers.hpp"
 #include <unistd.h>// For perf.
+//#include <unordered_set>
+//#include <chrono>
+
 
 // #include <Validation/validate_hash_table.hpp>
-// typedef chrono::nanoseconds ns;
+typedef chrono::nanoseconds ns;
 
 
 ////////////// Declarations:

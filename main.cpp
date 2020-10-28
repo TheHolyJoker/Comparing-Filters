@@ -252,6 +252,7 @@ int main(int argc, char **argv) {
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    return 0;
     single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);

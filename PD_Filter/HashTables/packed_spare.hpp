@@ -51,15 +51,18 @@ public:
     // HistoryLog *psLog;
 
     explicit packed_spare(size_t number_of_buckets_in_l1)
-        : number_of_buckets((number_of_buckets_in_l1 + batch_size - 1) / batch_size),
-          max_spare_capacity(((number_of_buckets_in_l1 + batch_size - 1) / batch_size) * bucket_capacity),
-          big_quots_set() {
+            : number_of_buckets((number_of_buckets_in_l1 + batch_size - 1) / batch_size),
+              max_spare_capacity(((number_of_buckets_in_l1 + batch_size - 1) / batch_size) * bucket_capacity) {
         assert(number_of_buckets <= MASK32);
         assert(64 < number_of_buckets);
 
 
         //        std::cout << "sizeof(MainBucket()): " << sizeof(MainBucket<bucket_capacity, batch_size, bits_per_item>()) << std::endl;
-        main_buckets = new MainBucket<bucket_capacity, batch_size, bits_per_item>[number_of_buckets];
+        int ok1 = posix_memalign((void **) &main_buckets, 64, 64 * number_of_buckets);
+        assert(!ok1);
+        // ok1 = posix_memalign((void **) &q_buckets, 24, 24 * number_of_buckets);
+        // assert(!ok1);
+        // main_buckets = new MainBucket<bucket_capacity, batch_size, bits_per_item>[number_of_buckets];
         q_buckets = new Quotients<bucket_capacity, batch_size, quot_length>[number_of_buckets];
         big_quots_set = new Level3();
         capacity_vec.resize(number_of_buckets);
@@ -93,7 +96,13 @@ public:
     }
 
     virtual ~packed_spare() {
-        delete[] main_buckets;
+        // for (size_t i = 0; i < number_of_buckets; ++i) {
+        //     // free(main_buckets[i]);
+        //     // delete main_buckets[i];
+        // }
+
+        free(main_buckets);
+        // free(q_buckets);
         delete[] q_buckets;
         //        delete validate_spare;
         // delete psLog;
@@ -157,10 +166,8 @@ public:
     }
 
 
-    
     auto find_helper(uint64_t pd_index, uint8_t spare_quot, uint8_t rem, bool is_primary_bucket,
                      size_t bucket_index) const -> bool {
-
         uint64_t mask = main_buckets[bucket_index].find(pd_index, rem, is_primary_bucket);
         return mask && q_buckets[bucket_index].find(mask, spare_quot);
     }

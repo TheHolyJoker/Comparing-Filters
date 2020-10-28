@@ -102,7 +102,7 @@ public:
     virtual ~Dict256_Ver5() {
         assert(get_capacity() >= 0);
         free(pd_array);
-        free(spare_filter);
+        delete spare_filter;
         delete spare;
     }
 

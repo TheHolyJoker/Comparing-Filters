@@ -31,45 +31,53 @@ class hashTable_Aligned {
     };
 
     Bucket *Table;
-    const size_t num_of_buckets, max_capacity, element_length;
-    size_t capacity{0};
+    const size_t max_capacity;
+    const size_t element_length;
     const double max_load_factor;
+    const size_t num_of_buckets;
+    size_t capacity{0};
     const bucket_type empty_slot{(bucket_type) -1};
 
     size_t insert_existing_counter = 0;
     HashFamily hasher;
 
 public:
-    hashTable_Aligned(size_t max_capacity, size_t element_length, double max_load_factor)
-        : max_capacity(std::ceil(max_capacity / (max_load_factor))),
-          element_length(element_length), max_load_factor(max_load_factor),
-          num_of_buckets(std::ceil(max_capacity / (max_load_factor * bucket_size))),
-          hasher() {
+    hashTable_Aligned(size_t max_capacity_arg, size_t element_length_arg, double max_load_factor_arg) :
+            element_length(element_length_arg), max_load_factor(max_load_factor_arg),
+            max_capacity(static_cast<size_t>(std::ceil(max_capacity_arg / (max_load_factor_arg)))),
+//          max_capacity(max_capacity_arg),
+            num_of_buckets(std::ceil(max_capacity_arg / (max_load_factor_arg * bucket_size))),
+//          num_of_buckets(max_capacity_arg >> 2ul),
+            hasher() {
         assert(element_length <= sizeof(bucket_type) * CHAR_BIT);
         assert(num_of_buckets <= MASK32);
 
         /* Todo: test changes to second argument */
-        int ok = posix_memalign((void **) &Table, sizeof(Bucket), sizeof(Bucket) * num_of_buckets);
+        constexpr unsigned BucketSize = sizeof(Bucket);
+        constexpr unsigned BucketTypeSize = sizeof(bucket_type);
+        int ok = posix_memalign((void **) &Table, BucketSize, BucketSize * num_of_buckets);
 
         if (ok != 0) {
             cout << "Failed!!!" << endl;
             return;
         }
         //        Table = new Bucket[num_of_buckets];
-        constexpr auto db_midder1 = sizeof(bucket_type);
-        constexpr auto db_midder2 = sizeof(bucket_type) * CHAR_BIT;
+        // constexpr auto db_midder1 = sizeof(bucket_type);
+        // constexpr auto db_midder2 = sizeof(bucket_type) * CHAR_BIT;
+
         assert(element_length < sizeof(bucket_type) * CHAR_BIT);
-        for (int i = 0; i < num_of_buckets; ++i) {
+        for (size_t i = 0; i < num_of_buckets; ++i) {
             auto bp = Table[i].bits_;
-            for (int j = 0; j < bucket_size; ++j) {
+            for (size_t j = 0; j < bucket_size; ++j) {
                 bp[j] = empty_slot;
             }
         }
     }
 
     virtual ~hashTable_Aligned() {
+//        std::cout << "here!" << std::endl;
         free(Table);
-        // delete[] Table;
+        // delete Table;
     }
 
     // inline 
@@ -160,7 +168,7 @@ public:
          * @param bucket_index
          */
     inline void cuckoo_swap(bucket_type *hold, size_t *bucket_index) {
-        bucket_type old_val = *hold;
+        // bucket_type old_val = *hold;
 
         bucket_type junk = swap_elements_from_bucket(*bucket_index, *hold);
         assert(junk != empty_slot);
@@ -514,7 +522,7 @@ public:
 
     auto does_bucket_contain_valid_elements(uint32_t bucket_index) const -> bool {
         auto *bp = Table[bucket_index].bits_;
-        for (int i = 0; i < bucket_size; ++i) {
+        for (size_t i = 0; i < bucket_size; ++i) {
             auto temp = bp[i];
             if (temp == empty_slot)
                 continue;
@@ -602,7 +610,7 @@ private:
     auto remove_helper(bucket_type x, size_t bucket_index) -> bool {
         //        auto table_index = bucket_index * bucket_size;
         auto *bp = Table[bucket_index].bits_;
-        for (int i = 0; i < bucket_size; ++i) {
+        for (size_t i = 0; i < bucket_size; ++i) {
             if (bp[i] == x) {
                 bp[i] = empty_slot;
                 capacity--;
@@ -637,7 +645,7 @@ private:
     auto get_bucket_capacity(size_t bucket_index) const -> size_t {
         size_t res = 0;
         auto *bp = Table[bucket_index].bits_;
-        for (int i = 0; i < bucket_size; ++i) {
+        for (size_t i = 0; i < bucket_size; ++i) {
             if (bp[i] != empty_slot) {
                 res++;
             }
@@ -647,7 +655,7 @@ private:
 
     auto is_bucket_empty(size_t bucket_index) const -> bool {
         auto *bp = Table[bucket_index].bits_;
-        for (int i = 0; i < bucket_size; ++i) {
+        for (size_t i = 0; i < bucket_size; ++i) {
             if (bp[i] != empty_slot) {
                 return false;
             }
@@ -658,7 +666,7 @@ private:
     auto find_empty_bucket_interval() -> std::tuple<size_t, size_t> {
         size_t max_length = 0;
         size_t start = 0, end = 0;
-        size_t temp_start = 0, temp_end = 0;
+        // size_t temp_start = 0, temp_end = 0;
         size_t index = 0;
         // __m512i *ppd = &pd_array[0];
         while (index < num_of_buckets) {

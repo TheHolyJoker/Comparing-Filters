@@ -5,13 +5,18 @@
 #ifndef FILTERS_TESTS_HPP
 #define FILTERS_TESTS_HPP
 
+
 #include "printutil.hpp"
-#ifdef SPEC
-#include "wrappers_for_debugging.hpp"
-#else
-// static_assert(0);
 #include "wrappers.hpp"
-#endif// SPEC
+//#include "wrappers_for_debugging.hpp"
+//#ifdef SPEC
+//#include "wrappers_for_debugging.hpp"
+//#endif// SPEC
+//#ifndef SPEC
+//// static_assert(0);
+//#include "wrappers.hpp"
+//#endif// !SPEC
+
 
 #include <chrono>
 #include <set>
@@ -45,7 +50,7 @@ auto rand_item() -> string;
 template<typename itemType>
 void set_init(size_t size, unordered_set<itemType> *mySet) {
     for (int i = 0; i < size; ++i)
-        mySet->insert(rand_item<uint64_t>());
+        mySet->insert(rand());
 }
 
 template<typename itemType>

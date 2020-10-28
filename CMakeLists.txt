@@ -7,13 +7,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bw")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512vl")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512dq")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -faligned-new")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -mbmi -mbmi2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -msse2 -msse3 -msse4.1")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mlzcnt")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=icelake-client")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=tigerlake-client")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=tigerlake-client")
 
 # -O3 -mavx512bw -mavx512vl -mavx512f -mavx512dq -faligned-new -mbmi -mbmi2
 # -msse2 -msse3 -msse4.1 -mlzcnt -march=icelake-client set(CMAKE_CXX_FLAGS
@@ -37,106 +37,102 @@ include_directories(cuckoofilter)
 find_package(OpenSSL REQUIRED)
 
 set(PROJECT_SOURCES
-    # main.cpp
-    hashutil.h
-    Tests/wrappers.hpp
-    Tests/tests.hpp
-    Tests/tests.cpp
-    Tests/new_tests.hpp
-    Tests/new_tests.cpp
-    Tests/printutil.cpp
-    Tests/printutil.hpp
-    PD_Filter/macros.h
-    Hash_functions/xxhash64.h
-    Hash_functions/wyhash.h
-    Hash_functions/woothash.h
-    Hash_functions/MurmurHash3.h
-    Hash_functions/MurmurHash3.cpp
-    Hash_functions/BobJenkins.h
-    Hash_functions/BobJenkins.cpp
-    # PD_Filter/HashTables/hashTable64.hpp
-    PD_Filter/HashTables/hashTable_Aligned.hpp
-    PD_Filter/HashTables/hashTable_Packed.hpp
-    PD_Filter/HashTables/hashTable_BatchPacking.hpp
-    PD_Filter/HashTables/hashTable_CuckooFilter.hpp
-    PD_Filter/HashTables/Spare_Low_Load.hpp
-    PD_Filter/HashTables/Spare_Validator.hpp
-    PD_Filter/HashTables/packed_spare.hpp
-    PD_Filter/HashTables/HistoryLog.hpp
-    PD_Filter/HashTables/HistoryLog.cpp
-    # PD_Filter/HashTables/HashTables_Tests/validate_hash_table.hpp
-    # PD_Filter/HashTables/HashTables_Tests/validate_hash_table.cpp
-    PD_Filter/Dict512/pd512.hpp
-    PD_Filter/Dict512/pd512.cpp
-    PD_Filter/Dict512/pd512_plus.hpp
-    PD_Filter/Dict512/pd512_plus.cpp
-    PD_Filter/Dict512/Dict512.hpp
-    PD_Filter/Dict512/twoChoicer.hpp
-    PD_Filter/Dict512/Dict512_With_CF.hpp
-    PD_Filter/Dict512/Dict512_SparseSpare.hpp
-    PD_Filter/Dict512/Dict512_Ver2.hpp
-    # PD_Filter/Dict512/Dict512_Ver3.hpp
-    PD_Filter/Dict512/Dict512_Ver4.hpp
-    PD_Filter/Dict320/pd320.hpp
-    PD_Filter/Dict320/pd320.cpp
-    PD_Filter/Dict320/pd256.hpp
-    PD_Filter/Dict320/pd256.cpp
-    PD_Filter/Dict320/pd256_plus.hpp
-    PD_Filter/Dict320/pd256_plus.cpp
-    PD_Filter/Dict320/Dict320.hpp
-    PD_Filter/Dict320/Dict256_Ver4.hpp
-    PD_Filter/Dict320/Dict256_Ver5.hpp
-    PD_Filter/Dict320/Dict256_Ver6.hpp
-    PD_Filter/Dict320/Dict256_Ver6_DB.hpp
-    PD_Filter/Dict320/Dict256_Ver7.hpp
-    PD_Filter/Dict320/Dict320_v2.hpp
-    PD_Filter/Dict320/twoChoicer320.hpp
-    PD_Filter/Dict320/twoChoicer256.hpp
-    PD_Filter/basic_function_util.h
-    PD_Filter/basic_function_util.cpp
-    PD_Filter/Fixed_PD/fpd.hpp
-    PD_Filter/Fixed_PD/fpd.cpp
-    PD_Filter/Fixed_PD/wrap_fpd.hpp
-    PD_Filter/Fixed_PD/wrap_fpd.cpp
-    PD_Filter/Fixed_PD/Fixed_Dict.hpp
-    PD_Filter/Fixed_PD/fixed_pd_45.cpp
-    PD_Filter/Fixed_PD/fixed_pd_45.hpp
-    PD_Filter/Fixed_PD/Fixed_Dict_Ver2.hpp
-    # PD_Filter/L2_pd/tpd.hpp PD_Filter/L2_pd/tpd.cpp
-    PD_Filter/L2_pd/twoDimPD.hpp
-    PD_Filter/L2_pd/twoDimPD.cpp)
+        # main.cpp
+        hashutil.h
+        Tests/wrappers.hpp
+        Tests/tests.hpp
+        Tests/tests.cpp
+        Tests/new_tests.hpp
+        Tests/new_tests.cpp
+        Tests/printutil.cpp
+        Tests/printutil.hpp
+        PD_Filter/macros.h
+        Hash_functions/xxhash64.h
+        Hash_functions/wyhash.h
+        Hash_functions/woothash.h
+        Hash_functions/MurmurHash3.h
+        Hash_functions/MurmurHash3.cpp
+        Hash_functions/BobJenkins.h
+        Hash_functions/BobJenkins.cpp
+        # PD_Filter/HashTables/hashTable64.hpp
+        PD_Filter/HashTables/hashTable_Aligned.hpp
+        PD_Filter/HashTables/hashTable_Packed.hpp
+        PD_Filter/HashTables/hashTable_BatchPacking.hpp
+        PD_Filter/HashTables/hashTable_CuckooFilter.hpp
+        PD_Filter/HashTables/Spare_Low_Load.hpp
+        PD_Filter/HashTables/Spare_Validator.hpp
+        PD_Filter/HashTables/packed_spare.hpp
+        PD_Filter/HashTables/HistoryLog.hpp
+        PD_Filter/HashTables/HistoryLog.cpp
+        # PD_Filter/HashTables/HashTables_Tests/validate_hash_table.hpp
+        # PD_Filter/HashTables/HashTables_Tests/validate_hash_table.cpp
+        PD_Filter/Dict512/pd512.hpp
+        PD_Filter/Dict512/pd512.cpp
+        PD_Filter/Dict512/pd512_plus.hpp
+        PD_Filter/Dict512/pd512_plus.cpp
+        PD_Filter/Dict512/Dict512.hpp
+        PD_Filter/Dict512/twoChoicer.hpp
+        PD_Filter/Dict512/Dict512_With_CF.hpp
+        PD_Filter/Dict512/Dict512_SparseSpare.hpp
+        PD_Filter/Dict512/Dict512_Ver2.hpp
+        # PD_Filter/Dict512/Dict512_Ver3.hpp
+        PD_Filter/Dict512/Dict512_Ver4.hpp
+        PD_Filter/Dict320/pd320.hpp
+        PD_Filter/Dict320/pd320.cpp
+        PD_Filter/Dict320/pd256.hpp
+        PD_Filter/Dict320/pd256.cpp
+        PD_Filter/Dict320/pd256_plus.hpp
+        PD_Filter/Dict320/pd256_plus.cpp
+        PD_Filter/Dict320/Dict320.hpp
+        PD_Filter/Dict320/Dict256_Ver4.hpp
+        PD_Filter/Dict320/Dict256_Ver5.hpp
+        PD_Filter/Dict320/Dict256_Ver6.hpp
+        PD_Filter/Dict320/Dict256_Ver6_DB.hpp
+        PD_Filter/Dict320/Dict256_Ver7.hpp
+        PD_Filter/Dict320/Dict320_v2.hpp
+        PD_Filter/Dict320/twoChoicer320.hpp
+        PD_Filter/Dict320/twoChoicer256.hpp
+        PD_Filter/basic_function_util.h
+        PD_Filter/basic_function_util.cpp
+        PD_Filter/Fixed_PD/fpd.hpp
+        PD_Filter/Fixed_PD/fpd.cpp
+        PD_Filter/Fixed_PD/wrap_fpd.hpp
+        PD_Filter/Fixed_PD/wrap_fpd.cpp
+        PD_Filter/Fixed_PD/Fixed_Dict.hpp
+        PD_Filter/Fixed_PD/fixed_pd_45.cpp
+        PD_Filter/Fixed_PD/fixed_pd_45.hpp
+        PD_Filter/Fixed_PD/Fixed_Dict_Ver2.hpp
+        # PD_Filter/L2_pd/tpd.hpp PD_Filter/L2_pd/tpd.cpp
+        PD_Filter/L2_pd/twoDimPD.hpp
+        PD_Filter/L2_pd/twoDimPD.cpp)
 
 set(SPEC_SOURCES
-    PD_Filter/basic_function_util.h
-    PD_Filter/basic_function_util.cpp
-    hashutil.h
-    Tests/minimal_tests.hpp
-    Tests/wrappers.hpp
-    Tests/tests.hpp
-    Tests/tests.cpp
-    Tests/new_tests.hpp
-    Tests/new_tests.cpp
-    Tests/printutil.cpp
-    Tests/printutil.hpp
-    PD_Filter/macros.h
-    Hash_functions/xxhash64.h
-    Hash_functions/wyhash.h
-    PD_Filter/HashTables/hashTable_Aligned.hpp
-    PD_Filter/HashTables/packed_spare.hpp
-    PD_Filter/HashTables/HistoryLog.hpp
-    PD_Filter/HashTables/HistoryLog.cpp
-    PD_Filter/L2_pd/twoDimPD.hpp
-    PD_Filter/L2_pd/twoDimPD.cpp
-    
-    PD_Filter/Dict320/pd256_plus.hpp
-    PD_Filter/Dict320/pd256_plus.cpp
-    
-    PD_Filter/Dict320/Dict256_Ver5.hpp
-    PD_Filter/Dict320/Dict256_Ver6_DB.hpp
-    PD_Filter/Dict320/Dict256_Ver7.hpp
-
-    Spec_main.cpp
-    )
+        PD_Filter/basic_function_util.h
+        PD_Filter/basic_function_util.cpp
+        hashutil.h
+        Tests/minimal_tests.hpp
+        Tests/wrappers.hpp
+        Tests/tests.hpp
+        Tests/tests.cpp
+        Tests/new_tests.hpp
+        Tests/new_tests.cpp
+        Tests/printutil.cpp
+        Tests/printutil.hpp
+        PD_Filter/macros.h
+        Hash_functions/xxhash64.h
+        Hash_functions/wyhash.h
+        PD_Filter/HashTables/hashTable_Aligned.hpp
+        PD_Filter/HashTables/packed_spare.hpp
+        PD_Filter/HashTables/HistoryLog.hpp
+        PD_Filter/HashTables/HistoryLog.cpp
+        PD_Filter/L2_pd/twoDimPD.hpp
+        PD_Filter/L2_pd/twoDimPD.cpp
+        PD_Filter/Dict320/pd256_plus.hpp
+        PD_Filter/Dict320/pd256_plus.cpp
+        PD_Filter/Dict320/Dict256_Ver5.hpp
+        PD_Filter/Dict320/Dict256_Ver6_DB.hpp
+        PD_Filter/Dict320/Dict256_Ver7.hpp
+        Spec_main.cpp)
 
 add_executable(Filters main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for Filters.
@@ -147,7 +143,7 @@ target_compile_options(valid_test PRIVATE -O0 -g3) # -Wall -Wextra -W)
 
 add_executable(test_o2 main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
-target_compile_options(test_o2 PRIVATE -O2 -g)
+target_compile_options(test_o2 PRIVATE -O2 -g -DNDEBUG)
 
 add_executable(test_o1 main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
@@ -162,32 +158,39 @@ add_executable(profiling main.cpp ${PROJECT_SOURCES})
 target_compile_options(profiling PRIVATE -O3 -DNDEBUG -DPROF)
 
 add_executable(Spec ${SPEC_SOURCES})
-target_compile_options(Spec PRIVATE -O0 -g3 -DSPEC)# -fstack-clash-protection -fstack-protector)
+target_compile_options(Spec PRIVATE -O0 -g3 -DSPEC) # -fstack-clash-protection
+# -fstack-protector)
 
 add_executable(S3 ${SPEC_SOURCES})
 target_compile_options(S3 PRIVATE -O3 -DNDEBUG -DSPEC)# -fstack-clash-protection -fstack-protector)
 
 add_executable(S2 ${SPEC_SOURCES})
-target_compile_options(S2 PRIVATE -O2 -DSPEC)# -fstack-clash-protection -fstack-protector)
+target_compile_options(S2 PRIVATE -O2 -DSPEC) # -fstack-clash-protection
+# -fstack-protector)
 
 add_executable(S1 ${SPEC_SOURCES})
-target_compile_options(S1 PRIVATE -O1 -DSPEC)# -fstack-clash-protection -fstack-protector)
-
+target_compile_options(S1 PRIVATE -O1 -DSPEC) # -fstack-clash-protection
+# -fstack-protector)
 
 add_executable(
-  temp
-  PD_Filter/HashTables/packed_spare.hpp
-  PD_Filter/HashTables/HistoryLog.hpp
-  PD_Filter/HashTables/HistoryLog.cpp
-  PD_Filter/HashTables/Level3.hpp
+        temp
 
-  PD_Filter/L2_pd/twoDimPD.hpp
-  PD_Filter/L2_pd/twoDimPD.cpp
-  # PD_Filter/L2_pd/temp_main.cpp
-  PD_Filter/HashTables/HashTables_Tests/validate_hash_table.hpp
-  PD_Filter/HashTables/HashTables_Tests/validate_hash_table.cpp
-  PD_Filter/HashTables/HashTables_Tests/Hashtable_main.cpp
-  # PD_Filter/HashTables/HashTables_Tests/old_main.cpp
+        PD_Filter/basic_function_util.h
+        PD_Filter/basic_function_util.cpp
+        hashutil.h
+
+        #  PD_Filter/HashTables/packed_spare.hpp
+        PD_Filter/HashTables/hashTable_Aligned.hpp
+        #  PD_Filter/HashTables/HistoryLog.hpp
+        #  PD_Filter/HashTables/HistoryLog.cpp
+        #  PD_Filter/HashTables/Level3.hpp
+        #  PD_Filter/L2_pd/twoDimPD.hpp
+        #  PD_Filter/L2_pd/twoDimPD.cpp
+        # PD_Filter/L2_pd/temp_main.cpp
+        PD_Filter/HashTables/HashTables_Tests/validate_hash_table.hpp
+        PD_Filter/HashTables/HashTables_Tests/validate_hash_table.cpp
+        PD_Filter/HashTables/HashTables_Tests/Hashtable_main.cpp
+        # PD_Filter/HashTables/HashTables_Tests/old_main.cpp
 )
 # Add the compile options ONLY for valid_test. target_compile_options(temp
 # PRIVATE -O0 -g)
@@ -202,6 +205,10 @@ target_link_libraries(test_o2 OpenSSL::SSL)
 target_link_libraries(counting OpenSSL::SSL)
 target_link_libraries(profiling OpenSSL::SSL)
 target_link_libraries(Spec OpenSSL::SSL)
+target_link_libraries(S1 OpenSSL::SSL)
+target_link_libraries(S2 OpenSSL::SSL)
+target_link_libraries(S3 OpenSSL::SSL)
+target_link_libraries(temp OpenSSL::SSL)
 # add_executable( Filters main.cpp hashutil.h robin_hood.h Tests/wrappers.hpp
 # Tests/tests.hpp Tests/tests.cpp Tests/new_tests.hpp Tests/new_tests.cpp
 # Tests/printutil.cpp Tests/printutil.hpp Bloom_Filter/counting_bloom.h

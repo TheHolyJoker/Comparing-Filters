@@ -94,8 +94,8 @@ public:
     virtual ~Dict256_Ver7() {
         assert(get_capacity() >= 0);
         free(pd_array);
-        free(spare_filter);
         delete spare;
+        delete spare_filter;
         // std::cout << std::string(80, '!') << std::endl;
         // std::cout << std::string(80, '!') << std::endl;
         // op_count = 0;
@@ -318,7 +318,7 @@ public:
         }
     }
 
-    void insert_into_not_full_pd_helper(const itemType s) {
+    inline void insert_into_not_full_pd_helper(const itemType s) {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
@@ -338,7 +338,7 @@ public:
         // assert(lookup(s, Yes));
     }
 
-    void insert_into_full_pd_helper(const itemType s) {
+    inline void insert_into_full_pd_helper(const itemType s) {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
@@ -377,8 +377,8 @@ public:
         // assert(lookup_l2_safe(s, Yes));
     }
 
-    void insertion_swap_case(const itemType s, uint64_t pd_index, uint8_t l1_quot, uint8_t l1_rem,
-                             uint64_t pd_add_qr_result) {
+    inline void insertion_swap_case(const itemType s, uint64_t pd_index, uint8_t l1_quot, uint8_t l1_rem,
+                                    uint64_t pd_add_qr_result) {
         assert(pd_name::pd_full(&pd_array[pd_index]));
 
         // Level1_Log->Add(pd_index, l1_quot, l1_rem);

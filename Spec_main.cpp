@@ -78,7 +78,17 @@ void heavy_validation() {
     }
 }
 
+void valgrind_check() {
+    using Table_Dict256_Ver7 = Dict256_Ver7<uint64_t>;
+    auto filter = FilterAPI<Table_Dict256_Ver7>::ConstructFromAddCount(15435038UL);
+    // return 0;
+
+}
+
 int main(int argc, char **argv) {
+
+    // valgrind_check();
+    // return 0;
     using itemType = uint64_t;
     using spare_item = uint64_t;
     using temp_hash = hashTable_Aligned<spare_item, 4>;
@@ -90,17 +100,21 @@ int main(int argc, char **argv) {
     using Table_Dict256_Ver6_db = Dict256_Ver6_DB<itemType>;
 
 
-    // assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
-    // assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver5, itemType>()));
+//    return 0;
+    assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
 
-    // assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
-    // assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
-
+    assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
+//    return 0;
     // get_fp_ratios();
 
     // constexpr size_t max_filter_capacity = 7381975UL * 2UL; // load is .88
     constexpr size_t max_filter_capacity = 15435038UL; // load is .92
     constexpr size_t lookup_reps = 124822484;
+    // constexpr size_t max_filter_capacity = 154350UL; // load is .92
+    // constexpr size_t lookup_reps = 1248224;
     constexpr size_t bits_per_element = 8;
     constexpr size_t bench_precision = 16;
     vector<itemType> v_add, v_find, v_delete;
@@ -110,6 +124,9 @@ int main(int argc, char **argv) {
     // size_t del_size = 0;
     constexpr size_t del_size = 1.0 * max_filter_capacity / (double) (bench_precision);
     fill_vec(elements.at(2), del_size);
+
+
+
     // constexpr size_t del_size = 1;
     // size_t del_size = 1;
 
@@ -120,11 +137,12 @@ int main(int argc, char **argv) {
     // single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, lookup_reps, bench_precision, false, false);
 
 
-    // single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//     single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+//     single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    return 0;
 
     single_bench<Table_CF, itemType>(max_filter_capacity, lookup_reps, bench_precision, false, true);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, lookup_reps, bench_precision, false, true);
