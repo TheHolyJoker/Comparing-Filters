@@ -102,5 +102,9 @@ public:
 
         return pop_item;
     }
+
+    size_t get_byte_size() const {
+        return elements.size() * sizeof(item_key_t);
+    }
 };
 #endif//FILTERS_LEVEL3_HPP

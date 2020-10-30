@@ -91,8 +91,13 @@ public:
         spare_filter = new Simd_BF(ceil(log2(max_number_of_elements * 0.1 * 8.0 / CHAR_BIT)));
     }
 
+
     virtual ~Dict256_Ver7() {
-        assert(get_capacity() >= 0);
+        std::cout << std::string(80, '=') << std::endl;
+        print_data_on_space();
+        std::cout << std::string(80, '=') << std::endl;
+
+        // assert(get_capacity() >= 0);
         free(pd_array);
         delete spare;
         delete spare_filter;
@@ -207,8 +212,7 @@ public:
         const uint64_t spare_quot = 24 - quot;
         const uint8_t rem = qr;
         return (!pd_name::cmp_qr1(qr, &pd_array[pd_index])) ? pd_name::pd_find_25(quot, rem, &pd_array[pd_index])
-                                                            : (spare->find(((uint64_t) pd_index) ,spare_quot , rem));
-        
+                                                            : (spare->find(((uint64_t) pd_index), spare_quot, rem));
     }
 
     inline auto lookup_with_l2_filter(const itemType s) const -> bool {
@@ -529,6 +533,14 @@ public:
             size_t b1 = pd_index / 32;
             size_t b2 = (pd_index / 32) + (pd_index & 31) + 1;
             bool validation = ((pop_item.pd_index == b1) && (pop_item.pd_index == b2));
+            if (!validation) {
+                std::cout << "b1: " << b1 << std::endl;
+                std::cout << "b2: " << b2 << std::endl;
+                std::cout << "pd_index: " << pd_index << std::endl;
+                std::cout << "pop_item:\n" << pop_item << std::endl;
+                std::cout << "pd_last_item:\n" << pd_last_item << std::endl;
+                assert(0);
+            }
             assert(validation);
             pd_last_item.pd_index = pop_item.pd_index;
             // std::cout << "pop_item.pd_index: " << pop_item.pd_index << std::endl;
@@ -926,17 +938,41 @@ public:
         return {42, 42};
     }
 
-    auto get_byte_size() {
+    auto get_l2_byte_size() const -> size_t {
+        return spare->get_byte_size();
+    }
+
+    auto get_l1_byte_size() const -> size_t {
+        size_t res = sizeof(__m256i) * number_of_pd;
+        size_t simd_filter_size = spare_filter->SizeInBytes();
+        res += simd_filter_size;
+        return res;
+    }
+
+    auto get_byte_size() const -> size_t {
         //variables.
-        size_t res = 8 * sizeof(size_t);
+        // size_t res = 8 * sizeof(size_t);
 
         //PD's
-        res += sizeof(__m512i) * number_of_pd;
+        size_t res = sizeof(__m256i) * number_of_pd;
         // Capacity vec.
-        res += sizeof(uint8_t) * number_of_pd;
-        // Pointer to spare->
-        res += 1;
+        size_t simd_filter_size = spare_filter->SizeInBytes();
+        res += simd_filter_size;
+        res += get_l2_byte_size();
         return res;
+    }
+
+    void print_data_on_space() const {
+        auto total_size = get_byte_size();
+        std::cout << "Total byte size is: \t" << get_byte_size() << std::endl;
+        std::cout << "L1 size:            \t" << get_l1_byte_size();
+        std::cout << ".\t" << (1.0 * get_l1_byte_size() / total_size) << std::endl;
+
+        std::cout << "spare_filter size:  \t" << spare_filter->SizeInBytes();
+        std::cout << ".\t" << (1.0 * spare_filter->SizeInBytes() / total_size) << std::endl;
+
+        std::cout << "L2 size:            \t" << get_l2_byte_size();
+        std::cout << ".\t" << (1.0 * get_l2_byte_size() / total_size) << std::endl;
     }
 
     auto get_byte_size_with_spare() {

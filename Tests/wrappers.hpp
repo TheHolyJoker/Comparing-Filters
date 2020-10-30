@@ -756,7 +756,7 @@ struct FilterAPI<Dict256_Ver7<itemType>> {
     using Table = Dict256_Ver7<itemType>;
 
     static Table ConstructFromAddCount(size_t add_count) {
-        constexpr float load = .94;
+        constexpr float load = .93;
         if (load < .95)
             std::cout << "Lower workload" << std::endl;
         return Table(add_count, load, .5);

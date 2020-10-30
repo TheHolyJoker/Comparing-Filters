@@ -103,7 +103,10 @@ class CuckooFilter {
     // std::cout << __LINE__ << std::endl;
   }
 
-  ~CuckooFilter() { delete table_; }
+  ~CuckooFilter() {
+      std::cout << "Byte size is: " << SizeInBytes() << std::endl;
+      delete table_;
+  }
 
   // Add an item to the filter.
   Status Add(const ItemType &item);

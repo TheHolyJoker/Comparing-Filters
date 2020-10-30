@@ -379,11 +379,11 @@ namespace pd256_plus {
     inline bool pd_full(const __m256i *pd) {
         // static int counter = 0;
         // counter++;
-        auto res = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & (1ULL << (63 - (8)));
-        size_t cap = get_capacity(pd);
-        bool v_res = get_capacity(pd) == 25;
-        assert((!!res) == v_res);
-        return res;
+        return _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & (1ULL << (63 - (8)));
+        // size_t cap = get_capacity(pd);
+        // bool v_res = get_capacity(pd) == 25;
+        // assert((!!res) == v_res);
+        // return res;
         // return _mm_extract_epi16(_mm256_castsi256_si128(*pd), 6) & 240;
         // 16 + 32 + 64 + 128 == 240
     }
@@ -432,7 +432,11 @@ namespace pd256_plus {
         return _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 63;
     }
 
+
     inline uint64_t get_header(const __m256i *pd) {
+        return ((uint64_t *) pd)[0] & ((1ULL << 56) - 1);
+    }
+    inline uint64_t get_header_smid(const __m256i *pd) {
         return _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & ((1ULL << 56) - 1);
     }
 
@@ -449,7 +453,7 @@ namespace pd256_plus {
         // uint64_t res = (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) >> 6) & ((1ULL << 50) - 1);
         // auto temp = _mm_popcnt_u64(res);
         // assert(_mm_popcnt_u64(res) == QUOT_SIZE25);
-        return (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) >> 6) & ((1ULL << 50) - 1);
+        return ((((uint64_t *) pd)[0]) >> 6ul) & ((1ULL << 50ul) - 1);
     }
 
     inline uint64_t clean_header(uint64_t header) {
@@ -492,7 +496,7 @@ namespace pd256_plus {
     }
 
     inline uint64_t decode_last_quot(const __m256i *pd) {
-        return _mm_cvtsi128_si32(_mm256_castsi256_si128(*pd)) & 31;
+        return ((uint64_t *) pd)[0] & 31;
         // uint64_t v_res = decode_last_quot_safe(pd);
         // assert(res == v_res);
         // return res;
@@ -1272,7 +1276,7 @@ namespace pd256_plus {
 
 
     inline bool did_pd_overflowed(const __m256i *pd) {
-        return !(_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32);
+        return !(((uint64_t *) pd)[0] & 32);
     }
 
 
@@ -1440,10 +1444,10 @@ namespace pd256_plus {
      * @return false Look only in this PD.
      */
     inline bool cmp_qr1(uint16_t qr, const __m256i *pd) {
-        if (_mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 32) {
+        if (((uint64_t *) pd)[0] & 32) {
             return false;
         }
-        const uint64_t hfb = _mm_cvtsi128_si64(_mm256_castsi256_si128(*pd)) & 31;
+        const uint64_t hfb = ((uint64_t *) pd)[0] & 31;
         const uint16_t old_qr = (hfb << 8ul) | get_last_byte(pd);
         return old_qr < qr;
     }

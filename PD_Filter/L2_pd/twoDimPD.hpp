@@ -896,14 +896,14 @@ class MainBucket {
     // const size_t bucket_size{get_l2_bucket_size<max_capacity, batch_size, bits_per_item>()};
     // uint64_t pd[8] __attribute__((aligned(64)));
     // uint64_t *pd;
-    uint64_t pd[8]; //__attribute__((aligned(64)));
+    uint64_t pd[8];//__attribute__((aligned(64)));
 
 public:
     // __attribute__((aligned(64)));
 
     MainBucket() {
-//        int ok1 = posix_memalign((void **) &pd, 64, 8 * get_l2_bucket_size<max_capacity, batch_size, bits_per_item>());
-//        assert(ok1 == 0);
+        //        int ok1 = posix_memalign((void **) &pd, 64, 8 * get_l2_bucket_size<max_capacity, batch_size, bits_per_item>());
+        //        assert(ok1 == 0);
         assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
 
         constexpr unsigned bit_size = get_l2_bucket_size<max_capacity, batch_size, bits_per_item>() * 64;
@@ -950,22 +950,22 @@ public:
     }
 
     auto get_capacity_att() const -> size_t {
-//        static int c = 0;
-//        c++;
+        //        static int c = 0;
+        //        c++;
         size_t capacity = 4242;
-//        size_t v_capacity = get_capacity_naive();
+        //        size_t v_capacity = get_capacity_naive();
         const uint64_t w2 = pd[1] & MASK(16ul);
         if (w2) {
-//            static int c2 = 0;
-//            c2++;
-//            auto lz_rez = _lzcnt_u64(w2);
-            auto temp = (_lzcnt_u64(w2) - (63 - 16)); // todo 64? 63?
+            //            static int c2 = 0;
+            //            c2++;
+            //            auto lz_rez = _lzcnt_u64(w2);
+            auto temp = (_lzcnt_u64(w2) - (63 - 16));// todo 64? 63?
             assert(temp >= 0);
             capacity = max_capacity - temp + 1;
             assert(capacity == get_capacity_naive());
             return capacity;
         } else {
-            auto temp = 64 - _lzcnt_u64(pd[0]); // todo 64? 63?
+            auto temp = 64 - _lzcnt_u64(pd[0]);// todo 64? 63?
             assert(batch_size <= temp);
             capacity = temp - batch_size;
             assert(capacity == get_capacity_naive());
@@ -975,8 +975,8 @@ public:
 
     auto get_capacity() const -> size_t {
         return get_capacity_att();
-//        auto pd_index_res = count_zeros_up_to_the_kth_one(pd, batch_size - 1);
-//        return pd_index_res;
+        //        auto pd_index_res = count_zeros_up_to_the_kth_one(pd, batch_size - 1);
+        //        return pd_index_res;
     }
 
     bool is_full() const {
@@ -1043,7 +1043,6 @@ public:
         constexpr auto dest_start = get_pd_header_size();
         constexpr auto length = get_location_bitmask_size();
         bits_memcpy::copy(&new_bitmask, pd, 0, dest_start, length);
-
     }
 
     void write_new_location_bitmask(uint64_t new_bitmask) {
@@ -1054,7 +1053,7 @@ public:
     void insert_bit_to_location_bitmask(uint64_t index, bool value) {
         index += 16ul;
         uint64_t mask = MASK(index);
-//        uint64_t dest = pd[1];
+        //        uint64_t dest = pd[1];
         uint64_t lo = pd[1] & mask;
         uint64_t mid = (value) ? (1ULL << index) : 0;
         uint64_t hi = (pd[1] & (~mask)) << 1ul;
@@ -1193,7 +1192,7 @@ public:
         std::cout << "nsh_pdMask:  \t";
         print_memory::print_word_LE((uint64_t) get_pd_header_mask(pd_index), GAP);
         std::cout << "sh_header:   \t";
-        print_memory::print_word_LE((uint64_t) (get_pd_header() >> pd_index), GAP);
+        print_memory::print_word_LE((uint64_t)(get_pd_header() >> pd_index), GAP);
         std::cout << "pd_mask:     \t";
         print_memory::print_word_LE((uint64_t) pd_mask, GAP);
         std::cout << "v:           \t";
@@ -2437,6 +2436,14 @@ public:
         uint64_t unpacked_array[max_capacity] = {0};
         unpack_Q_list(unpacked_array);
         print_memory::print_array_in_columns_screened(unpacked_array, capacity, quot);
+    }
+
+    void count_quots(size_t capacity, size_t *freq_array) const {
+        uint64_t unpack_array[max_capacity] = {0};
+        unpack_Q_list(unpack_array);
+        for (size_t i = 0; i < capacity; i++) {
+            freq_array[unpack_array[i]] += 1;
+        }
     }
 };
 

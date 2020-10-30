@@ -128,9 +128,55 @@ void heavy_validation() {
 // void attempt_to_use_simd_bf(){
 
 // }
+
+void rel_code() {
+
+    constexpr int x = 25542240;
+    constexpr int y = 25165824;
+    constexpr auto r = 1.0 * x / y;
+    constexpr auto r2 = (1.0 * x / (y * (1.0 * 11/ 12)));
+
+    using itemType = uint64_t;
+
+    using Table_CF = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO, cuckoofilter::SingleTable>;
+    using Table_CF12 = cuckoofilter::CuckooFilter<uint64_t, 12, cuckoofilter::SingleTable>;
+    using Table_Dict256_Ver7 = Dict256_Ver7<itemType>;
+
+    assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
+    assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
+
+    // constexpr size_t max_filter_capacity = 15435038UL; // load is .92
+    constexpr size_t max_filter_capacity = 15770583UL; // load is .94
+    // constexpr size_t max_filter_capacity = 15435038UL >> 3;// load is .92
+    // const size_t max_filter_capacity =  62411242;
+    constexpr size_t lookup_reps = 124822484;
+    constexpr size_t bench_precision = 16;
+
+    vector<itemType> v_add, v_find, v_delete;
+    vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
+
+    fill_vec(elements.at(0), max_filter_capacity);
+    fill_vec(elements.at(1), lookup_reps);
+    size_t del_size = 1.0 * max_filter_capacity / (double) bench_precision;
+    fill_vec(elements.at(2), del_size);
+
+    // for (size_t i = 0; i < 100; i++) {
+    //     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // }
+    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+}
 int main(int argc, char **argv) {
+    rel_code();
+    return 0;
     // std::cout << "Here!" << std::endl;
     // assert(0);
+    int x = 24562848;//24921392;
+    int y = 25165831;
+    auto ratio = 1.0 * x / y;
+    std::cout << "ratio: " << ratio << std::endl;
     using itemType = uint64_t;
     using spare_item = uint64_t;
     using temp_hash = hashTable_Aligned<spare_item, 4>;
@@ -182,8 +228,8 @@ int main(int argc, char **argv) {
     //    }
     assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
     assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
-    assert((default_validation_test_single<Table_CF , itemType>()));
-    assert((default_validation_test_single<Table_CF , itemType>()));
+    assert((default_validation_test_single<Table_CF, itemType>()));
+    assert((default_validation_test_single<Table_CF, itemType>()));
     // assert((default_validation_test_single<Table_Dict256_Ver6_db, itemType>()));
     // assert((default_validation_test_single<Table_Dict256_Ver6_db, itemType>()));
     // assert((default_validation_test_single<Table_Dict256_Ver6_db, itemType>()));
@@ -232,8 +278,8 @@ int main(int argc, char **argv) {
 
 
     // get_fp_ratios();
-
-    const size_t max_filter_capacity = 62411242;
+    constexpr size_t max_filter_capacity = 15435038UL;// load is .92
+    // const size_t max_filter_capacity = 62411242;
     const size_t lookup_reps = 124822484;
     const size_t bits_per_element = 8;
     const size_t bench_precision = 16;
@@ -241,7 +287,7 @@ int main(int argc, char **argv) {
     vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
     fill_vec(elements.at(0), max_filter_capacity);
     fill_vec(elements.at(1), lookup_reps);
-//    size_t del_size = 0;
+    //    size_t del_size = 0;
     size_t del_size = 1.0 * max_filter_capacity / (double) bench_precision;
     fill_vec(elements.at(2), del_size);
 
@@ -252,14 +298,19 @@ int main(int argc, char **argv) {
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
     return 0;
-    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-//    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
-//    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-//    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
-//    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+
+    // single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    //    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    //    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    //    single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    //    single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver6, itemType>(max_filter_capacity, bench_precision, false, &elements);

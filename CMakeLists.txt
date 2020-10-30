@@ -15,8 +15,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=icelake-client")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=tigerlake-client")
 
-# -O3 -mavx512bw -mavx512vl -mavx512f -mavx512dq -faligned-new -mbmi -mbmi2
-# -msse2 -msse3 -msse4.1 -mlzcnt -march=icelake-client set(CMAKE_CXX_FLAGS
+# -O3 -mavx512bw -mavx512vl -mavx512f -mavx512dq -faligned-new -mbmi -mbmi2 -msse2 -msse3 -msse4.1 -mlzcnt
+# -march=icelake-client
+#set(CMAKE_CXX_FLAGS
 # "${CMAKE_CXX_FLAGS} -O3") set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
 
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2") SET(CMAKE_CXX_FLAGS
@@ -141,9 +142,13 @@ add_executable(valid_test main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
 target_compile_options(valid_test PRIVATE -O0 -g3) # -Wall -Wextra -W)
 
+add_executable(test_o3 main.cpp ${PROJECT_SOURCES})
+# Add the compile options ONLY for valid_test.
+target_compile_options(test_o3 PRIVATE -O2 -g)# -DNDEBUG)
+
 add_executable(test_o2 main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
-target_compile_options(test_o2 PRIVATE -O2 -g -DNDEBUG)
+target_compile_options(test_o2 PRIVATE -O2 -g)# -DNDEBUG)
 
 add_executable(test_o1 main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
@@ -202,6 +207,7 @@ target_compile_options(temp PRIVATE -O0 -g3 -Wall -Wextra -W)# -fstack-clash-pro
 target_link_libraries(Filters OpenSSL::SSL)
 target_link_libraries(valid_test OpenSSL::SSL)
 target_link_libraries(test_o2 OpenSSL::SSL)
+target_link_libraries(test_o3 OpenSSL::SSL)
 target_link_libraries(counting OpenSSL::SSL)
 target_link_libraries(profiling OpenSSL::SSL)
 target_link_libraries(Spec OpenSSL::SSL)

@@ -12,7 +12,12 @@ bool item_key_t::operator!=(const item_key_t &rhs) const {
 }
 
 bool item_key_t::operator<(const item_key_t &rhs) const {
-    assert(this->pd_index == rhs.pd_index);
+    if (this->pd_index != rhs.pd_index){
+        // std::cout << "comparing item_key_t with different pd_index field." << std::endl;
+        return this->pd_index < rhs.pd_index;
+    }
+
+    // assert(this->pd_index == rhs.pd_index);
     return (this->quot != rhs.quot) ? this->quot < rhs.quot : this->rem < rhs.rem;
 }
 
