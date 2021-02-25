@@ -134,13 +134,14 @@ void rel_code() {
     constexpr int x = 25542240;
     constexpr int y = 25165824;
     constexpr auto r = 1.0 * x / y;
-    constexpr auto r2 = (1.0 * x / (y * (1.0 * 11/ 12)));
+    constexpr auto r2 = (1.0 * x / (y * (1.0 * 11 / 12)));
 
     using itemType = uint64_t;
 
     using Table_CF = cuckoofilter::CuckooFilter<uint64_t, BITS_PER_ELEMENT_MACRO, cuckoofilter::SingleTable>;
     using Table_CF12 = cuckoofilter::CuckooFilter<uint64_t, 12, cuckoofilter::SingleTable>;
     using Table_Dict256_Ver7 = Dict256_Ver7<itemType>;
+    using Table_Dict512_Ver4 = Dict512_Ver4<hashTable_Aligned<itemType, 4>, itemType, itemType>;
 
     assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
     assert((default_validation_test_single<Table_Dict256_Ver7, itemType>()));
@@ -148,7 +149,7 @@ void rel_code() {
     assert((default_validation_test_single_with_deletions<Table_Dict256_Ver7, itemType>()));
 
     // constexpr size_t max_filter_capacity = 15435038UL; // load is .92
-    constexpr size_t max_filter_capacity = 15770583UL; // load is .94
+    constexpr size_t max_filter_capacity = 15770583UL;// load is .94
     // constexpr size_t max_filter_capacity = 15435038UL >> 3;// load is .92
     // const size_t max_filter_capacity =  62411242;
     constexpr size_t lookup_reps = 124822484;
@@ -160,15 +161,35 @@ void rel_code() {
     fill_vec(elements.at(0), max_filter_capacity);
     fill_vec(elements.at(1), lookup_reps);
     size_t del_size = 1.0 * max_filter_capacity / (double) bench_precision;
+    // del_size = 0;
     fill_vec(elements.at(2), del_size);
 
     // for (size_t i = 0; i < 100; i++) {
     //     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // }
-    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict512_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict512_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // while (true) {
+
+    // single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+
+    // }
+    int counter = 4;
+    while (counter-- >0) {
+        single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    }
+
+
+    // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
 }
 int main(int argc, char **argv) {
+    // std::cout << "Tomer1" << std::endl;
     rel_code();
     return 0;
     // std::cout << "Here!" << std::endl;
@@ -299,7 +320,8 @@ int main(int argc, char **argv) {
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    return 0;
+    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // return 0;
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
     single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
@@ -326,12 +348,15 @@ int main(int argc, char **argv) {
     // single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
 
-    // while (true) {
-    //     single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    //     single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    //     single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    //     single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    // }
+    while (true) {
+        single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        //     single_bench<Table_Dict256_Ver5, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        //     single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+        //     single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    }
 
     // single_bench<Table_Dict256_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);

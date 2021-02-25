@@ -104,5 +104,23 @@ void single_bench(size_t filter_max_capacity, size_t lookup_reps, size_t bench_p
     return single_bench<Table, itemType>(filter_max_capacity, bench_precision, validate_before_benchmarking, &elements);
 }
 
+// template<typename Table, typename itemType>
+// void single_bench_with_del(size_t filter_max_capacity, size_t bench_precision, bool validate_before_benchmarking, vector<vector<itemType> *> *elements) {
+//     // vector<itemType> v_add, v_find, v_delete;
+//     // vector<vector<itemType> *> elements{&v_add, &v_find, &v_delete};
+//     // init_elements(filter_max_capacity, lookup_reps, &elements, bench_precision, with_deletions);
+
+//     bool valid = true;
+//     if (validate_before_benchmarking) {
+//         valid = default_validation_test_single<Table, itemType>();
+        
+//     }
+//     if (valid) {
+//         std::stringstream ss;
+//         ss = benchmark_single_filter_wrapper<Table, itemType>(filter_max_capacity, bench_precision, elements);
+//     }
+//     // return single_bench<Table, itemType>(filter_max_capacity, bench_precision, validate_before_benchmarking, &elements);
+// }
+
 
 #endif// FILTERS_MINIMAL_TESTS_HPP

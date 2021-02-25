@@ -62,12 +62,12 @@ class Dict256_Ver7 {
 
 public:
     Dict256_Ver7(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
-        : filter_max_capacity(max_number_of_elements),
-          number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
-          //   pd_index_length(
-          //           ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
-          //   spare_element_length(pd_index_length + quotient_length + remainder_length),
-          Hasher() {
+            : filter_max_capacity(max_number_of_elements),
+              number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
+            //   pd_index_length(
+            //           ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
+            //   spare_element_length(pd_index_length + quotient_length + remainder_length),
+              Hasher() {
         // op_count = 0;
         expected_pd_capacity = max_capacity * level1_load_factor;
         spare = new packed_spare<48, 32, bits_per_item, 4>(number_of_pd);
@@ -79,8 +79,7 @@ public:
         int ok = posix_memalign((void **) &pd_array, 32, 32 * number_of_pd);
         if (ok != 0) {
             std::cout << "Failed!!!" << std::endl;
-            std::cout << level2_load_factor << std::endl;
-            ;
+            std::cout << level2_load_factor << std::endl;;
             assert(false);
             return;
         }
@@ -233,6 +232,24 @@ public:
                                                             : (spare_filter->Find(((uint64_t) pd_index << (13)) | qr));
     }
 
+    inline auto lookup_with_l2_filter_alt(const itemType s) const -> bool {
+        // op_count++;
+        // bool bpc = is_bad_element(s);
+        // if (bpc) {
+        //     std::cout << "lookup. ";
+        //     std::cout << "op_count: \t" << op_count << std::endl;
+        // }
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        assert(validate_lowers_quot_are_in_l1(pd_index));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        return pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) ||
+               (spare_filter->Find(((uint64_t) pd_index << (13)) | qr));
+    }
+
     int get_find_level(const itemType s) const {
         if (!lookup(s)) return 0;
         uint64_t hash_res = Hasher(s);
@@ -309,15 +326,15 @@ public:
         //     std::cout << "insert. ";
         //     std::cout << "op_count: \t" << op_count << std::endl;
         // }
-        uint64_t hash_res = Hasher(s);
-        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint64_t hash_res = Hasher(s);
+        const uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         assert(validate_lowers_quot_are_in_l1(pd_index));
         if (pd_name::pd_full(&pd_array[pd_index])) {
-            insert_into_full_pd_helper(s);
+            insert_into_full_pd_helper(s, pd_index, out2);
             assert(lookup_naive(s, Yes));
         } else {
-            insert_into_not_full_pd_helper(s);
+            insert_into_not_full_pd_helper(s, pd_index, out2);
             assert(lookup_naive(s, Yes));
         }
     }
@@ -342,10 +359,67 @@ public:
         // assert(lookup(s, Yes));
     }
 
+    inline void insert_into_not_full_pd_helper(const itemType s, const uint32_t pd_index, const uint32_t out2) {
+//        uint64_t hash_res = Hasher(s);
+//        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+//        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        assert(!pd_name::pd_full(&pd_array[pd_index]));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> bits_per_item;
+        const uint8_t rem = qr;
+        assert(pd_index < number_of_pd);
+        assert(quot <= quot_range);
+
+        const uint64_t res_qr = pd_name::pd_conditional_add_50(quot, rem, &pd_array[pd_index]);
+        constexpr uint64_t Mask15 = 1ULL << 15ULL;
+        assert(res_qr == Mask15);
+
+        // Level1_Log->Add(pd_index, quot, rem);
+        // assert(Level1_Log->Find(pd_index, quot, rem));
+        // assert(lookup(s, Yes));
+    }
+
     inline void insert_into_full_pd_helper(const itemType s) {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        assert(pd_name::pd_full(&pd_array[pd_index]));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> bits_per_item;
+        const int64_t spare_quot = quot_range - 1 - quot;
+        const uint8_t rem = qr;
+        assert(pd_index < number_of_pd);
+        assert(quot <= quot_range);
+
+        const uint64_t res_qr = pd_name::pd_conditional_add_50(quot, rem, &pd_array[pd_index]);
+        constexpr uint64_t Mask15 = 1ULL << 15ULL;
+        assert(res_qr != Mask15);
+
+        if (res_qr != qr) {
+            return insertion_swap_case(s, pd_index, quot, rem, res_qr);
+        }
+
+        /** PD did not change!
+         * Element is bigger then pd's biggest_element
+         * */
+
+        assert(pd_name::pd_full(&pd_array[pd_index]));
+        insert_to_spare_without_pop(pd_index, spare_quot, rem);
+        // Level2_Log->Add(pd_index, quot, rem);
+        // assert(Level2_Log->Find(pd_index, quot, rem));
+        // assert(!Level2_Log->using_flipped_quot);
+
+        uint64_t spare_val = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | qr;
+        assert((res_qr & spare_val) == res_qr);
+        spare_filter->Add(spare_val);
+        assert(spare_filter->Find(spare_val));
+
+        assert(lookup_naive(s, Yes));
+        // assert(lookup_l2_safe(s, Yes));
+    }
+
+    inline void insert_into_full_pd_helper(const itemType s, const uint32_t pd_index, const uint32_t out2) {
+//        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         assert(pd_name::pd_full(&pd_array[pd_index]));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
         const int64_t quot = qr >> bits_per_item;

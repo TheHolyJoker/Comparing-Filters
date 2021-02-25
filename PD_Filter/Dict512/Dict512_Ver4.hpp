@@ -13,6 +13,9 @@
 #define DICT512_VER4_DB1 (true)
 #define DICT512_VER4_DB2 (true & DICT512_VER4_DB1)
 #define DICT512_VER4_DB3 (true & DICT512_VER4_DB2)
+
+#define DICT512_VER4_NO_SPARE (true)
+
 // #define DICT512_VER4_SF_BITS (16)
 // #define DICT512_VER4_SF_MASK (MASK(DICT512_VER4_SF_BITS))
 
@@ -202,12 +205,12 @@ public:
     }
 
 
-    inline auto lookup_minimal(const itemType s) const -> bool {
+    inline auto lookup_minimal(itemType s) const -> bool {
         uint64_t hash_res = Hasher(s);
         uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
-        const int64_t quot = qr >> 8;
+        const int64_t quot = qr >> 8u;
         const uint8_t rem = qr;
         // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
         // const uint8_t rem = out2 & MASK(bits_per_item);
@@ -217,6 +220,26 @@ public:
         // return pd512_plus::pd_find_50_v21(quot, rem, &pd_array[pd_index]);
         // return pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
     }
+
+    inline auto lookup_low_load(itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);
+        const int64_t quot = qr >> 8u;
+        const uint8_t rem = qr;
+        // const uint64_t quot = reduce32((uint32_t) out2, (uint32_t) quot_range);
+        // const uint8_t rem = out2 & MASK(bits_per_item);
+        // const uint64_t spare_element = ((uint64_t) pd_index << (quotient_length + bits_per_item)) | (quot << bits_per_item) | rem;
+        const bool a = pd512_plus::pd_find_50_v18(quot, rem, &pd_array[pd_index]);
+        const bool b = (pd512_plus::did_pd_overflowed(&pd_array[pd_index]) && pd512_plus::cmp_qr_smart(qr,&pd_array[pd_index]));
+        // return b || a;
+        return a || b;
+        // return pd512_plus::pd_find_50_v18(quot, rem, &pd_array[pd_index]);
+        // return pd512_plus::pd_find_50_v21(quot, rem, &pd_array[pd_index]);
+        // return pd512_plus::pd_find_50(quot, rem, &pd_array[pd_index]);
+    }
+
 
     auto lookup_count(const itemType s, int caser = 0) -> bool {
         static size_t l1_lookups[2] = {0, 0};
@@ -325,6 +348,9 @@ public:
 
         constexpr uint64_t Mask15 = 1ULL << 15;
         const uint64_t res_qr = pd512_plus::pd_conditional_add_50(quot, rem, &pd_array[pd_index]);
+        if (DICT512_VER4_NO_SPARE){
+            return;
+        }
         const uint64_t temp_qr = (quot << 8u) | ((uint64_t) rem);
         // const uint64_t pd_last_qr = pd512_plus::get_last_qr_in_pd(&pd_array[pd_index]);
 

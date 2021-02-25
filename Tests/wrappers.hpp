@@ -6,16 +6,17 @@
 #define FILTERS_WRAPPERS_HPP
 
 #include <climits>
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
-#include <random>
-#include <stdexcept>
-#include <cstdio>
-#include <vector>
 #include <map>
+#include <random>
 #include <set>
+#include <stdexcept>
+#include <vector>
 
 #include "../cuckoofilter/src/cuckoofilter.h"
+#include "../cuckoofilter/src/ts_cuckoofilter.h"
 #include "Dict320/Dict320.hpp"
 // #include "Dict320/Dict320_v2.hpp"
 #include "Dict320/Dict256_Ver4.hpp"
@@ -29,6 +30,7 @@
 // #include "Dict512/Dict512_Ver2.hpp"
 #include "Dict512/Dict512_Ver3.hpp"
 #include "Dict512/Dict512_Ver4.hpp"
+#include "Dict512/DictApx512.hpp"
 #include "Fixed_PD/Fixed_Dict.hpp"
 #include "Fixed_PD/Fixed_Dict_Ver2.hpp"
 // #include "Dict512/Dict512_With_CF.hpp"
@@ -50,11 +52,13 @@
 //#include "../xorfilter/xorfilter_singleheader.h"
 //#include "../xorfilter/xor_fuse_filter.h"
 
+
 #define CONTAIN_ATTRIBUTES __attribute__((noinline))
 
 enum filter_id {
     BF,
     CF,
+    TS_CF,
     CF_ss,
     MF,
     SIMD,
@@ -70,6 +74,7 @@ enum filter_id {
     d256_ver5,
     d256_ver6,
     d256_ver7,
+    D_APX_512,
     d256_ver6_db,
     att_d512_id,
     fixed_dict_id,
@@ -203,9 +208,9 @@ struct FilterAPI<Fixed_Dict<spareItemType, itemType>> {
     // Todo return const here:
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
-// #ifdef COUNT
-//         return table->lookup_count(key);
-// #endif// COUNT \
+        // #ifdef COUNT
+        //         return table->lookup_count(key);
+        // #endif// COUNT \
 
         return table->lookup(key);
         // return table->lookup_count(key);
@@ -227,10 +232,10 @@ struct FilterAPI<Fixed_Dict<spareItemType, itemType>> {
      * 4 is for deletions.
      */
     static auto get_functionality(Table *table) -> uint32_t {
-// #ifdef COUNT
-//         table->lookup_count(0, 2);
-//         table->lookup_count(0, 1);
-// #endif// COUNT \
+        // #ifdef COUNT
+        //         table->lookup_count(0, 2);
+        //         table->lookup_count(0, 1);
+        // #endif// COUNT \
 
         return 3;
     }
@@ -397,7 +402,7 @@ struct FilterAPI<Dict512_Ver4<TableType, spareItemType, itemType, HashFamily>> {
     using Table = Dict512_Ver4<TableType, spareItemType, itemType, HashFamily>;
 
     static Table ConstructFromAddCount(size_t add_count) {
-        return Table(add_count, .95 * .9, .5);
+        return Table(add_count, 1.0 * 41 / 51, .5);
     }
 
     static void Add(itemType key, Table *table) {
@@ -425,7 +430,9 @@ struct FilterAPI<Dict512_Ver4<TableType, spareItemType, itemType, HashFamily>> {
     // Todo return const here:
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
-        return table->lookup(key);
+        return table->lookup_low_load(key);
+        // return table->lookup_minimal(key);
+        // return table->lookup(key);
         // return table->lookup_count(key);
         // return table->lookup_minimal(key);
     }
@@ -746,7 +753,6 @@ struct FilterAPI<Dict256_Ver6_DB<itemType>> {
     // static auto generic_function(itemType key, Table *table) -> filter_id {
     //     return d256_ver6_db;
     // }
-    
 };
 
 
@@ -844,7 +850,6 @@ struct FilterAPI<Dict256_Ver7<itemType>> {
         return 0;
     }
 };
-
 
 
 template<typename itemType>
@@ -965,6 +970,182 @@ struct FilterAPI<SimdBlockFilter<>> {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename ItemType, size_t bits_per_item, template<size_t> class TableType, typename HashFamily>
+struct FilterAPI<ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>> {
+    using Table = ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        return Table(add_count);
+    }
+
+    static void Add(uint64_t key, Table *table) {
+        if (table->Add(key) != cuckoofilter::Ok) {
+            std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
+            get_info(table);
+
+            throw logic_error("The filter is too small to hold all of the elements");
+        }
+    }
+
+    static void AddAll(const vector<ItemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            if (table->Add(keys[i]) != ts_cuckoofilter::Ok) {
+                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
+                get_info(table);
+
+                throw logic_error("The filter is too small to hold all of the elements");
+            }
+        }
+    }
+
+    static void AddAll(const std::vector<ItemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            if (table->Add(keys[i]) != cuckoofilter::Ok) {
+                std::cerr << "Cuckoo filter is too full. Inertion of the element (" << keys[i] << ") failed.\n";
+                // std::cerr << "Load before insertion is: " << ;
+                get_info(table);
+
+                throw logic_error("The filter is too small to hold all of the elements");
+            }
+        }
+        //        table->AddAll(keys, 0, keys.size());
+    }
+
+    static void Remove(uint64_t key, Table *table) {
+        table->Delete(key);
+    }
+
+    CONTAIN_ATTRIBUTES static bool Contain(uint64_t key, const Table *table) {
+        return (0 == table->Contain(key));
+    }
+
+    static string get_name(Table *table) {
+        auto ss = table->Info();
+        std::string temp = "PackedHashtable";
+        if (ss.find(temp) != std::string::npos) {
+            return "TS_CF-ss";
+        }
+        return "TS_Cuckoo";
+    }
+
+    static auto get_info(const Table *table) -> std::stringstream {
+        std::string state = table->Info();
+        std::stringstream ss;
+        ss << state;
+        return ss;
+        // std::cout << state << std::endl;
+    }
+
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+
+    static auto get_ID(Table *table) -> filter_id {
+        return TS_CF;
+    }
+};
+
+
+template<
+        typename itemType>
+struct FilterAPI<DictApx512<itemType>> {
+    using Table = DictApx512<itemType>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        // constexpr float load = .93;
+        // if (load < .95)
+        //     std::cout << "Lower workload" << std::endl;
+        return Table(add_count, 1.0);
+    }
+
+    static void Add(itemType key, Table *table) {
+        table->insert(key);
+    }
+
+    static void AddAll(const std::vector<itemType> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<itemType> keys, Table *table) {
+        for (int i = 0; i < keys.size(); ++i) {
+            table->insert(keys[i]);
+        }
+    }
+
+    static void Remove(itemType key, Table *table) {
+        table->remove(key);
+    }
+
+    // Todo return const here:
+    // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
+    CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
+#ifdef COUNT
+        return table->lookup_count(key);
+#endif// COUNT 
+
+        return table->lookup(key);
+    }
+
+    static string get_name(Table *table) {
+        return table->get_name();
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        assert(0);
+        return table->get_extended_info();
+    }
+
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+#ifdef COUNT
+        table->lookup_count(0, 2);
+        table->lookup_count(0, 1);
+#endif// COUNT \
+
+        return 7;
+    }
+
+    static auto get_ID(Table *table) -> filter_id {
+        return D_APX_512;
+    }
+
+    static int generic_function(itemType key, Table *table, int op_index) {
+        if (op_index == 1) {
+            static int c = 0;
+            c++;
+            item_key_t itemKey = table->get_hash_res_as_key(key);
+            if (itemKey.pd_index == 4245) {
+                std::cout << "counter: " << c << std::endl;
+                std::cout << "itemKey: " << itemKey << std::endl;
+            }
+
+            return 42;
+        }
+        item_key_t itemKey = table->get_hash_res_as_key(key);
+        std::cout << "itemKey: " << itemKey << std::endl;
+        return 42;
+        if (itemKey.pd_index == 3216) {
+            return 1;
+        }
+        return 0;
+    }
+};
+
+
 #endif//FILTERS_WRAPPERS_HPP
 
 
@@ -1025,7 +1206,6 @@ struct FilterAPI<SimdBlockFilter<>> {
 //         return d512_WCF;
 //     }
 // };
-
 
 
 // template<typename itemType>

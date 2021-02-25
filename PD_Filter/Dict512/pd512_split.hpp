@@ -3,8 +3,8 @@
  * https://github.com/jbapple/crate-dictionary
  * */
 
-#ifndef FILTERS_PD512_HPP
-#define FILTERS_PD512_HPP
+#ifndef FILTERS_PD512_SPLIT_HPP
+#define FILTERS_PD512_SPLIT_HPP
 
 #include <assert.h>
 #include <limits.h>
@@ -1517,6 +1517,7 @@ namespace pd512 {
     }
 
 
+
     inline uint8_t get_last_quot_in_pd_naive_bf(const __m512i *pd) {
         /* This is complete garbage */
         assert(0);
@@ -1528,6 +1529,7 @@ namespace pd512 {
     inline uint8_t get_last_quot_in_pd_super_naive(const __m512i *pd) {
         return count_ones_up_to_the_kth_zero(pd);
     }
+    
     inline uint8_t get_last_quot_in_pd_naive(const __m512i *pd) {
         constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
@@ -1569,7 +1571,6 @@ namespace pd512 {
         const uint64_t rem = _mm_extract_epi8(_mm512_extracti64x2_epi64(*pd, imm1), imm2);
         return (quot << 8ul) | rem;
     }
-
 
     inline uint64_t pd_add_50_Wed(int64_t quot, char rem, __m512i *pd) {
         assert(quot < 50);
@@ -2153,7 +2154,7 @@ namespace pd512 {
 }// namespace pd512
 
 
-#endif// FILTERS_PD512_HPP
+#endif// FILTERS_PD512_SPLIT_HPP
 
 
 auto my_equal(__m512i x, __m512i y) -> bool;

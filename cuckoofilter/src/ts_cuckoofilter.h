@@ -1,5 +1,5 @@
-#ifndef CUCKOO_FILTER_CUCKOO_FILTER_H_
-#define CUCKOO_FILTER_CUCKOO_FILTER_H_
+#ifndef CUCKOO_FILTER_TS_CUCKOO_FILTER_H_
+#define CUCKOO_FILTER_TS_CUCKOO_FILTER_H_
 
 #include <assert.h>
 #include <algorithm>
@@ -10,7 +10,7 @@
 #include "printutil.h"
 #include "singletable.h"
 
-namespace cuckoofilter {
+namespace ts_cuckoofilter {
 // status returned by a cuckoo filter operation
 enum Status {
   Ok = 0,
@@ -30,9 +30,9 @@ const size_t kMaxCuckooCount = 500;
 //   TableType: the storage of table, SingleTable by default, and
 // PackedTable to enable semi-sorting
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType = SingleTable,
-          typename HashFamily = TwoIndependentMultiplyShift>
-class CuckooFilter {
+          template <size_t> class TableType = cuckoofilter::SingleTable,
+          typename HashFamily = cuckoofilter::TwoIndependentMultiplyShift>
+class ts_CuckooFilter {
   // Storage of items
   TableType<bits_per_item> *table_;
 
@@ -80,15 +80,8 @@ class CuckooFilter {
 
   Status AddImpl(const size_t i, const uint32_t tag);
 
-  /**
-   * @brief
-   *
-   * @param i
-   * @param tag
-   * @return Status
-   */
-  Status AddImplWithFN(const size_t i, const uint32_t tag,
-                       const size_t var_kMaxCuckooCount);
+  Status AddImpl_with_fn(const size_t i, const uint32_t tag,
+                         const size_t var_kMaxCuckooCount = 16);
 
   // load factor is the fraction of occupancy
   double LoadFactor() const { return 1.0 * Size() / table_->SizeInTags(); }
@@ -96,11 +89,11 @@ class CuckooFilter {
   double BitsPerItem() const { return 8.0 * table_->SizeInBytes() / Size(); }
 
  public:
-  explicit CuckooFilter(const size_t max_num_keys)
+  explicit ts_CuckooFilter(const size_t max_num_keys)
       : num_items_(0), victim_(), hasher_() {
     size_t assoc = 4;
     size_t num_buckets =
-        upperpower2(std::max<uint64_t>(1, max_num_keys / assoc));
+        cuckoofilter::upperpower2(std::max<uint64_t>(1, max_num_keys / assoc));
     double frac = (double)max_num_keys / num_buckets / assoc;
     if (frac > 0.96) {
       std::cout << "CF might fail." << std::endl;
@@ -113,16 +106,13 @@ class CuckooFilter {
     // std::cout << __LINE__ << std::endl;
   }
 
-  ~CuckooFilter() {
+  ~ts_CuckooFilter() {
     std::cout << "Byte size is: " << SizeInBytes() << std::endl;
     delete table_;
   }
 
   // Add an item to the filter.
   Status Add(const ItemType &item);
-
-  // Add an item to the filter.
-  Status AddWithFN(const ItemType &item, const size_t var_kMaxCuckooCount = 16);
 
   // Report if the item is inserted, with false positive rate.
   Status Contain(const ItemType &item) const;
@@ -143,43 +133,17 @@ class CuckooFilter {
 
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType, typename HashFamily>
-Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Add(
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Add(
     const ItemType &item) {
   size_t i;
   uint32_t tag;
-
-  if (victim_.used) {
-    std::cout << std::string(80, '=') << std::endl;
-    if (Contain(item) == Ok) {
-      std::cout << "Item was already in the set." << std::endl;
-    } else {
-      std::cout << "Item was not already in the set." << std::endl;
-    }
-    std::cout << "Info: ";
-    std::cout << Info();
-    std::cout << std::string(80, '=') << std::endl;
-    return NotEnoughSpace;
-  }
-
   GenerateIndexTagHash(item, &i, &tag);
-  return AddImpl(i, tag);
+  return AddImpl_with_fn(i, tag);
 }
 
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType, typename HashFamily>
-Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddWithFN(
-    const ItemType &item, const size_t var_kMaxCuckooCount) {
-  size_t i;
-  uint32_t tag;
-
-  GenerateIndexTagHash(item, &i, &tag);
-  return AddImpl(i, tag);
-}
-
-
-template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImpl(
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImpl(
     const size_t i, const uint32_t tag) {
   size_t curindex = i;
   uint32_t curtag = tag;
@@ -207,13 +171,14 @@ Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImpl(
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType, typename HashFamily>
 Status
-CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImplWithFN(
-    const size_t i, const uint32_t tag, const size_t var_kMaxCuckooCount) {
+ts_CuckooFilter<ItemType, bits_per_item, TableType,
+                HashFamily>::AddImpl_with_fn(const size_t i, const uint32_t tag,
+                                             const size_t var_kMaxCuckooCount) {
   size_t curindex = i;
   uint32_t curtag = tag;
   uint32_t oldtag;
 
-  for (uint32_t count = 0; count < kMaxCuckooCount; count++) {
+  for (uint32_t count = 0; count < var_kMaxCuckooCount; count++) {
     bool kickout = count > 0;
     oldtag = 0;
     if (table_->InsertTagToBucket(curindex, curtag, kickout, oldtag)) {
@@ -225,12 +190,16 @@ CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImplWithFN(
     }
     curindex = AltIndex(curindex, curtag);
   }
+
+  // victim_.index = curindex;
+  // victim_.tag = curtag;
+  // victim_.used = true;
   return Ok;
 }
 
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType, typename HashFamily>
-Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Contain(
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Contain(
     const ItemType &key) const {
   bool found = false;
   size_t i1, i2;
@@ -253,7 +222,7 @@ Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Contain(
 
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType, typename HashFamily>
-Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Delete(
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Delete(
     const ItemType &key) {
   size_t i1, i2;
   uint32_t tag;
@@ -263,34 +232,35 @@ Status CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Delete(
 
   if (table_->DeleteTagFromBucket(i1, tag)) {
     num_items_--;
-    goto TryEliminateVictim;
+    return Ok;
   } else if (table_->DeleteTagFromBucket(i2, tag)) {
     num_items_--;
-    goto TryEliminateVictim;
-  } else if (victim_.used && tag == victim_.tag &&
-             (i1 == victim_.index || i2 == victim_.index)) {
-    // num_items_--;
-    victim_.used = false;
     return Ok;
-  } else {
+  }  //  else if (victim_.used && tag == victim_.tag &&
+  //            (i1 == victim_.index || i2 == victim_.index)) {
+  //   // num_items_--;
+  //   victim_.used = false;
+  //   return Ok;
+  // }
+  else {
     return NotFound;
   }
-TryEliminateVictim:
-  if (victim_.used) {
-    victim_.used = false;
-    size_t i = victim_.index;
-    uint32_t tag = victim_.tag;
-    AddImpl(i, tag);
-  }
-  return Ok;
+  // TryEliminateVictim:
+  //   if (victim_.used) {
+  //     victim_.used = false;
+  //     size_t i = victim_.index;
+  //     uint32_t tag = victim_.tag;
+  //     AddImpl(i, tag);
+  //   }
+  //   return Ok;
 }
 
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType, typename HashFamily>
-std::string CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Info()
-    const {
+std::string
+ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Info() const {
   std::stringstream ss;
-  ss << "CuckooFilter Status:\n"
+  ss << "ts_CuckooFilter Status:\n"
      << "\t\t" << table_->Info() << "\n"
      << "\t\tKeys stored: " << Size() << "\n"
      << "\t\tLoad factor: " << LoadFactor() << "\n"
@@ -302,5 +272,5 @@ std::string CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Info()
   }
   return ss.str();
 }
-}  // namespace cuckoofilter
-#endif  // CUCKOO_FILTER_CUCKOO_FILTER_H_
+}  // namespace ts_cuckoofilter
+#endif  // CUCKOO_FILTER_TS_CUCKOO_FILTER_H_

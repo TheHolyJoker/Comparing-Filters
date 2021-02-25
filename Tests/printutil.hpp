@@ -25,7 +25,7 @@ using namespace std;
 //static const size_t default_line_width = 116;
 static const size_t default_line_width = 160;
 
-auto print_name(const std::string &filter_name, size_t line_width = default_line_width) ->std::stringstream;
+auto print_name(const std::string &filter_name, size_t line_width = default_line_width) -> std::stringstream;
 
 // void table_print(size_t var_num, string *var_names, size_t *values, std::stringstream* os);
 
@@ -35,28 +35,28 @@ void table_print_rates(size_t var_num, string *var_names, size_t *values, size_t
 
 void print_seperating_line();
 
-auto print_round_header() ->std::stringstream;
+auto print_round_header() -> std::stringstream;
 
-auto print_single_round(size_t var_num, const size_t *values, const size_t *divisors, size_t width= DEFAULT_WIDTH) ->std::stringstream ;
+auto print_single_round(size_t var_num, const size_t *values, const size_t *divisors, size_t width = DEFAULT_WIDTH) -> std::stringstream;
 // void print_single_round(size_t var_num, const size_t *values, const size_t *divisors, std::stringstream *ss, std::size_t width = DEFAULT_WIDTH);
 
 void table_print_false_positive_rates(size_t expected_FP_count, size_t high_load_FP_count, size_t mid_load_FP_count);
 
 auto att_print_single_round_false_positive_rates(size_t lookups_repetitions, size_t bits_per_item,
-                                                 size_t false_positive_counter, size_t true_positive_counter) ->std::stringstream;
+                                                 size_t false_positive_counter, size_t true_positive_counter) -> std::stringstream;
 
-auto print_false_positive_rates_header(size_t width = 12)->std::stringstream;
+auto print_false_positive_rates_header(size_t width = 12) -> std::stringstream;
 
 
 auto print_single_round_false_positive_rates(size_t lookups_repetitions, size_t expected_false_positive,
-                                             size_t true_positive_counter, size_t false_positive_counter) ->std::stringstream ;
+                                             size_t true_positive_counter, size_t false_positive_counter) -> std::stringstream;
 
 auto print_single_round_false_positive_rates_probabilistic(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
                                                            size_t true_counter, size_t false_counter, bool is_last_line) -> std::stringstream;
 
 
 auto print_single_round_false_positive_rates(std::string filter_name, size_t lookups_repetitions, size_t expected_false_positive,
-                                             size_t true_positive_counter, size_t false_positive_counter, bool is_last_line = false)-> std::stringstream;
+                                             size_t true_positive_counter, size_t false_positive_counter, bool is_last_line = false) -> std::stringstream;
 
 // template<typename val_type>
 // void table_print(size_t var_num, string *var_names, val_type *values) {
@@ -64,7 +64,7 @@ auto print_single_round_false_positive_rates(std::string filter_name, size_t loo
 //     for (int i = 0; i < var_num; ++i) {
 //         max_length = max(var_names[i].length(), max_length);
 //     }
-// 
+//
 //     // values for controlling format
 //     const uint32_t name_width = int(max_length);
 //     const std::string sep = " |";
@@ -72,7 +72,7 @@ auto print_single_round_false_positive_rates(std::string filter_name, size_t loo
 //     const std::string line = sep + std::string(total_width - 1, '-') + '|';
 //     std::cout << line << '\n'
 //               << sep << left;
-// 
+//
 //     size_t counter = 0;
 //     while (counter < var_num - 1) {
 //         cout << std::setw(name_width) << var_names[counter++] << sep;
@@ -80,7 +80,7 @@ auto print_single_round_false_positive_rates(std::string filter_name, size_t loo
 //     cout << std::setw(name_width - 1) << var_names[counter] << sep;
 //     cout << '\n'
 //          << line << '\n' + sep;
-// 
+//
 //     counter = 0;
 //     while (counter < var_num - 1) {
 //         cout << std::setw(name_width) << values[counter++] << sep;
@@ -91,7 +91,7 @@ auto print_single_round_false_positive_rates(std::string filter_name, size_t loo
 // }
 
 template<typename val_type>
-void table_print(size_t var_num, string *var_names, val_type *values, std::stringstream* os) {
+void table_print(size_t var_num, string *var_names, val_type *values, std::stringstream *os) {
     size_t max_length = 16;
     for (int i = 0; i < var_num; ++i) {
         max_length = max(var_names[i].length(), max_length);
@@ -103,7 +103,7 @@ void table_print(size_t var_num, string *var_names, val_type *values, std::strin
     const int total_width = default_line_width;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
     *os << line << '\n'
-              << sep << left;
+        << sep << left;
 
     size_t counter = 0;
     while (counter < var_num - 1) {
@@ -111,7 +111,7 @@ void table_print(size_t var_num, string *var_names, val_type *values, std::strin
     }
     *os << std::setw(name_width - 1) << var_names[counter] << sep;
     *os << '\n'
-         << line << '\n' + sep;
+        << line << '\n' + sep;
 
     counter = 0;
     while (counter < var_num - 1) {
@@ -119,11 +119,11 @@ void table_print(size_t var_num, string *var_names, val_type *values, std::strin
     }
     *os << std::setw(name_width - 1) << values[counter] << sep;
     *os << '\n'
-         << line << '\n';
+        << line << '\n';
 }
 
 template<typename val_type>
-auto table_print(size_t var_num, string *var_names, val_type *values)-> std::stringstream {
+auto table_print(size_t var_num, string *var_names, val_type *values) -> std::stringstream {
     std::stringstream ss;
     size_t max_length = 16;
     for (int i = 0; i < var_num; ++i) {
@@ -136,7 +136,7 @@ auto table_print(size_t var_num, string *var_names, val_type *values)-> std::str
     const int total_width = default_line_width;
     const std::string line = sep + std::string(total_width - 1, '-') + '|';
     ss << line << '\n'
-              << sep << left;
+       << sep << left;
 
     size_t counter = 0;
     while (counter < var_num - 1) {
@@ -144,7 +144,7 @@ auto table_print(size_t var_num, string *var_names, val_type *values)-> std::str
     }
     ss << std::setw(name_width - 1) << var_names[counter] << sep;
     ss << '\n'
-         << line << '\n' + sep;
+       << line << '\n' + sep;
 
     counter = 0;
     while (counter < var_num - 1) {
@@ -152,7 +152,7 @@ auto table_print(size_t var_num, string *var_names, val_type *values)-> std::str
     }
     ss << std::setw(name_width - 1) << values[counter] << sep;
     ss << '\n'
-         << line << '\n';
+       << line << '\n';
     return ss;
 }
 
@@ -245,6 +245,22 @@ void print_line(T *vals, size_t num, size_t width, bool is_last_line) {
     if (is_last_round)
         std::cout << line << '\n';
 */
+}
+
+template<typename T>
+auto print_array_normalized_vertical(T *a, size_t a_size, size_t normalizer_val, std::string header = "", std::ostream &os = std::cout) -> std::ostream & {
+    auto line = std::string(40, '=');
+    os << line << std::endl;
+    auto mid_line = std::string(40, '-');
+    if (header.size()) {
+        os << header << std::endl;
+        os << mid_line << std::endl;
+    }
+    for (size_t i = 0; i < a_size; i++) {
+        os << i << ":\t" << (1.0 * a[i] / normalizer_val) << std::endl;
+    }
+    os << line << std::endl;
+    return os;
 }
 
 #endif//FILTERS_PRINTUTIL_HPP

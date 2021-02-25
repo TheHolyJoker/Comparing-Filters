@@ -1007,8 +1007,10 @@ namespace pd512_plus {
 
         if (!v) return false;
 
-        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
-        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        // const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        // const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        const uint64_t h0 = ((uint64_t *)pd)[0];
+        const uint64_t h1 = ((uint64_t *)pd)[1];
         if (_blsr_u64(v) == 0) {
             if (v << quot) {
                 // const unsigned __int128 *h = (const unsigned __int128 *) pd;
@@ -3155,3 +3157,4 @@ namespace pd512_plus {
 
 //     return count_ones_up_to_the_kth_zero(pd);
 // }
+    

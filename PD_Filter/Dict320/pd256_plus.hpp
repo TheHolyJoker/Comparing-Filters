@@ -290,6 +290,8 @@ static constexpr uint8_t Table3_8[256] =
 
 namespace v_pd256_plus {
 
+    bool vec_equal(__m256i a, __m256i b);
+
     void p_format_header(const __m256i *pd);
 
     void p_format_header(uint64_t header);
@@ -333,6 +335,51 @@ namespace v_pd256_plus {
     auto test_bit(size_t index, const __m256i *pd) -> bool;
 
     void print_hlb(const __m256i *pd);
+
+    bool v_pd_add_25_core_vec(int64_t quot, uint8_t rem, __m256i *pd, bool do_nothing = true);
+
+    void show_vectors_diffs(__m256i a, __m256i b);
+
+    template<typename T>
+    void print_array(T *a, size_t size) {
+        assert(size);
+        std::cout << "[" << a[0];
+        for (size_t i = 1; i < size; i++) {
+            std::cout << ", " << a[i];
+        }
+        std::cout << "]" << std::endl;
+    }
+
+    void print_array(uint8_t *a, size_t size);
+
+
+    template<typename vecSize>
+    void print_vec(size_t size, const vecSize *v) {
+        const size_t bit_size = sizeof(*v) * CHAR_BIT;
+        const size_t a_size = bit_size / size;
+        if (size == 64) {
+            uint64_t val[a_size];
+            memcpy(val, v, sizeof(*v));
+            print_array(val, a_size);
+        } else if (size == 32) {
+            uint32_t val[a_size];
+            memcpy(val, v, sizeof(*v));
+            print_array(val, a_size);
+        } else if (size == 16) {
+            uint16_t val[a_size];
+            memcpy(val, v, sizeof(*v));
+            print_array(val, a_size);
+        } else if (size == 8) {
+            uint8_t val[a_size];
+            memcpy(val, v, sizeof(*v));
+            print_array(val, a_size);
+        } else {
+            std::cout << "size is: " << size << std::endl;
+            assert(0);
+        }
+    }
+
+
 }// namespace v_pd256_plus
 
 namespace pd256_plus {
@@ -1458,6 +1505,11 @@ namespace pd256_plus {
         //   return (hfb & 32) && (((hfb & 31) << 8ul) | get_last_byte(pd)) < qr;
     }
 
+    inline bool cmp_qr3(uint16_t qr, const __m256i *pd) {
+        const uint8_t *ppd = (uint8_t *) pd;
+        return qr < (((ppd[0] & 63) << 6u) | ppd[31]);
+    }
+
     inline pd_Status pd_find0(int64_t quot, uint8_t rem, const __m256i *pd) {
         if (pd_find_25(quot, rem, pd))
             return Yes;
@@ -1703,17 +1755,15 @@ namespace pd256_plus {
         assert(validate_number_of_quotient(pd));
     }
 
+    
     /**
-     * @brief 
-     * This function is "private" i.e should not be called before saving relevant data. 
-     * If the pd is full, som data will be lost.
-     * This function updates last quot, but does not updates the overflow bit.
+     * @brief Only for validation (to solve a recursive call to the validation function.)
      * 
      * @param quot 
      * @param rem 
      * @param pd 
      */
-    inline void pd_add_25_core(int64_t quot, uint8_t rem, __m256i *pd) {
+    inline void pd_add_25_core_core(int64_t quot, uint8_t rem, __m256i *pd) {
         constexpr unsigned kBytes2copy = 7;
         const uint64_t header = get_clean_header(pd);
 
@@ -1746,6 +1796,109 @@ namespace pd256_plus {
         ((uint8_t *) pd)[kBytes2copy + i] = rem;
         assert(validate_number_of_quotient(pd));
     }
+
+    /**
+     * @brief Taken from stackoverflow: https://stackoverflow.com/a/20827433/5381404
+     * Shift 'a' 8 bits left.
+     * @param a 
+     * @return __m256i 
+     */
+    inline __m256i shift_left(__m256i a) {
+        __m256i mask = _mm256_permute2x128_si256(a, a, _MM_SHUFFLE(0, 0, 3, 0));
+        return _mm256_alignr_epi8(a, mask, 15);
+    }
+    inline void pd_add_25_core_vec(int64_t quot, uint8_t rem, __m256i *pd) {
+        constexpr unsigned kBytes2copy = 7;
+        const uint64_t header = get_clean_header(pd);
+
+        const uint64_t begin = quot ? (select64(header, quot - 1) + 1) : 0;
+        const uint64_t end = select64(header, quot);
+        assert(begin <= end);
+        assert(end <= CAPACITY25 + QUOT_SIZE25);
+
+        const __m256i target = _mm256_set1_epi8(rem);
+        assert(validate_number_of_quotient(pd));
+        write_header(begin, end, quot, pd);
+        assert(validate_number_of_quotient(pd));
+
+        __m256i pd_start = *pd;
+        const __m256i shifted_pd = shift_left(*pd);
+
+        const uint64_t begin_fingerprint = begin - quot;
+        const uint64_t end_fingerprint = end - quot;
+        assert(begin_fingerprint <= end_fingerprint);
+        assert(end_fingerprint <= 51);
+
+        uint64_t i = begin_fingerprint;
+        for (; i < end_fingerprint; ++i) {
+            if (rem <= ((const uint8_t *) pd)[kBytes2copy + i]) break;
+        }
+        ((uint8_t *) &pd_start)[kBytes2copy + i] = rem;
+        const uint32_t mask = ~MSK(kBytes2copy + i + 1);
+        const __mmask32 blend_mask = mask;
+
+        assert((i == end_fingerprint) ||
+               (rem <= ((const uint8_t *) pd)[kBytes2copy + i]));
+
+        assert(validate_number_of_quotient(pd));
+        *pd = _mm256_mask_blend_epi8(blend_mask, pd_start, shifted_pd);
+
+        // memmove(&((uint8_t *) pd)[kBytes2copy + i + 1],
+        //         &((const uint8_t *) pd)[kBytes2copy + i],
+        //         sizeof(*pd) - (kBytes2copy + i + 1));
+        // In previous versions, changed 1 to 2, Because the last byte contained something when the pd is not full
+        // ((uint8_t *) pd)[kBytes2copy + i] = rem;
+        // assert(validate_number_of_quotient(pd));
+    }
+
+    /**
+     * @brief 
+     * This function is "private" i.e should not be called before saving relevant data. 
+     * If the pd is full, some data will be lost.
+     * This function updates last quot, but does not updates the overflow bit.
+     * 
+     * @param quot 
+     * @param rem 
+     * @param pd 
+     */
+    inline void pd_add_25_core(int64_t quot, uint8_t rem, __m256i *pd) {
+        // pd_add_25_core_vec(quot, rem, pd);
+        // return;
+        // static bool should_validate = true;
+//        assert(v_pd256_plus::v_pd_add_25_core_vec(quot, rem, pd, false));
+        constexpr unsigned kBytes2copy = 7;
+        const uint64_t header = get_clean_header(pd);
+
+        const uint64_t begin = quot ? (select64(header, quot - 1) + 1) : 0;
+        const uint64_t end = select64(header, quot);
+        assert(begin <= end);
+        assert(end <= CAPACITY25 + QUOT_SIZE25);
+        // const __m256i target = _mm256_set1_epi8(rem);
+        assert(validate_number_of_quotient(pd));
+        write_header(begin, end, quot, pd);
+        assert(validate_number_of_quotient(pd));
+
+        const uint64_t begin_fingerprint = begin - quot;
+        const uint64_t end_fingerprint = end - quot;
+        assert(begin_fingerprint <= end_fingerprint);
+        assert(end_fingerprint <= 51);
+
+        uint64_t i = begin_fingerprint;
+        for (; i < end_fingerprint; ++i) {
+            if (rem <= ((const uint8_t *) pd)[kBytes2copy + i]) break;
+        }
+        assert((i == end_fingerprint) ||
+               (rem <= ((const uint8_t *) pd)[kBytes2copy + i]));
+
+        assert(validate_number_of_quotient(pd));
+        memmove(&((uint8_t *) pd)[kBytes2copy + i + 1],
+                &((const uint8_t *) pd)[kBytes2copy + i],
+                sizeof(*pd) - (kBytes2copy + i + 1));
+        // In previous versions, changed 1 to 2, Because the last byte contained something when the pd is not full
+        ((uint8_t *) pd)[kBytes2copy + i] = rem;
+        assert(validate_number_of_quotient(pd));
+    }
+
 
     inline void pd_add_50_not_full_after(int64_t quot, uint8_t rem, __m256i *pd) {
         assert(quot < QUOT_SIZE25);

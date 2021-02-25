@@ -6,6 +6,11 @@
 #include "pd256_plus.hpp"
 
 namespace v_pd256_plus {
+    bool vec_equal(__m256i a, __m256i b) {
+        __m256i pcmp = _mm256_cmpeq_epi32(a, b);// epi8 is fine too
+        unsigned bitmask = _mm256_movemask_epi8(pcmp);
+        return (bitmask == 0xffffffffU);
+    }
 
     void p_format_header(const __m256i *pd) {
         uint64_t header = pd256_plus::get_header(pd);
@@ -221,6 +226,53 @@ namespace v_pd256_plus {
         std::cout << "h0: " << bin_print_header_spaced2(h0) << std::endl;
         std::cout << "h1: " << bin_print_header_spaced2(h1) << std::endl;
     }
+
+    void print_array(uint8_t *a, size_t size) {
+        assert(size);
+        std::cout << "[" << ((uint16_t) a[0]);
+        ;
+        for (size_t i = 1; i < size; i++) {
+            std::cout << ", " << ((uint16_t) a[i]);
+        }
+        std::cout << "]" << std::endl;
+    }
+
+
+    bool v_pd_add_25_core_vec(int64_t quot, uint8_t rem, __m256i *pd, bool do_nothing) {
+        if (do_nothing)
+            return true;
+        __m256i before_pd = *pd;
+        __m256i valid_after_pd = *pd;
+        __m256i att_after_pd = *pd;
+        pd256_plus::pd_add_25_core_core(quot, rem, &valid_after_pd);
+        pd256_plus::pd_add_25_core_vec(quot, rem, &att_after_pd);
+
+        bool res = vec_equal(valid_after_pd, att_after_pd);
+        if (!res) {
+            // v_pd256_plus::p_format_header(pd);
+            std::cout << "before PD: ";
+            print_vec(8, pd);
+            std::cout << "after PD:  ";
+            print_vec(8, &valid_after_pd);
+            std::cout << "att PD:    ";
+            print_vec(8, &att_after_pd);
+            // std::cout << "v_res: " << v_res << std::endl;
+            // pd256_plus::print256(pd);
+            // std::cout << "t_counter: " << t_counter << std::endl;
+            assert(0);
+            // show_vectors_diffs(valid_after_pd, att_after_pd);
+        }
+        return res;
+    }
+
+    void show_vectors_diffs(__m256i a, __m256i b) {
+        assert(0);
+        // pd256_plus::print256(&a);
+        // pd256_plus::print256(&b);
+        // pd256_plus::print256(&);
+    }
+
+
 }// namespace v_pd256_plus
 
 namespace pd256_plus {
@@ -479,6 +531,7 @@ namespace pd256_plus {
         //        val[0], val[1], val[2], val[3], val[4], val[5],
         //        val[6], val[7]);
     }
+
 
     // auto validate_number_of_quotient(const __m256i *pd) -> bool {
     //     // std::cout << "h128: " << std::endl;

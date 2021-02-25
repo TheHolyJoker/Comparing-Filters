@@ -71,7 +71,10 @@ set(PROJECT_SOURCES
         PD_Filter/Dict512/pd512.cpp
         PD_Filter/Dict512/pd512_plus.hpp
         PD_Filter/Dict512/pd512_plus.cpp
+        PD_Filter/Dict512/ts_pd512.hpp
+        PD_Filter/Dict512/ts_pd512.cpp
         PD_Filter/Dict512/Dict512.hpp
+        PD_Filter/Dict512/DictApx512.hpp
         PD_Filter/Dict512/twoChoicer.hpp
         PD_Filter/Dict512/Dict512_With_CF.hpp
         PD_Filter/Dict512/Dict512_SparseSpare.hpp
@@ -111,6 +114,7 @@ set(SPEC_SOURCES
         PD_Filter/basic_function_util.h
         PD_Filter/basic_function_util.cpp
         hashutil.h
+        Tests/dict_approximation_tests.hpp
         Tests/minimal_tests.hpp
         Tests/wrappers.hpp
         Tests/tests.hpp
@@ -138,6 +142,13 @@ set(SPEC_SOURCES
 add_executable(Filters main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for Filters.
 target_compile_options(Filters PRIVATE -O3 -DNDEBUG)
+
+add_executable(set_apx_validate sa_main.cpp ${PROJECT_SOURCES})
+target_compile_options(set_apx_validate PRIVATE -O0 -g3)
+
+add_executable(set_apx_bench sa_main.cpp ${PROJECT_SOURCES})
+target_compile_options(set_apx_bench PRIVATE -O0 -g3)
+
 add_executable(valid_test main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
 target_compile_options(valid_test PRIVATE -O0 -g3) # -Wall -Wextra -W)

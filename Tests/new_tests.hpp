@@ -140,14 +140,14 @@ void benchmark_single_round(Table *wrap_filter, vector<vector<itemType> *> *elem
     auto add_vec = elements->at(0);
     auto find_vec = elements->at(1);
     auto delete_vec = elements->at(2);
-
+    constexpr bool to_delete = true;
 
     size_t add_step = add_vec->size() / benchmark_precision;
     size_t find_step = find_vec->size() / benchmark_precision;
     size_t true_find_step = add_step;
 
     size_t removal_time = 0;
-    if (delete_vec->size()) {
+    if (delete_vec->size() and to_delete) {
         // size_t delete_step = delete_vec->size() / benchmark_precision;
         auto del_insertion_time = time_insertions(wrap_filter, delete_vec, 0, delete_vec->size());
         removal_time = time_deletions(wrap_filter, delete_vec, 0, delete_vec->size());
@@ -248,7 +248,6 @@ auto fp_rates_single_filter_probabilistic(Table *wrap_filter, vector<vector<item
     return std::make_tuple(counters[0], counters[1]);
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -296,8 +295,9 @@ auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t st
     }
 
     auto t0 = chrono::high_resolution_clock::now();
-    for (int i = start; i < end; ++i) { 
-        FilterAPI<Table>::Remove(element_set->at(i), wrap_filter); }
+    for (int i = start; i < end; ++i) {
+        FilterAPI<Table>::Remove(element_set->at(i), wrap_filter);
+    }
     auto t1 = chrono::high_resolution_clock::now();
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
@@ -402,4 +402,26 @@ void profile_benchmark(Table *wrap_filter, vector<vector<itemType> *> *elements)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+/**2021 Phase*/
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template<class Table, typename itemType>
+auto prob_compute_yes_queries(Table *wrap_filter, vector<itemType> *query_vec, size_t start, size_t end) {
+    auto vec_size = query_vec->size();
+    assert(end <= vec_size);
+    size_t yes_query_counter = 0;
+    for (size_t i = start; i < end; ++i) {
+        bool temp_res = FilterAPI<Table>::Contain(query_vec->at(i), wrap_filter);
+        if (temp_res)
+            yes_query_counter++;
+    }
+    return yes_query_counter;
+}
+
+template<class Table, typename itemType>
+auto prob_compute_yes_queries(Table *wrap_filter, vector<itemType> *query_vec) {
+    size_t start = 0;
+    size_t end = query_vec->size();
+    return prob_compute_yes_queries(wrap_filter, query_vec, start, end);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #endif//FILTERS_NEW_TESTS_HPP
