@@ -423,5 +423,14 @@ auto prob_compute_yes_queries(Table *wrap_filter, vector<itemType> *query_vec) {
     size_t end = query_vec->size();
     return prob_compute_yes_queries(wrap_filter, query_vec, start, end);
 }
+
+template<class Table, typename itemType>
+auto strong_random_prob_compute_yes_queries(Table *wrap_filter, size_t reps) {
+    vector<itemType> vec;
+    fill_vec_better_but_slower_randomness(&vec, reps);
+    return prob_compute_yes_queries(wrap_filter, &vec);
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #endif//FILTERS_NEW_TESTS_HPP

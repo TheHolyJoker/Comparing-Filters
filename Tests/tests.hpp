@@ -71,9 +71,9 @@ auto fill_vec_better_but_slower_randomness(std::vector<itemType> *vec, size_t nu
     vec->resize(number_of_elements);
     for (int i = 0; i < number_of_elements; ++i) {
         vec->at(i) = dist(rng);
-        if (i % 500000 == 0) {
-            std::cout << i << "/" << number_of_elements << std::endl;
-        }
+        // if (i % 500000 == 0) {
+        //     std::cout << i << "/" << number_of_elements << std::endl;
+        // }
     }
 }
 

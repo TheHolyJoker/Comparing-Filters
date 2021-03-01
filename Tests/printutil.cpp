@@ -165,7 +165,7 @@ auto print_single_round(size_t var_num, const size_t *values, const size_t *divi
     rate = divisors[0] / (values[2] / 1e9);
     ss << sep << std::setw(name_width) << rate;
     //uniform_lookup rate (op/sec)
-    rate = divisors[1] / (values[3] / 1e9);
+    rate = divisors[1] / ( values[3] / 1e9);
     ss << sep << std::setw(name_width) << rate;
     //true_lookup rate (op/sec)
     rate = divisors[2] / (values[4] / 1e9);

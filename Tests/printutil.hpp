@@ -156,6 +156,43 @@ auto table_print(size_t var_num, string *var_names, val_type *values) -> std::st
     return ss;
 }
 
+template<typename val_type>
+auto table_print_normalized(size_t var_num, string *var_names, val_type *values, size_t *normalizer_array) -> std::stringstream {
+    std::stringstream ss;
+    size_t max_length = 16;
+    for (int i = 0; i < var_num; ++i) {
+        max_length = max(var_names[i].length(), max_length);
+    }
+
+    // values for controlling format
+    const uint32_t name_width = int(max_length);
+    const std::string sep = " |";
+    const int total_width = default_line_width;
+    const std::string line = sep + std::string(total_width - 1, '-') + '|';
+    ss << line << '\n'
+       << sep << left;
+
+    size_t counter = 0;
+    while (counter < var_num - 1) {
+        ss << std::setw(name_width) << var_names[counter++] << sep;
+    }
+    ss << std::setw(name_width - 1) << var_names[counter] << sep;
+    ss << '\n'
+       << line << '\n' + sep;
+
+    counter = 0;
+    while (counter < var_num - 1) {
+        auto temp_norm_val = values[counter] / normalizer_array[counter];
+        ss << std::setw(name_width) << temp_norm_val << sep;
+        counter++;
+    }
+    auto temp_norm_val = values[counter] / normalizer_array[counter];
+    ss << std::setw(name_width - 1) << temp_norm_val << sep;
+    ss << '\n'
+       << line << '\n';
+    return ss;
+}
+
 
 template<typename T>
 auto bin_print(T x, std::ostream &os = std::cout) -> std::ostream & {

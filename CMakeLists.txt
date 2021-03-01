@@ -144,10 +144,13 @@ add_executable(Filters main.cpp ${PROJECT_SOURCES})
 target_compile_options(Filters PRIVATE -O3 -DNDEBUG)
 
 add_executable(set_apx_validate sa_main.cpp ${PROJECT_SOURCES})
-target_compile_options(set_apx_validate PRIVATE -O0 -g3)
+target_compile_options(set_apx_validate PRIVATE -O0 -g3 -DVALIDATE)
+
+add_executable(set_apx_val2 sa_main.cpp ${PROJECT_SOURCES})
+target_compile_options(set_apx_val2 PRIVATE -O2 -g3 -DVALIDATE)
 
 add_executable(set_apx_bench sa_main.cpp ${PROJECT_SOURCES})
-target_compile_options(set_apx_bench PRIVATE -O0 -g3)
+target_compile_options(set_apx_bench PRIVATE -O3 -DNDEBUG)
 
 add_executable(valid_test main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.

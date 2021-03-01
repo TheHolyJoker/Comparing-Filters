@@ -7,7 +7,6 @@
 
 namespace v_pd512_plus {
 
-    
 
     // From CuckooFilter repository, where this following message was written:
     //
@@ -27,7 +26,7 @@ namespace v_pd512_plus {
 
     auto space_string(std::string s) -> std::string {
         std::string new_s = "";
-        for (size_t i = 0; i < s.size(); i+= 4) {
+        for (size_t i = 0; i < s.size(); i += 4) {
             if (i) {
                 if (i % 16 == 0) {
                     new_s += "|";
@@ -54,7 +53,6 @@ namespace v_pd512_plus {
         return res;
     }
 
-    
 
     auto to_bin_reversed(uint64_t x) -> std::string {
         size_t p = upperpower2(x);
@@ -205,11 +203,25 @@ namespace v_pd512_plus {
         // constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
         const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        std::cout << std::string(84, '-') << std::endl;
         std::cout << "h0: " << bin_print_header_spaced2(h0) << std::endl;
         std::cout << "h1: " << bin_print_header_spaced2(h1) << std::endl;
+        std::cout << std::string(84, '-') << std::endl;
     }
-}// namespace v_pd512_plus
 
+    void print_headers_extended(const __m512i *pd) {
+        // constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        std::cout << std::string(84, '-') << std::endl;
+        std::cout << "h0: " << bin_print_header_spaced2(h0);
+        std::cout << "\t(#1,#0): (" << _mm_popcnt_u64(h0) << ", " << (64 - _mm_popcnt_u64(h0)) << ")" << std::endl;
+        std::cout << "h1: " << bin_print_header_spaced2(h1);
+        std::cout << "\t(#1,#0): (" << _mm_popcnt_u64(h1) << ", " << (64 - _mm_popcnt_u64(h1)) << ")" << std::endl;
+        std::cout << std::string(84, '-') << std::endl;
+    }
+
+}// namespace v_pd512_plus
 namespace pd512_plus {
 
     auto validate_clz(int64_t quot, char rem, const __m512i *pd) -> bool {
@@ -791,6 +803,62 @@ namespace pd512_plus {
     }
 
     auto count_ones_up_to_the_kth_zero(const __m512i *x, size_t k) -> size_t {
+        int zero_count = -1;
+        int one_count = 0;
+        uint64_t header[2];
+        memcpy(header, x, 13);
+
+        for (size_t j = 0; j < 2; j++) {
+            uint64_t temp = header[j];
+            uint64_t b = 1ULL;
+            for (size_t i = 0; i < 64; i++) {
+                if (b & temp) {
+                    one_count++;
+                } else {
+                    zero_count++;
+                    if (zero_count == k)
+                        return one_count;
+                }
+                b <<= 1ul;
+            }
+        }
+        std::cout << one_count << std::endl;
+        std::cout << zero_count << std::endl;
+        assert(false);
+        return -1;
+    }
+
+    auto count_zeros_up_to_the_kth_one(const __m512i *x, size_t k) -> size_t {
+        int zero_count = 0;
+        int one_count = -1;
+        
+        uint64_t header[2];
+        memcpy(header, x, 13);
+        size_t total_one_count = _mm_popcnt_u64(header[0]) + _mm_popcnt_u64(header[1]);
+        assert(total_one_count >= k);
+        
+        for (size_t j = 0; j < 2; j++) {
+            uint64_t temp = header[j];
+            uint64_t b = 1ULL;
+            for (size_t i = 0; i < 64; i++) {
+                if (b & temp) {
+                    one_count++;
+                    if (one_count == k)
+                        return zero_count;
+                } else {
+                    zero_count++;
+                }
+                b <<= 1ul;
+            }
+        }
+        std::cout << zero_count << std::endl;
+        std::cout << one_count << std::endl;
+        return -1;
+        assert(false);
+    }
+
+
+    auto count_ones_up_to_the_kth_zero_old(const __m512i *x, size_t k) -> size_t {
         assert(k > 0);
         assert(k <= 51);
 
@@ -825,7 +893,7 @@ namespace pd512_plus {
     }
 
 
-    auto count_zeros_up_to_the_kth_one(const __m512i *x, size_t k) -> size_t {
+    auto count_zeros_up_to_the_kth_one_old(const __m512i *x, size_t k) -> size_t {
         // #ifdef NDEBUG
         //         std::cout << "called count_zeros_up_to_the_kth_one with -O3" << std::endl;
         // #endif// !NDEBUG

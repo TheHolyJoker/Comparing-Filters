@@ -169,10 +169,20 @@ namespace pd512 {
                sizeof(header_end));
         return 1 & (header_end >> (101 - 1 - 64));
     }
+
+    inline bool pd_full_naive2(const __m512i *pd) {
+        uint8_t header_end;
+        memcpy(&header_end, reinterpret_cast<const uint8_t *>(pd) + 12,
+               1);
+        return header_end & 16;
+    }
+
+
     inline bool pd_full(const __m512i *pd) {
         const bool att = _mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 16;
         assert(att == (get_capacity(pd) == 51));
         assert(att == pd_full_naive(pd));
+        assert(pd_full_naive(pd) == pd_full_naive2(pd));
         return (_mm_extract_epi16(_mm512_castsi512_si128(*pd), 6) & 16);
 
         // uint64_t header_end;
@@ -1112,6 +1122,54 @@ namespace pd512 {
         }
     }
 
+    inline bool pd_find_50_ver_pc(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return false;
+
+        if (quot == 0) {
+            const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+            // std::cout << "h0" << std::endl;
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        }
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t pop = _mm_popcnt_u64(h0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+
+        assert(pop);
+        if (quot < pop) {
+            // static int counter = 0;
+            // counter++;
+            // std::cout << "counter: " << counter << std::endl;
+            // std::cout << "pop: " << pop << std::endl;
+            // std::cout << "v: " << v << std::endl;
+            // std::cout << "h1" << std::endl;
+            v &= (1ULL << (64 - pop)) - 1;
+            // std::cout << "v: " << v << std::endl;
+            if (!v) return false;
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            // std::cout << "h2" << std::endl;
+            v &= ~((1ULL << (64 - pop)) - 1);
+            if (!v) return false;
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            // std::cout << "h3" << std::endl;
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+
     inline bool pd_find_50_v19(int64_t quot, uint8_t rem, const __m512i *pd) {
         const __m512i target = _mm512_set1_epi8(rem);
         uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
@@ -1452,10 +1510,12 @@ namespace pd512 {
         assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v12(quot, rem, pd));
         assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v17(quot, rem, pd));
         assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_v18(quot, rem, pd));
+        assert(pd_find_50_v1(quot, rem, pd) == pd_find_50_ver_pc(quot, rem, pd));
         // return pd_find_50_v4(quot, rem, pd);
         // return pd_find_50_v11(quot, rem, pd);
         // return pd_find_50_v12(quot, rem, pd);
         // return pd_find_50_v11(quot, rem, pd);
+        // return pd_find_50_ver_pc(quot, rem, pd);
         return pd_find_50_v18(quot, rem, pd);
         // return pd_find_50_v18(quot, rem, pd);
         // return pd_find_50_v10(quot, rem, pd);

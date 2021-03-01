@@ -88,6 +88,7 @@ class ts_CuckooFilter {
 
   double BitsPerItem() const { return 8.0 * table_->SizeInBytes() / Size(); }
 
+
  public:
   explicit ts_CuckooFilter(const size_t max_num_keys)
       : num_items_(0), victim_(), hasher_() {
@@ -129,6 +130,8 @@ class ts_CuckooFilter {
 
   // size of the filter in bytes.
   size_t SizeInBytes() const { return table_->SizeInBytes(); }
+  
+  std::string get_name() const;
 };
 
 template <typename ItemType, size_t bits_per_item,
@@ -272,5 +275,15 @@ ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Info() const {
   }
   return ss.str();
 }
+template <typename ItemType, size_t bits_per_item,
+          template <size_t> class TableType, typename HashFamily>
+std::string
+ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::get_name() const {
+  std::stringstream ss;
+  ss << "ts_CuckooFilter:\t";
+  ss << "BPI:" << bits_per_item << std::endl;
+  return ss.str();
+}
+
 }  // namespace ts_cuckoofilter
 #endif  // CUCKOO_FILTER_TS_CUCKOO_FILTER_H_

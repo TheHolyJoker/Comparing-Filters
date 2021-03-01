@@ -30,6 +30,8 @@ class DictApx512 {
     const size_t filter_max_capacity;
     const size_t number_of_pd;
 
+    // size_t number_of_pd
+
     const size_t remainder_length{bits_per_item},
             quotient_range{quot_range},
             quotient_length{ceil_log2(quot_range)},
@@ -57,6 +59,7 @@ public:
         }
 
         constexpr uint64_t ts_pd512_init_header = (INT64_C(1) << 50) - 1;
+        assert(_mm_popcnt_u64(ts_pd512_init_header) == pd_apx_name::QUOTS);
         std::fill(pd_array, pd_array + number_of_pd, __m512i{(INT64_C(1) << 50) - 1, 0, 0, 0, 0, 0, 0, 0});
     }
 

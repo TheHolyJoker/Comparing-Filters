@@ -1023,10 +1023,11 @@ struct FilterAPI<ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, Table
     static string get_name(Table *table) {
         auto ss = table->Info();
         std::string temp = "PackedHashtable";
+        auto name = table->get_name();
         if (ss.find(temp) != std::string::npos) {
-            return "TS_CF-ss";
+            return name + "TS_CF-ss" ;
         }
-        return "TS_Cuckoo";
+        return name;
     }
 
     static auto get_info(const Table *table) -> std::stringstream {

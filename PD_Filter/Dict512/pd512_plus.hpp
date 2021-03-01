@@ -46,6 +46,8 @@ namespace v_pd512_plus {
 
     void print_headers(const __m512i *pd);
 
+    void print_headers_extended(const __m512i *pd);
+
     inline void print_headers_masked(const __m512i *pd) {
         constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
