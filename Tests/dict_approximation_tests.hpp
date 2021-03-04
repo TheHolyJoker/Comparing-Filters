@@ -9,11 +9,14 @@ size_t
 compute_false_negative_exact_with_limits(Table *wrap_filter, vector<itemType> *add_vec, size_t start, size_t end);
 
 template<typename Table, typename itemType>
-void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, size_t filter_max_capacity, size_t max_elements_in_filter, size_t num_of_blocks_it_takes_to_fill_the_filter, size_t add_block_size, size_t find_block_size);
+void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, size_t filter_max_capacity,
+                                       size_t max_elements_in_filter, size_t num_of_blocks_it_takes_to_fill_the_filter,
+                                       size_t add_block_size, size_t find_block_size);
 
 
 template<class Table, typename itemType>
-size_t prob_compute_false_negative(Table *wrap_filter, vector<itemType> *add_vec, size_t start, size_t end, size_t reps);
+size_t
+prob_compute_false_negative(Table *wrap_filter, vector<itemType> *add_vec, size_t start, size_t end, size_t reps);
 
 template<typename Table, typename itemType>
 void fpc_sanity_check(Table *wrap_filter, vector<itemType> *query_vec);
@@ -80,8 +83,10 @@ void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, siz
     // fpc_sanity_check = prob_compute_yes_queries(wrap_filter, find_vec);
     // std::cout << "fpc_sanity_check: " << fpc_sanity_check << std::endl;
     // std::cout << "fpc_sanity_check_normalized: " << (1.0 * fpc_sanity_check / find_vec->size()) << std::endl;
-    fpc_sanity_check(wrap_filter, find_vec);
-    fpc_strong_sanity_check<Table, itemType>(wrap_filter, find_vec->size() / 4);
+
+    /*Those tests are too slow:*/
+    //    fpc_sanity_check(wrap_filter, find_vec);
+    //    fpc_strong_sanity_check<Table, itemType>(wrap_filter, find_vec->size() / 4);
 
     size_t fnc_arr_exact[number_of_rounds_left];
     size_t fnc_arr_prob[number_of_rounds_left];
@@ -94,6 +99,7 @@ void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, siz
         size_t add_end = add_start + add_block_size;
 
         auto removal_time = time_deletions(wrap_filter, add_vec, del_start, del_start + add_block_size);
+        // size_t removal_time = 0;
         auto insertions_time = time_insertions(wrap_filter, add_vec, add_start, add_start + add_block_size);
 
         //Queries
@@ -119,7 +125,8 @@ void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, siz
 
 template<typename Table, typename itemType>
 void compute_prob_symmetric_difference_without_deletions(vector<vector<itemType> *> *elements, size_t filter_max_capacity,
-                                                         size_t max_elements_in_filter, size_t num_of_blocks_it_takes_to_fill_the_filter,
+                                                         size_t max_elements_in_filter,
+                                                         size_t num_of_blocks_it_takes_to_fill_the_filter,
                                                          size_t add_block_size, size_t find_block_size) {
     Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     Table *wrap_filter = &filter;
@@ -146,7 +153,7 @@ void compute_prob_symmetric_difference_without_deletions(vector<vector<itemType>
     size_t fnc_arr_exact[number_of_rounds_left];
     size_t fnc_arr_prob[number_of_rounds_left];
     size_t fpc_arr[number_of_rounds_left];
-    
+
     //Queries
     fnc_arr_exact[0] = compute_false_negative_exact_with_limits(wrap_filter, add_vec, 0, rounded_max_elements);
     fnc_arr_prob[0] = prob_compute_false_negative(wrap_filter, add_vec, 0, rounded_max_elements, add_block_size);
@@ -154,7 +161,7 @@ void compute_prob_symmetric_difference_without_deletions(vector<vector<itemType>
     size_t find_start = find_block_size * 0;
     size_t find_end = find_start + find_block_size;
     fpc_arr[0] = prob_compute_yes_queries(wrap_filter, find_vec, find_start, find_end);
-    
+
     std::string fp_header = "False Positive Probabilities";
     std::string fn_header_exact = "exact False Negative Probabilities";
     std::string fn_header_prob = "prob False Negative Probabilities";
@@ -166,7 +173,9 @@ void compute_prob_symmetric_difference_without_deletions(vector<vector<itemType>
 
 template<typename Table, typename itemType>
 void compute_prob_symmetric_difference_wrapper(vector<vector<itemType> *> *elements, size_t filter_max_capacity,
-                                               float work_load, size_t lookup_reps, size_t num_of_blocks_it_takes_to_fill_the_filter) {
+                                               float work_load, size_t lookup_reps,
+                                               size_t num_of_blocks_it_takes_to_fill_the_filter) {
+    assert(filter_max_capacity > 100);
     size_t max_elements_in_filter = (size_t) ceil(filter_max_capacity * work_load);
     size_t total_insertions_num = elements->at(0)->size();
     size_t insertion_blocks_num = num_of_blocks_it_takes_to_fill_the_filter;
@@ -180,7 +189,9 @@ void compute_prob_symmetric_difference_wrapper(vector<vector<itemType> *> *eleme
     size_t find_block_size = (std::size_t) floor(lookup_reps / total_number_of_blocks);
 
     // compute_prob_symmetric_difference_without_deletions<Table, itemType>(elements, filter_max_capacity, max_elements_in_filter, num_of_blocks_it_takes_to_fill_the_filter, add_block_size, find_block_size);
-    compute_prob_symmetric_difference<Table, itemType>(elements, filter_max_capacity, max_elements_in_filter, num_of_blocks_it_takes_to_fill_the_filter, add_block_size, find_block_size);
+    compute_prob_symmetric_difference<Table, itemType>(elements, filter_max_capacity, max_elements_in_filter,
+                                                       num_of_blocks_it_takes_to_fill_the_filter, add_block_size,
+                                                       find_block_size);
 }
 
 /**
@@ -206,7 +217,8 @@ size_t get_rand_position_in_vec(vector<itemType> *vec, size_t start, size_t end,
 }
 
 template<class Table, typename itemType>
-size_t prob_compute_false_negative(Table *wrap_filter, vector<itemType> *add_vec, size_t start, size_t end, size_t reps) {
+size_t
+prob_compute_false_negative(Table *wrap_filter, vector<itemType> *add_vec, size_t start, size_t end, size_t reps) {
     assert(end < add_vec->size());
     assert(start + reps < end);
 
@@ -279,8 +291,8 @@ void bench_symmetric_difference(vector<vector<itemType> *> *elements, size_t fil
     std::cout << " | empty_filter_fp_sanity_check: \t\t" << empty_filter_fp_sanity_check << std::endl;
     double empty_filter_fp_sanity_check_normalized = (1.0 * empty_filter_fp_sanity_check / find_vec->size());
     std::cout << " | empty_filter_fp_sanity_check normalized: \t\t" << empty_filter_fp_sanity_check_normalized << std::endl;
-    */
     fpc_sanity_check(wrap_filter, find_vec);
+    */
 
 
     size_t total_insertions_num = add_vec->size();
@@ -305,8 +317,8 @@ void bench_symmetric_difference(vector<vector<itemType> *> *elements, size_t fil
     std::cout << " | fpc_sanity_check normalized: \t" << (1.0 * fpc_sanity_check / find_vec->size()) << "\t\tExpecting:\t" << 1.0 / 32 << std::endl;
     */
 
-    fpc_sanity_check(wrap_filter, find_vec);
-    fpc_strong_sanity_check<Table, itemType>(wrap_filter, find_vec->size() / 4);
+    // fpc_sanity_check(wrap_filter, find_vec);
+    // fpc_strong_sanity_check<Table, itemType>(wrap_filter, find_vec->size() / 4);
 
     std::stringstream ss1 = print_round_header();
     std::cout << ss1.str();
@@ -322,6 +334,7 @@ void bench_symmetric_difference(vector<vector<itemType> *> *elements, size_t fil
         size_t add_end = add_start + add_block_size;
 
         auto removal_time = time_deletions(wrap_filter, add_vec, del_start, del_start + add_block_size);
+        // size_t removal_time = 0;
         auto insertions_time = time_insertions(wrap_filter, add_vec, add_start, add_start + add_block_size);
 
         size_t uni_start = round_index * find_block_size;
@@ -359,7 +372,8 @@ void bench_symmetric_difference(vector<vector<itemType> *> *elements, size_t fil
 
 template<typename Table, typename itemType>
 void bench_symmetric_difference_wrapper(vector<vector<itemType> *> *elements, size_t filter_max_capacity,
-                                        float work_load, size_t lookup_reps, size_t num_of_blocks_it_takes_to_fill_the_filter) {
+                                        float work_load, size_t lookup_reps,
+                                        size_t num_of_blocks_it_takes_to_fill_the_filter) {
     size_t max_elements_in_filter = (size_t) ceil(filter_max_capacity * work_load);
     size_t total_insertions_num = elements->at(0)->size();
     size_t insertion_blocks_num = num_of_blocks_it_takes_to_fill_the_filter;
@@ -372,7 +386,9 @@ void bench_symmetric_difference_wrapper(vector<vector<itemType> *> *elements, si
 
     size_t find_block_size = (std::size_t) floor(lookup_reps / total_number_of_blocks);
 
-    bench_symmetric_difference<Table, itemType>(elements, filter_max_capacity, max_elements_in_filter, num_of_blocks_it_takes_to_fill_the_filter, add_block_size, find_block_size);
+    bench_symmetric_difference<Table, itemType>(elements, filter_max_capacity, max_elements_in_filter,
+                                                num_of_blocks_it_takes_to_fill_the_filter, add_block_size,
+                                                find_block_size);
 }
 
 template<typename Table, typename itemType>

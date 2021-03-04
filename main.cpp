@@ -169,14 +169,15 @@ void rel_code() {
     // }
     // single_bench<Table_Dict512_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_Dict512_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    // while (true) {
+    while (true) {
 
-    // single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    // single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    // single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
-    // single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
-
-    // }
+    single_bench<SimdBlockFilter<>, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    // single_bench<Table_Dict512_Ver4, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF12, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    std::cout << std::string(80, '=') << std::endl;
+    }
     int counter = 4;
     while (counter-- > 0) {
         single_bench<Table_Dict256_Ver7, itemType>(max_filter_capacity, bench_precision, false, &elements);
@@ -313,7 +314,10 @@ int main(int argc, char **argv) {
     fill_vec(elements.at(2), del_size);
 
     // single_bench<Table_Fixed_Dict_Ver2, itemType>(max_filter_capacity, bench_precision, false, &elements);
-
+    std::cout << "Start7!" << std::endl;
+    single_bench<Table_CF, itemType>(max_filter_capacity, bench_precision, false, &elements);
+    std::cout << "End13!" << std::endl;
+    return 0;
 
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);
     // single_bench<Table_CF_ss_13, itemType>(max_filter_capacity, bench_precision, false, &elements);

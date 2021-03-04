@@ -282,7 +282,10 @@ auto time_lookups(Table *wrap_filter, vector<itemType> *element_set, size_t star
 template<class Table, typename itemType>
 auto time_insertions(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong {
     auto t0 = chrono::high_resolution_clock::now();
-    FilterAPI<Table>::AddAll(*element_set, start, end, wrap_filter);
+    for (int i = start; i < end; ++i){
+        FilterAPI<Table>::Add(element_set->at(i), wrap_filter);    
+    }
+    // FilterAPI<Table>::AddAll(*element_set, start, end, wrap_filter);
     auto t1 = chrono::high_resolution_clock::now();
     return chrono::duration_cast<ns>(t1 - t0).count();
 }
@@ -290,7 +293,8 @@ auto time_insertions(Table *wrap_filter, vector<itemType> *element_set, size_t s
 template<class Table, typename itemType>
 auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong {
     if (!(FilterAPI<Table>::get_functionality(wrap_filter) & 4)) {
-        std::cout << FilterAPI<Table>::get_name(wrap_filter) << " does not support deletions." << std::endl;
+        //FIXME: UNCOMMENT!
+        // std::cout << FilterAPI<Table>::get_name(wrap_filter) << " does not support deletions." << std::endl;
         return 0;
     }
 

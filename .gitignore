@@ -32,3 +32,5 @@ cmake-build-debug-coverage
 PD_Filter/Dict512/Comparing-searches.txt
 
 packed_spare (backup before changing hash function).hpp
+Helpfull-Commands.txt
+temp_res.txt

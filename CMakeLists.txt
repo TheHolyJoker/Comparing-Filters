@@ -144,13 +144,29 @@ add_executable(Filters main.cpp ${PROJECT_SOURCES})
 target_compile_options(Filters PRIVATE -O3 -DNDEBUG)
 
 add_executable(set_apx_validate sa_main.cpp ${PROJECT_SOURCES})
-target_compile_options(set_apx_validate PRIVATE -O0 -g3 -DVALIDATE)
+# target_compile_options(set_apx_validate PRIVATE -O0 -g3 -DVALIDATE)
+#target_compile_options(set_apx_validate PRIVATE -O0 -g3 -DEBUG)
+ target_compile_options(set_apx_validate PRIVATE -O0 -g3)
 
 add_executable(set_apx_val2 sa_main.cpp ${PROJECT_SOURCES})
 target_compile_options(set_apx_val2 PRIVATE -O2 -g3 -DVALIDATE)
 
 add_executable(set_apx_bench sa_main.cpp ${PROJECT_SOURCES})
 target_compile_options(set_apx_bench PRIVATE -O3 -DNDEBUG)
+
+add_executable(set_apx_profile sa_main.cpp ${PROJECT_SOURCES})
+target_compile_options(set_apx_profile PRIVATE -O3 -DNDEBUG -g3 -fno-inline-small-functions)
+
+add_executable(set_apx_count sa_main.cpp ${PROJECT_SOURCES})
+target_compile_options(set_apx_count PRIVATE -O3 -DNDEBUG -g3 -DCOUNT)
+
+
+add_executable(set_apx_coverage sa_main.cpp ${PROJECT_SOURCES})
+target_compile_options(set_apx_coverage PRIVATE -O0 -DNDEBUG -fprofile-arcs -ftest-coverage -fPIC)
+target_link_options(set_apx_coverage PRIVATE -lgcov --coverage)
+
+
+
 
 add_executable(valid_test main.cpp ${PROJECT_SOURCES})
 # Add the compile options ONLY for valid_test.
@@ -229,6 +245,7 @@ target_link_libraries(S1 OpenSSL::SSL)
 target_link_libraries(S2 OpenSSL::SSL)
 target_link_libraries(S3 OpenSSL::SSL)
 target_link_libraries(temp OpenSSL::SSL)
+#target_link_libraries(set_apx_coverage gcov)
 # add_executable( Filters main.cpp hashutil.h robin_hood.h Tests/wrappers.hpp
 # Tests/tests.hpp Tests/tests.cpp Tests/new_tests.hpp Tests/new_tests.cpp
 # Tests/printutil.cpp Tests/printutil.hpp Bloom_Filter/counting_bloom.h

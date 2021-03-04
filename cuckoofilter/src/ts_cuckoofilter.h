@@ -31,8 +31,11 @@ const size_t kMaxCuckooCount = 500;
 // PackedTable to enable semi-sorting
 template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType = cuckoofilter::SingleTable,
-          typename HashFamily = cuckoofilter::TwoIndependentMultiplyShift>
+          typename HashFamily = cuckoofilter::TwoIndependentMultiplyShift,
+          size_t max_relocations = 16>
 class ts_CuckooFilter {
+  size_t insertions_failed_counter;
+  size_t insertions_total_count;
   // Storage of items
   TableType<bits_per_item> *table_;
 
@@ -80,35 +83,42 @@ class ts_CuckooFilter {
 
   Status AddImpl(const size_t i, const uint32_t tag);
 
-  Status AddImpl_with_fn(const size_t i, const uint32_t tag,
-                         const size_t var_kMaxCuckooCount = 16);
+  Status AddImpl_lite(const size_t i, const uint32_t tag);
+
+  Status AddImpl_with_fn(const size_t i, const uint32_t tag);
 
   // load factor is the fraction of occupancy
   double LoadFactor() const { return 1.0 * Size() / table_->SizeInTags(); }
 
   double BitsPerItem() const { return 8.0 * table_->SizeInBytes() / Size(); }
 
-
  public:
   explicit ts_CuckooFilter(const size_t max_num_keys)
-      : num_items_(0), victim_(), hasher_() {
+      : num_items_(0),
+        victim_(),
+        hasher_(),
+        insertions_failed_counter(0),
+        insertions_total_count(0) {
     size_t assoc = 4;
     size_t num_buckets =
         cuckoofilter::upperpower2(std::max<uint64_t>(1, max_num_keys / assoc));
     double frac = (double)max_num_keys / num_buckets / assoc;
     if (frac > 0.96) {
-      std::cout << "CF might fail." << std::endl;
+      // std::cout << "CF might fail." << std::endl;
       //       num_buckets <<= 1;
     }
     victim_.used = false;
     table_ = new TableType<bits_per_item>(num_buckets);
-    std::cout << "load is: " << frac << std::endl;
+    // std::cout << "load is: " << frac << std::endl;
     // std::cout << "Here!" << std::endl;
     // std::cout << __LINE__ << std::endl;
   }
 
   ~ts_CuckooFilter() {
-    std::cout << "Byte size is: " << SizeInBytes() << std::endl;
+    // std::cout << get_name();
+    double ratio = 1.0 * insertions_failed_counter / insertions_total_count;
+    std::cout << "Failed insertion ratio is: " << ratio << std::endl;
+
     delete table_;
   }
 
@@ -130,24 +140,28 @@ class ts_CuckooFilter {
 
   // size of the filter in bytes.
   size_t SizeInBytes() const { return table_->SizeInBytes(); }
-  
+
   std::string get_name() const;
 };
 
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Add(
-    const ItemType &item) {
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                       max_relocations>::Add(const ItemType &item) {
   size_t i;
   uint32_t tag;
   GenerateIndexTagHash(item, &i, &tag);
   return AddImpl_with_fn(i, tag);
+  // return AddImpl_lite(i, tag);
 }
 
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImpl(
-    const size_t i, const uint32_t tag) {
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                       max_relocations>::AddImpl(const size_t i,
+                                                 const uint32_t tag) {
   size_t curindex = i;
   uint32_t curtag = tag;
   uint32_t oldtag;
@@ -172,16 +186,44 @@ Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::AddImpl(
 }
 
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-Status
-ts_CuckooFilter<ItemType, bits_per_item, TableType,
-                HashFamily>::AddImpl_with_fn(const size_t i, const uint32_t tag,
-                                             const size_t var_kMaxCuckooCount) {
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                       max_relocations>::AddImpl_lite(const size_t i,
+                                                      const uint32_t tag) {
+  size_t curindex = i;
+  uint32_t curtag = tag;
+  uint32_t oldtag;
+  bool kickout = true;
+
+  if (table_->InsertTagToBucket(curindex, curtag, kickout, oldtag)) {
+    num_items_++;
+    return Ok;
+  } else {
+    curindex = AltIndex(curindex, curtag);
+    if (table_->InsertTagToBucket(curindex, curtag, kickout, oldtag)) {
+      num_items_++;
+      return Ok;
+    }
+  }
+  return Ok;
+}
+
+template <typename ItemType, size_t bits_per_item,
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                       max_relocations>::AddImpl_with_fn(const size_t i,
+                                                         const uint32_t tag) {
+#ifdef COUNT
+  insertions_total_count++;
+#endif  // COUNT
+
   size_t curindex = i;
   uint32_t curtag = tag;
   uint32_t oldtag;
 
-  for (uint32_t count = 0; count < var_kMaxCuckooCount; count++) {
+  for (uint32_t count = 0; count <= max_relocations; count++) {
     bool kickout = count > 0;
     oldtag = 0;
     if (table_->InsertTagToBucket(curindex, curtag, kickout, oldtag)) {
@@ -197,13 +239,17 @@ ts_CuckooFilter<ItemType, bits_per_item, TableType,
   // victim_.index = curindex;
   // victim_.tag = curtag;
   // victim_.used = true;
+#ifdef COUNT
+  insertions_failed_counter++;
+#endif  // COUNT
   return Ok;
 }
 
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Contain(
-    const ItemType &key) const {
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                       max_relocations>::Contain(const ItemType &key) const {
   bool found = false;
   size_t i1, i2;
   uint32_t tag;
@@ -224,9 +270,10 @@ Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Contain(
 }
 
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Delete(
-    const ItemType &key) {
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                       max_relocations>::Delete(const ItemType &key) {
   size_t i1, i2;
   uint32_t tag;
 
@@ -259,9 +306,10 @@ Status ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Delete(
 }
 
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-std::string
-ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Info() const {
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+std::string ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                            max_relocations>::Info() const {
   std::stringstream ss;
   ss << "ts_CuckooFilter Status:\n"
      << "\t\t" << table_->Info() << "\n"
@@ -276,12 +324,14 @@ ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::Info() const {
   return ss.str();
 }
 template <typename ItemType, size_t bits_per_item,
-          template <size_t> class TableType, typename HashFamily>
-std::string
-ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>::get_name() const {
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+std::string ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                            max_relocations>::get_name() const {
   std::stringstream ss;
   ss << "ts_CuckooFilter:\t";
   ss << "BPI:" << bits_per_item << std::endl;
+  ss << "Max Relocations:\t " << max_relocations << std::endl;
   return ss.str();
 }
 

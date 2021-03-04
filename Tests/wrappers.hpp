@@ -971,16 +971,16 @@ struct FilterAPI<SimdBlockFilter<>> {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template<typename ItemType, size_t bits_per_item, template<size_t> class TableType, typename HashFamily>
-struct FilterAPI<ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>> {
-    using Table = ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily>;
+template<typename ItemType, size_t bits_per_item, template<size_t> class TableType, typename HashFamily, size_t max_relocations>
+struct FilterAPI<ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily, max_relocations>> {
+    using Table = ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily, max_relocations>;
 
     static Table ConstructFromAddCount(size_t add_count) {
         return Table(add_count);
     }
 
     static void Add(uint64_t key, Table *table) {
-        if (table->Add(key) != cuckoofilter::Ok) {
+        if (table->Add(key) != ts_cuckoofilter::Ok) {
             std::cerr << "Cuckoo filter is too full. Inertion of the element (" << key << ") failed.\n";
             get_info(table);
 
@@ -1025,7 +1025,7 @@ struct FilterAPI<ts_cuckoofilter::ts_CuckooFilter<ItemType, bits_per_item, Table
         std::string temp = "PackedHashtable";
         auto name = table->get_name();
         if (ss.find(temp) != std::string::npos) {
-            return name + "TS_CF-ss" ;
+            return name + "TS_CF-ss";
         }
         return name;
     }
@@ -1090,8 +1090,8 @@ struct FilterAPI<DictApx512<itemType>> {
     // CONTAIN_ATTRIBUTES static bool Contain(itemType key,const Table *table) {
     CONTAIN_ATTRIBUTES static bool Contain(itemType key, Table *table) {
 #ifdef COUNT
-        return table->lookup_count(key);
-#endif// COUNT 
+        // return table->lookup_count(key);
+#endif// COUNT
 
         return table->lookup(key);
     }
@@ -1113,8 +1113,8 @@ struct FilterAPI<DictApx512<itemType>> {
      */
     static auto get_functionality(Table *table) -> uint32_t {
 #ifdef COUNT
-        table->lookup_count(0, 2);
-        table->lookup_count(0, 1);
+        // table->lookup_count(0, 2);
+        // table->lookup_count(0, 1);
 #endif// COUNT \
 
         return 7;

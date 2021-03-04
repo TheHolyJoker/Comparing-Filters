@@ -166,7 +166,6 @@ namespace pd512_plus {
         
         
         
-        
         // constexpr int imm1 = 3;
         // constexpr int imm2 = 15;
         // return _mm_extract_epi8(_mm512_extracti64x2_epi64(*pd, imm1), imm2);
