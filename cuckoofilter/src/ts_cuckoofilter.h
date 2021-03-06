@@ -138,7 +138,15 @@ class ts_CuckooFilter {
   // number of current inserted items;
   size_t Size() const { return num_items_; }
 
-  // size of the filter in bytes.
+  // size of the filter in bytes.r_of_quotient(pd));
+            //     memcpy(pd, &new_header, kBytes2copy);
+            //     assert(pd512::validate_number_of_quotient(pd));
+
+            //     memmove(&((uint8_t *) pd)[kBytes2copy + i],
+            //             &((const uint8_t *) pd)[kBytes2copy + i + 1],
+            //             sizeof(*pd) - (kBytes2copy + i + 1));
+            // }
+            // return find_res;
   size_t SizeInBytes() const { return table_->SizeInBytes(); }
 
   std::string get_name() const;

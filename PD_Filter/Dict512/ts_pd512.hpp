@@ -27,6 +27,11 @@ namespace v_ts_pd512 {
     }
 
 
+    auto space_string(std::string s) -> std::string;
+    auto to_bin(uint64_t x, size_t length) -> std::string;
+    void p_format_word(uint64_t x);
+    auto format_word_to_string(uint64_t x) -> std::string;
+
     size_t popcount_up_to_index(uint64_t word, size_t index);
 
     size_t popcount_up_to_index(uint64_t *arr, size_t a_size, size_t index);
@@ -37,6 +42,7 @@ namespace v_ts_pd512 {
 
     // bool v_write_header_cond12_without_quot(uint64_t h0, size_t index, uint64_t quot);
     void print_body(const __m512i *pd);
+
 
     /**
      * @brief Computes the symmetric difference between two pocket dictionaries.
@@ -71,6 +77,22 @@ namespace v_ts_pd512 {
 
 
     bool validate_evicted_qr(int64_t quot, uint8_t rem, int64_t evict_quot, uint8_t evict_rem, __m512i *pd);
+
+    bool safe_validate_tombstoning_methods(__m512i *pd, size_t reps);
+
+    void print_pds_difference(int64_t quot, uint8_t rem, const __m512i *old_pd, const __m512i *new_pd);
+
+    void print_pd(const __m512i *pd);
+
+
+    auto headers_extended_to_string(const __m512i *pd) -> std::stringstream;
+    auto headers_extended_to_string2(const __m512i *pd) -> std::stringstream;
+
+    auto body_to_string(const __m512i *pd) -> std::stringstream;
+
+    auto pds_difference_to_string(int64_t quot, uint8_t rem, const __m512i *old_pd, const __m512i *new_pd) -> std::stringstream;
+
+    auto pd_to_string(const __m512i *pd) -> std::stringstream;
 }// namespace v_ts_pd512
 
 namespace ts_pd512 {
@@ -78,6 +100,7 @@ namespace ts_pd512 {
     constexpr size_t QUOTS = 50;
     constexpr size_t MAX_CAPACITY = 51;
     constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+    constexpr uint8_t Tombstone_FP = 255;
 
 
     inline bool pd_full(const __m512i *pd) {
@@ -101,6 +124,163 @@ namespace ts_pd512 {
 
     auto get_specific_quot_capacity_naive2(int64_t quot, const __m512i *pd) -> int;
 
+    inline auto get_all_mask_quotient_with_validation(uint64_t mask, __m512i *pd, uint64_t *quot_arr) -> void {
+        // static int c = 0;
+        const uint64_t mask_pop = _mm_popcnt_u64(mask);
+        uint64_t v = mask;
+        size_t zero_counter_by_select_arr[mask_pop + 2];
+        // uint64_t quot_arr[mask_pop];
+
+        uint64_t temp = _tzcnt_u64(v);
+
+        for (size_t i = 0; i < mask_pop; i++) {
+            assert(pd512::select64(4, 0) == 2);
+            zero_counter_by_select_arr[i] = pd512::select64(v, i);
+        }
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+
+        uint64_t h0_pop = _mm_popcnt_u64(h0);
+        uint64_t h0_zc = 64 - h0_pop;
+        size_t i = 0;
+
+        for (i; i < mask_pop; i++) {
+            // std::cout << "M0" << std::endl;
+            uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, zero_counter_by_select_arr[i]);
+            if (zero_counter_by_select_arr[i] >= h0_zc)
+                break;
+            uint64_t temp_index = pd512::select64(~h0, zero_counter_by_select_arr[i]);
+            uint64_t ones_counter = temp_index - zero_counter_by_select_arr[i];
+            assert(ones_counter == valid_quot);
+            quot_arr[i] = ones_counter;
+        }
+
+        if (zero_counter_by_select_arr[i] == h0_zc) {
+            // std::cout << "M1" << std::endl;
+            uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, zero_counter_by_select_arr[i]);
+            uint64_t temp_index = pd512::select64(~h1, 0);
+            uint64_t abs_index = 64 + temp_index;
+            uint64_t ones_counter = abs_index - zero_counter_by_select_arr[i];
+            assert(ones_counter == valid_quot);
+            quot_arr[i] = ones_counter;
+            i++;
+        }
+
+        for (i; i < mask_pop; i++) {
+            // c++;
+            // std::cout << "M2" << std::endl;
+            uint64_t shifted_zc = zero_counter_by_select_arr[i] - h0_zc;
+            uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, zero_counter_by_select_arr[i]);
+            // v_ts_pd512::print_pd(pd);
+
+            uint64_t temp_index = pd512::select64(~h1, shifted_zc);
+            uint64_t abs_index = 64 + temp_index;
+            uint64_t ones_counter = abs_index - zero_counter_by_select_arr[i];
+            assert(ones_counter == valid_quot);
+            quot_arr[i] = ones_counter;
+
+            /* bool h0_ends_with_zero = h0 & (1ULL << 63);
+            if (h0_ends_with_zero) {
+                uint64_t ans3 = 64 + pd512::select64(~h0, shifted_zc - 1) + 1 - zero_counter_by_select_arr[i];
+                uint64_t ones_counter = ans3;
+                assert(ones_counter == valid_quot);
+                quot_arr[i] = ones_counter;
+            } else {
+
+
+                uint64_t temp_index0 = pd512::select64(~h0, shifted_zc - 1);
+                uint64_t temp_index1 = pd512::select64(~h0, shifted_zc);
+                uint64_t temp_index2 = pd512::select64(~h0, shifted_zc + 1);
+
+                uint64_t ans0 = 64 + temp_index0 - zero_counter_by_select_arr[i];
+                uint64_t ans1 = 64 + temp_index1 - zero_counter_by_select_arr[i];
+                uint64_t ans2 = 64 + temp_index2 - zero_counter_by_select_arr[i];
+                uint64_t ans3 = ans0 + 1;
+                std::cout << "i:               " << i << std::endl;
+                std::cout << "zero_counter[i]: " << zero_counter_by_select_arr[i] << std::endl;
+                std::cout << "h0 ends with zero: " << h0_ends_with_zero << std::endl;
+                std::cout << "ans0:            " << ans0 << std::endl;
+                std::cout << "ans1:            " << ans1 << std::endl;
+                std::cout << "ans2:            " << ans2 << std::endl;
+                std::cout << "ans3:            " << ans3 << std::endl;
+                std::cout << "valid_quot:      " << valid_quot << std::endl;
+
+                uint64_t temp_index;
+                if (h0_ends_with_zero) {
+                    temp_index = temp_index0;
+                } else {
+                    temp_index = temp_index1;
+                }
+                uint64_t abs_index = 64 + temp_index;
+                uint64_t ones_counter = abs_index - zero_counter_by_select_arr[i];
+                assert(ones_counter == valid_quot);
+                quot_arr[i] = ones_counter;
+            } */
+        }
+        // std::cout << std::string(80, '=') << std::endl;
+    }
+
+    inline auto get_all_mask_quotient1(uint64_t mask, __m512i *pd, uint64_t *quot_arr) -> void {
+        // static int c = 0;
+        const uint64_t mask_pop = _mm_popcnt_u64(mask);
+        uint64_t v = mask;
+        size_t zero_counter_by_select_arr[mask_pop + 2];
+        // uint64_t quot_arr[mask_pop];
+
+        uint64_t temp = _tzcnt_u64(v);
+
+        for (size_t i = 0; i < mask_pop; i++) {
+            assert(pd512::select64(4, 0) == 2);
+            zero_counter_by_select_arr[i] = pd512::select64(v, i);
+        }
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+
+        uint64_t h0_pop = _mm_popcnt_u64(h0);
+        uint64_t h0_zc = 64 - h0_pop;
+        size_t i = 0;
+
+        for (i; i < mask_pop; i++) {
+            if (zero_counter_by_select_arr[i] >= h0_zc)
+                break;
+            uint64_t temp_index = pd512::select64(~h0, zero_counter_by_select_arr[i]);
+            uint64_t ones_counter = temp_index - zero_counter_by_select_arr[i];
+            // assert(ones_counter == valid_quot);
+            quot_arr[i] = ones_counter;
+        }
+
+        if (zero_counter_by_select_arr[i] == h0_zc) {
+            uint64_t temp_index = pd512::select64(~h1, 0);
+            uint64_t abs_index = 64 + temp_index;
+            uint64_t ones_counter = abs_index - zero_counter_by_select_arr[i];
+            // assert(ones_counter == valid_quot);
+            quot_arr[i] = ones_counter;
+            i++;
+        }
+
+        for (i; i < mask_pop; i++) {
+
+            uint64_t shifted_zc = zero_counter_by_select_arr[i] - h0_zc;
+            // uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, zero_counter_by_select_arr[i]);
+            uint64_t temp_index = pd512::select64(~h1, shifted_zc);
+            uint64_t abs_index = 64 + temp_index;
+            uint64_t ones_counter = abs_index - zero_counter_by_select_arr[i];
+            // assert(ones_counter == valid_quot);
+            quot_arr[i] = ones_counter;
+        }
+    }
+
+
+    inline auto compute_body_index_matching_quot_super_naive(uint64_t body_index, const __m512i *pd) -> int64_t {
+        return pd512_plus::count_ones_up_to_the_kth_zero(pd, body_index);
+    }
+
+    inline auto compute_body_index_matching_quot_naive(uint64_t body_index, const __m512i *pd) -> int64_t {
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        return pd512_plus::count_ones_up_to_the_kth_zero(pd, body_index);
+    }
 
     inline size_t get_last_occupied_quot_for_full_pd_db(const __m512i *pd) {
         constexpr uint64_t h1_const_mask = ((1ULL << (101 - 64)) - 1);// 101-64 == 37; 64 - 37 == 27;
@@ -324,41 +504,623 @@ namespace ts_pd512 {
         return true;
     }
 
-    /* inline auto remove_from_not_sorted_body_without128_bits_op(int64_t quot, uint8_t rem, __m512i *pd) -> bool {
+    /* Insperation for deletions without 128bit elements.
+    inline bool pd_find_50_v17(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return false;
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (_blsr_u64(v) == 0) {
+            if (v << quot) {
+                const int64_t mask = v << quot;
+                const bool att = (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+                assert(att == pd_find_50_v1(quot, rem, pd));
+                return (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+            } else {
+                const int64_t pop = _mm_popcnt_u64(h0);
+                const uint64_t index = (_tzcnt_u64(v) + quot) & 63;
+                const int64_t mask = (1ULL << index);
+                const bool att = (!(h1 & mask)) && (_mm_popcnt_u64(h1 & (mask - 1)) == (quot - pop));
+                assert(att == pd_find_50_v1(quot, rem, pd));
+
+                // const unsigned __int128 *h = (const unsigned __int128 *) pd;
+                // constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+                // const unsigned __int128 header = (*h) & kLeftoverMask;
+                // const unsigned __int128 mask = ((unsigned __int128) v) << quot;
+
+                // const bool att = (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
+                // assert(att == pd_find_50_v1(quot, rem, pd));
+                // return (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
+            }
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+
+        if (quot == 0) {
+            // std::cout << "h0" << std::endl;
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            // std::cout << "h1" << std::endl;
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            // std::cout << "h2" << std::endl;
+
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            // std::cout << "h3" << std::endl;
+
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
+        }
+    }
+ */
+
+
+    inline void bad_tombstoning_idea(int64_t quot, uint8_t rem, __m512i *pd) {
+        const __m512i target = _mm512_set1_epi8(rem);
+        const uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13;
+        const uint64_t i = _tzcnt_u64(v);
+        ((uint8_t *) pd)[kBytes2copy + i] = Tombstone_FP;
+        // }
+    }
+    
+    /**
+     * @brief Instead of deleteing the element immediately, The function mask it remainder as a tombstone.
+     * Later on, it will be deleted.
+     * 
+     * This function assumes the element is in the PD. If it is not the case, one of the following might occur:
+     * 
+     * 1) If there is an element with remainder "rem" in the filter, it will be marked with the tombstone fingerprint.
+     * 2) Otherwise, the function will try to write to address not in current pd. There is an assertion for this case.
+     * @param quot 
+     * @param rem 
+     * @param pd 
+     */
+    inline auto remove_by_tombstoning(int64_t quot, uint8_t rem, __m512i *pd) -> void {
+        // int cc = 0;
+        /* Assuming the element is in the PD */
+        // assert(find(quot, rem, pd));
+        // return bad_tombstoning_idea(quot, rem, pd);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (_blsr_u64(v) == 0) {
+            // std::cout << "h0" << std::endl;
+            const uint64_t i = _tzcnt_u64(v);
+            assert(kBytes2copy + i < 64);
+            assert(((uint8_t *) pd)[kBytes2copy + i] == rem);
+            ((uint8_t *) pd)[kBytes2copy + i] = Tombstone_FP;
+            return;
+        }
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        // const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+
+        if (quot == 0) {
+            // std::cout << "h1" << std::endl;
+            const uint64_t i = _tzcnt_u64(v);
+            const uint64_t end = _tzcnt_u64(h0);
+            // if (i <= end) {
+            assert(((uint8_t *) pd)[kBytes2copy + i] == rem);
+            ((uint8_t *) pd)[kBytes2copy + i] = Tombstone_FP;
+            return;
+            // }
+            // return false;
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+
+        if (quot <= pop) {
+            // std::cout << "h2" << std::endl;
+            const uint64_t begin = pd512::select64(h0, quot - 1);
+            const uint64_t begin_body_index = begin - (quot - 1);
+            const uint64_t index_att = _tzcnt_u64(v & ~MSK(begin_body_index));
+            assert(index_att < MAX_CAPACITY);
+            // const uint64_t end = pd512::select64(h0, quot);
+            // const uint64_t index = end - (quot - 1);
+            // uint8_t temp_rem0 = ((uint8_t *) pd)[kBytes2copy + index - 1];
+            // uint8_t temp_rem1 = ((uint8_t *) pd)[kBytes2copy + index];
+            // uint8_t temp_rem2 = ((uint8_t *) pd)[kBytes2copy + index + 1];
+            // assert(temp_rem)
+            // assert(((uint8_t *) pd)[kBytes2copy + index] == rem);
+            assert(((uint8_t *) pd)[kBytes2copy + index_att] == rem);
+            ((uint8_t *) pd)[kBytes2copy + index_att] = Tombstone_FP;
+        } else {
+            // std::cout << "h3" << std::endl;
+            // constexpr uint64_t h1_const_mask = ((1ULL << (101 - 64)) - 1);
+            const uint64_t rel_quot = quot - pop;
+            const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+            const uint64_t begin = pd512::select64(h1, rel_quot - 1);
+            const uint64_t begin_body_index = (64 + begin) - (quot - 1);
+            const uint64_t index_att = _tzcnt_u64(v & ~MSK(begin_body_index));
+            assert(index_att < MAX_CAPACITY);
+            assert(((uint8_t *) pd)[kBytes2copy + index_att] == rem);
+            ((uint8_t *) pd)[kBytes2copy + index_att] = Tombstone_FP;
+
+            // const uint64_t end = pd512::select64(h1, quot - pop);
+            // const uint64_t index = 64 + end - quot;
+            // assert(((uint8_t *) pd)[kBytes2copy + index] == rem);
+            // ((uint8_t *) pd)[kBytes2copy + index] = Tombstone_FP;
+        }
+    }
+
+    inline void remove_last_rem_when_tombstone(__m512i *pd) {
+        assert(pd512::validate_number_of_quotient(pd));
+
+        constexpr uint64_t h1_const_mask = ((1ULL << (101 - 64)) - 1);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        uint64_t *pd64 = (uint64_t *) pd;
+
+        uint64_t temp_quot = get_last_occupied_quot_for_full_pd(pd);
+        //        uint64_t temp_quot2 = pd512_plus::count_ones_up_to_the_kth_zero(pd, 50);
+        assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, 50););
+        uint64_t temp_shift = QUOTS - temp_quot;
+        uint64_t xor_mask = (1ULL << 36) | ((1ULL << (36 - temp_shift)));
+        assert(_mm_popcnt_u64(pd64[1] & (1ULL << 36)) == 1);
+        assert(_mm_popcnt_u64(pd64[1] & xor_mask) == 1);
+        pd64[1] ^= xor_mask;
+        ((uint8_t *) pd)[63] = 0;
+        assert(pd512::validate_number_of_quotient(pd));
+    }
+
+    inline auto clear_all_tombstones_super_naive_with_prints(__m512i *pd) -> void {
+        //FIXME: continue from this functions
+        // std::cout << std::string(80, '~') + "\n" + std::string(80, '*') << std::endl;
+        std::stringstream ss;
+        const __m512i target = _mm512_set1_epi8(Tombstone_FP);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        uint64_t v_temp = _mm512_cmpeq_epu8_mask(target, *pd);
+
+        if (!v) {
+            return;
+        }
+        // const uint64_t v42 = v;
+        // bool cond = v & ((1ULL << 62u) >> 13ull);
+        bool cond = _lzcnt_u64(v_temp) == 0;
+        assert((!cond) || _lzcnt_u64(v) == 13);
+
+        if (cond) {
+            // std::cout << "Case of last rem is a tombstone." << std::endl;
+            remove_last_rem_when_tombstone(pd);
+            v = (v << 14) >> 14;
+        }
+        // bool cond2 = v & (1ULL << 49);
+
+        uint64_t v_pop = _mm_popcnt_u64(v);
+        size_t capacity = pd512::get_capacity(pd);
+        assert(v_pop <= capacity);
+        uint64_t v0 = v;
+        uint64_t body_index = 0;
+        size_t db_iter_counter = 0;
+        while (v) {
+            ss << db_iter_counter << ")" << std::endl;
+            ss << v_ts_pd512::pd_to_string(pd).str();
+            ss << v_ts_pd512::format_word_to_string(v);
+            ss << "v:          " << v << std::endl;
+            uint64_t temp_index = __tzcnt_u64(v);
+
+            assert(temp_index < 64);
+            v >>= (temp_index + 1);
+            body_index += temp_index;
+            uint64_t temp_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, body_index);
+            ss << "temp_index: " << temp_index << std::endl;
+            ss << "body_index: " << body_index << std::endl;
+            ss << "temp_quot:  " << temp_quot << std::endl;
+            ss << v_ts_pd512::headers_extended_to_string(pd).str();
+            remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+            db_iter_counter++;
+            ss << std::string(80, '=') << std::endl;
+            // std::cout << std::string(80, '*') + "\n" + std::string(80, '~') << std::endl;
+        }
+        // if (cond) {
+        //     std::cout << "Case of last rem is a tombstone." << std::endl;
+        //     ((uint8_t *) pd)[63] = 0;
+        // }
+        uint64_t v1 = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        assert(v1 == 0);
+        // std::cout << std::string(80, '*') + "\n" + std::string(80, '~') << std::endl;
+        // assert(cond)
+    }
+
+    inline auto clear_all_tombstones_super_naive(__m512i *pd) -> void {
+        const __m512i target = _mm512_set1_epi8(Tombstone_FP);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        uint64_t v_temp = _mm512_cmpeq_epu8_mask(target, *pd);
+        if (!v)
+            return;
+
+        bool cond = _lzcnt_u64(v_temp) == 0;
+        assert((!cond) || (_lzcnt_u64(v) == 13));
+
+        if (cond) {
+            remove_last_rem_when_tombstone(pd);
+            v = (v << 14) >> 14;
+        }
+
+        uint64_t v_pop = _mm_popcnt_u64(v);
+        size_t capacity = pd512::get_capacity(pd);
+        assert(v_pop <= capacity);
+        uint64_t v0 = v;
+        uint64_t curr_zero_count = 0;
+        while (v) {
+            uint64_t temp_index = __tzcnt_u64(v);
+            assert(temp_index < 64);
+            v >>= (temp_index + 1);
+            curr_zero_count += temp_index;
+            uint64_t temp_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+            remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+        }
+        assert((_mm512_cmpeq_epu8_mask(target, *pd) >> 13ul) == 0);
+    }
+
+    inline auto clear_all_tombstones_naiver007(__m512i *pd) -> void {
+        static int c = 0;
+        static int c2 = 0;
+        c++;
+        const __m512i target = _mm512_set1_epi8(Tombstone_FP);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        // uint64_t v_temp = _mm512_cmpeq_epu8_mask(target, *pd);
+        if (!v)
+            return;
+
+
+        if (_lzcnt_u64(v) == 13) {
+            remove_last_rem_when_tombstone(pd);
+            v = (v << 14) >> 14;
+        }
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t pop = _mm_popcnt_u64(h0);
+        const uint64_t h0_zero_count = 64 - pop;
+
+        size_t capacity = pd512::get_capacity(pd);
+        const uint64_t v_pop = _mm_popcnt_u64(v);
+        assert(v_pop <= capacity);
+        uint64_t v0 = v;
+        uint64_t curr_zero_count = 0;
+        while (v) {
+            uint64_t temp_v = v;
+            uint64_t temp_index = __tzcnt_u64(v);
+            assert(temp_index < 64);
+            v >>= (temp_index + 1);
+            curr_zero_count += temp_index;
+            if (curr_zero_count < h0_zero_count) {
+                std::cout << "c0" << std::endl;
+                uint64_t temp_index = pd512::select64(~h0, curr_zero_count);
+                uint64_t temp_quot = temp_index - curr_zero_count;
+                uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+
+                remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+            } else if (h0_zero_count < curr_zero_count) {
+                std::cout << "c1" << std::endl;
+                // static int c2 = 0;
+                c2++;
+
+                uint64_t temp_index = pd512::select64(~h1, curr_zero_count - h0_zero_count);
+                uint64_t temp_quot = 64 + temp_index - curr_zero_count;
+                // uint64_t temp_quot = 64 - curr_zero_count;
+                uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                std::cout << "capacity:            " << capacity << std::endl;
+                std::cout << "temp_quot:      " << temp_quot << std::endl;
+                std::cout << "valid_quot:     " << valid_quot << std::endl;
+                std::cout << "temp_index:     " << temp_index << std::endl;
+                std::cout << "v0:             " << v_ts_pd512::format_word_to_string(v0) << std::endl;
+                std::cout << "temp_v:         " << v_ts_pd512::format_word_to_string(temp_v) << std::endl;
+                std::cout << v_ts_pd512::headers_extended_to_string(pd).str();
+                assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+                remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+            } else {
+                std::cout << "c2" << std::endl;
+                const bool cond = h0 & (1ULL << 63);
+                if (cond) {
+                    uint64_t temp_quot = pop - _tzcnt_u64(~h0);
+                    uint64_t temp_quot_att = pop + _tzcnt_u64(~h1);
+                    uint64_t temp_quot_att2 = pop + _tzcnt_u64(~h1) + 1;
+                    uint64_t temp_quot_att3 = pop - _lzcnt_u64(~h0);
+                    uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                    std::cout << "capacity:            " << capacity << std::endl;
+                    std::cout << "temp_quot:           " << temp_quot << std::endl;
+                    std::cout << "temp_quot_att:       " << temp_quot_att << std::endl;
+                    std::cout << "temp_quot_att2:      " << temp_quot_att2 << std::endl;
+                    std::cout << "temp_quot_att3:      " << temp_quot_att3 << std::endl;
+                    std::cout << "valid_quot:          " << valid_quot << std::endl;
+                    std::cout << "v0:             " << v_ts_pd512::format_word_to_string(v0) << std::endl;
+                    std::cout << "temp_v:         " << v_ts_pd512::format_word_to_string(temp_v) << std::endl;
+                    std::cout << v_ts_pd512::headers_extended_to_string2(pd).str();
+                    assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+                    remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+                } else {
+                    uint64_t temp_quot = pop;
+                    uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                    assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+                    remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+                }
+            }
+            // uint64_t temp_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+            // remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+        }
+        assert((_mm512_cmpeq_epu8_mask(target, *pd) >> 13ul) == 0);
+    }
+
+    inline auto clear_all_tombstones_naiver(__m512i *pd) -> void {
+        std::cout << std::string(80, '=') << std::endl;
+        const __m512i old_pd = *pd;
+        const __m512i target = _mm512_set1_epi8(Tombstone_FP);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v)
+            return;
+
+
+        if (_lzcnt_u64(v) == 13) {
+            std::cout << "Y0" << std::endl;
+            remove_last_rem_when_tombstone(pd);
+            v = (v << 14) >> 14;
+        }
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        const uint64_t pop = _mm_popcnt_u64(h0);
+        const uint64_t h0_zero_count = 64 - pop;
+
+        size_t capacity = pd512::get_capacity(pd);
+        const uint64_t v_pop = _mm_popcnt_u64(v);
+        uint16_t quot_arr[v_pop];
+
+        assert(v_pop <= capacity);
+        uint64_t v0 = v;
+        uint64_t curr_zero_count = 0;
+        for (size_t i = 0; i < v_pop; i++) {
+            uint64_t temp_v = v;
+            uint64_t temp_index = __tzcnt_u64(v);
+            assert(temp_index < 64);
+            v >>= (temp_index + 1);
+            curr_zero_count += temp_index;
+            if (curr_zero_count < h0_zero_count) {
+                std::cout << "Y1" << std::endl;
+                uint64_t temp_index = pd512::select64(~h0, curr_zero_count);
+                uint64_t temp_quot = temp_index - curr_zero_count;
+                uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+                quot_arr[i] = temp_quot;
+                // remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+                // curr_zero_count++;
+            } else if (h0_zero_count < curr_zero_count) {
+                std::cout << "Y2" << std::endl;
+                // static int c2 = 0;
+                // c2++;
+
+                uint64_t temp_index = pd512::select64(~h1, curr_zero_count - h0_zero_count);
+                uint64_t temp_quot = 64 + temp_index - curr_zero_count;
+                // uint64_t temp_quot = 64 - curr_zero_count;
+                uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                std::cout << "capacity:            " << capacity << std::endl;
+                std::cout << "temp_quot:      " << temp_quot << std::endl;
+                std::cout << "valid_quot:     " << valid_quot << std::endl;
+                std::cout << "temp_index:     " << temp_index << std::endl;
+                std::cout << "v0:             " << v_ts_pd512::format_word_to_string(v0) << std::endl;
+                std::cout << "temp_v:         " << v_ts_pd512::format_word_to_string(temp_v) << std::endl;
+                std::cout << v_ts_pd512::headers_extended_to_string(pd).str();
+                assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+                quot_arr[i] = temp_quot;
+                // remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+            } else {
+                std::cout << "Y3" << std::endl;
+                const bool cond = h0 & (1ULL << 63);
+                uint64_t a = _lzcnt_u64(~h0);
+                uint64_t b = _lzcnt_u64(h0);
+                uint64_t c = _tzcnt_u64(~h1);
+                uint64_t d = _tzcnt_u64(h1);
+                if (cond) {
+                    uint64_t temp_quot = pop - _tzcnt_u64(~h0);
+                    uint64_t temp_quot_att = pop + _tzcnt_u64(~h1);
+                    uint64_t temp_quot_att2 = pop + _tzcnt_u64(~h1) + 1;
+                    uint64_t temp_quot_att3 = pop - _lzcnt_u64(~h0);
+                    uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                    std::cout << "capacity:            " << capacity << std::endl;
+                    std::cout << "temp_quot:           " << temp_quot << std::endl;
+                    std::cout << "temp_quot_att:       " << temp_quot_att << std::endl;
+                    std::cout << "temp_quot_att2:      " << temp_quot_att2 << std::endl;
+                    std::cout << "temp_quot_att3:      " << temp_quot_att3 << std::endl;
+                    std::cout << "valid_quot:          " << valid_quot << std::endl;
+                    std::cout << "v0:             " << v_ts_pd512::format_word_to_string(v0) << std::endl;
+                    std::cout << "temp_v:         " << v_ts_pd512::format_word_to_string(temp_v) << std::endl;
+                    std::cout << v_ts_pd512::headers_extended_to_string2(pd).str();
+                    assert(temp_quot_att == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+                    quot_arr[i] = temp_quot_att;
+                    // remove_from_not_sorted_body_naive(temp_quot_att, Tombstone_FP, pd);
+                } else {
+                    uint64_t temp_quot = pop + pd512::select64(~h1, 0);
+                    uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+                    assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count));
+                    quot_arr[i] = temp_quot;
+                    // remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+                }
+            }
+            // curr_zero_count++;
+            // uint64_t temp_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, curr_zero_count);
+            // remove_from_not_sorted_body_naive(temp_quot, Tombstone_FP, pd);
+        }
+
+        for (size_t i = 0; i < v_pop; i++) {
+            std::cout << quot_arr[i] << ", ";
+            remove_from_not_sorted_body_naive(quot_arr[i], Tombstone_FP, pd);
+        }
+        std::cout << std::endl;
+
+        uint64_t post_v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (post_v != 0) {
+            std::cout << v_ts_pd512::format_word_to_string(v0) << std::endl;
+            std::cout << v_ts_pd512::format_word_to_string(post_v) << std::endl;
+
+            v_ts_pd512::print_body(&old_pd);
+            v_ts_pd512::print_body(pd);
+
+            assert(post_v == 0);
+        }
+        assert(post_v == 0);
+
+        // assert((_mm512_cmpeq_epu8_mask(target, *pd) >> 13ul) == 0);
+    }
+
+    inline auto clear_all_tombstones_naive_ver2(__m512i *pd) -> void {
+        const __m512i old_pd = *pd;
+        const __m512i target = _mm512_set1_epi8(Tombstone_FP);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (!v)
+            return;
+
+        const uint64_t v_pop = _mm_popcnt_u64(v);
+        uint64_t quot_arr[v_pop + 2];
+        get_all_mask_quotient1(v, pd, quot_arr);
+
+        size_t lim = v_pop;
+        // size_t i = v_pop - 1;
+        if (_lzcnt_u64(v) == 13) {
+            // std::cout << "Y0" << std::endl;
+            remove_last_rem_when_tombstone(pd);
+            v = (v << 14) >> 14;
+            lim--;
+        }
+
+        for (size_t i = 0; i < lim; i++) {
+            remove_from_not_sorted_body_naive(quot_arr[i], Tombstone_FP, pd);
+        }
+
+        uint64_t post_v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (post_v != 0) {
+            std::cout << v_ts_pd512::format_word_to_string(post_v) << std::endl;
+
+            v_ts_pd512::print_pd(&old_pd);
+            v_ts_pd512::print_pd(pd);
+            // v_ts_pd512::print_body(&old_pd);
+            // v_ts_pd512::print_body(pd);
+
+            assert(post_v == 0);
+        }
+        assert(post_v == 0);
+    }
+
+    inline void clear_all_tombstones_wrapper(__m512i *pd) {
+        clear_all_tombstones_naive_ver2(pd);
+    }
+
+
+    inline auto get_all_mask_quotient(uint64_t mask, __m512i *pd) -> void {
+        const uint64_t mask_pop = _mm_popcnt_u64(mask);
+        uint64_t v = mask;
+        size_t zero_counter[mask_pop];
+        size_t zero_counter_by_select_arr[mask_pop];
+        uint64_t quot_arr[mask_pop];
+
+        uint64_t temp = _tzcnt_u64(v);
+        zero_counter[0] = temp;
+        v >>= (temp + 1);
+        for (size_t i = 1; i < mask_pop; i++) {
+            temp = _tzcnt_u64(v);
+            v >>= (temp + 1);
+            zero_counter[i] = zero_counter[i - 1] + 1 + temp;
+        }
+
+        for (size_t i = 0; i < mask_pop; i++) {
+            assert(pd512::select64(4, 0) == 2);
+            zero_counter_by_select_arr[i] = pd512::select64(v, i);
+        }
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+
+        uint64_t h0_pop = _mm_popcnt_u64(h0);
+        uint64_t h0_zc = 64 - h0_pop;
+        size_t i = 0;
+
+        for (i; i < mask_pop; i++) {
+            uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, zero_counter_by_select_arr[i]);
+            if (zero_counter_by_select_arr[i] >= h0_zc)
+                break;
+            uint64_t temp_index = pd512::select64(~h0, zero_counter[i]);
+            uint64_t ones_counter = temp_index - zero_counter[i];
+            assert(ones_counter == valid_quot);
+            quot_arr[i] = ones_counter;
+        }
+
+        if (zero_counter_by_select_arr[i] == h0_zc) {
+            // Claim: Using only h1, we can not know which quotient match this body index.
+            // Proof: If h0 ends with 0, and h0 starts with 0, then the quotient is pop(h0).
+            // Proof: If h0 ends with 1, the matching quotient is bigger than pop.
+            uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, zero_counter_by_select_arr[i]);
+            uint64_t temp_index = pd512::select64(~h1, 0);
+            uint64_t abs_index = 64 + temp_index;
+            uint64_t ones_counter = abs_index - zero_counter_by_select_arr[i];
+            assert(ones_counter == valid_quot);
+            zero_counter_by_select_arr[i] = ones_counter;
+            i++;
+        }
+
+        for (i; i < mask_pop; i++) {
+            uint64_t valid_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, zero_counter_by_select_arr[i]);
+            uint64_t shifted_zc = zero_counter[i] - h0_zc;
+            uint64_t temp_index = pd512::select64(~h0, shifted_zc);
+            uint64_t abs_index = 64 + temp_index;
+            uint64_t ones_counter = abs_index - zero_counter_by_select_arr[i];
+            assert(ones_counter == valid_quot);
+            zero_counter_by_select_arr[i] = ones_counter;
+            // quot_arr[i] = ones_counter;
+        }
+
+        for (size_t i = 0; i < mask_pop; i++) {
+            if (zero_counter[i] > h0_zc)
+                break;
+            // quot_arr
+            uint64_t temp_index = pd512::select64(~h0, zero_counter[i]);
+            uint64_t begin_plus_one = temp_index - zero_counter[i];
+        }
+
+        // uint16_t quot_arr[v_pop];
+    }
+
+    inline auto remove_from_not_sorted_body_without128_bits_op(int64_t quot, uint8_t rem, __m512i *pd) -> bool {
         const __m512i target = _mm512_set1_epi8(rem);
         uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
         // if (!v) {
         //     return false;
         // }
-
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
         if (_blsr_u64(v) == 0) {
             const uint64_t i = _tzcnt_u64(v);
+            // assert(rem == ((const uint8_t *) pd)[kBytes2copy + i]);
 
-            const bool find_res = (!(header & (((unsigned __int128) 1) << (quot + i)))) &&
-                                  (pd512::popcount128(header & (((unsigned __int128) 1 << (quot + i)) - 1)) == quot);
-
-            if (find_res) {
-                assert(rem == ((const uint8_t *) pd)[kBytes2copy + i]);
-
-                const uint64_t shift = i + quot;
-                unsigned __int128 new_header = header & ((((unsigned __int128) 1) << shift) - 1);
-                new_header |= ((header >> (shift + 1)) << (shift));
-                // new_header |= ((header >> shift) << (shift - 1));
-
-                assert(pd512::popcount128(header) == 50);
-
-                assert(pd512::validate_number_of_quotient(pd));
-                memcpy(pd, &new_header, kBytes2copy);
-                assert(pd512::validate_number_of_quotient(pd));
-
-                memmove(&((uint8_t *) pd)[kBytes2copy + i],
-                        &((const uint8_t *) pd)[kBytes2copy + i + 1],
-                        sizeof(*pd) - (kBytes2copy + i + 1));
+            const uint64_t mid = i + quot;
+            if (mid < 64) {
             }
-            return find_res;
+            // unsigned __int128 new_header = header & ((((unsigned __int128) 1) << shift) - 1);
+            // new_header |= ((header >> (shift + 1)) << (shift));
+            // new_header |= ((header >> shift) << (shift - 1));
+
+            // assert(pd512::popcount128(header) == 50);
+
+            //     assert(pd512::validate_number_of_quotient(pd));
+            //     memcpy(pd, &new_header, kBytes2copy);
+            //     assert(pd512::validate_number_of_quotient(pd));
+
+            //     memmove(&((uint8_t *) pd)[kBytes2copy + i],
+            //             &((const uint8_t *) pd)[kBytes2copy + i + 1],
+            //             sizeof(*pd) - (kBytes2copy + i + 1));
+            // }
+            // return find_res;
         }
+        assert(0);
+        return true;
     }
- */
 
     inline void remove_from_not_sorted_body_with_assertion(int64_t quot, uint8_t rem, __m512i *pd) {
         assert(quot < 50);
@@ -512,7 +1274,7 @@ namespace ts_pd512 {
 
 
     inline void body_add_naive(size_t end_fingerprint, uint8_t rem, __m512i *pd) {
-        constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        // constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
 
         memmove(&((uint8_t *) pd)[kBytes2copy + end_fingerprint + 1],
                 &((const uint8_t *) pd)[kBytes2copy + end_fingerprint],
@@ -584,7 +1346,7 @@ namespace ts_pd512 {
     inline void write_header_naive(int64_t quot, uint64_t end, __m512i *pd) {
         //This functions takes 36 lines in godbolt.
         assert(pd512::validate_number_of_quotient(pd));
-        
+
         // I'm assuming that the case "quot == 0" was dealt with, previously.
         assert(quot);
 
@@ -748,7 +1510,7 @@ namespace ts_pd512 {
 
     inline void write_header8(uint64_t index, __m512i *pd) {
         assert(pd512::validate_number_of_quotient(pd));
-        
+
         uint64_t *pd64 = (uint64_t *) pd;
         const uint64_t low_h1 = ((pd64[1] << 1)) | (pd64[0] >> 63u);
         memcpy(pd64 + 1, &low_h1, 5);
@@ -757,11 +1519,11 @@ namespace ts_pd512 {
         const uint64_t h0_lower = pd64[0] & h0_mask;
 
         pd64[0] = h0_lower | ((pd64[0] & ~h0_mask) << 1u);
-        //This saves one command, but does not work when index == 63. 
+        //This saves one command, but does not work when index == 63.
         // pd64[0] = h0_lower | ((pd64[0] >> index) << (index + 1));
-        
+
         //   pd64[0] = (pd64[0] & MSK(index)) | ((pd64[0] >> index) << (index - 1));
-    
+
         assert(pd512::validate_number_of_quotient(pd));
     }
 
@@ -956,11 +1718,11 @@ namespace ts_pd512 {
         }
 
 
-        constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
         constexpr uint64_t h1_const_mask = ((1ULL << (101 - 64)) - 1);
 
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
         const uint64_t pop = _mm_popcnt_u64(h0);
+        // const uint64_t pop = (h0 ^ (h0 >> 8u)) % QUOTS;
         if (quot < pop) {
             const uint64_t end = pd512::select64(h0, quot);
             assert(v_ts_pd512::validate_write_header(quot, end, pd));
@@ -1141,7 +1903,7 @@ namespace ts_pd512 {
             // const uint64_t pre_pop = _mm_popcnt_u64(h0);
             //header
             // Turns first one to zero, and first zero to one.
-            // Logically, we delete the first remainder, and add a new one, whose matching quotinet is zero.
+            // Logically, we delete the first remainder, and add a new one, whose matching quotient is zero.
 
             const uint64_t first_zero_index = _tzcnt_u64(~h0);
             // first_zero_index can not be 64. If it is 64, then the header contains to many 1's (63 which is more than QUOTS)
@@ -1718,6 +2480,29 @@ namespace ts_pd512 {
         // add_when_full(quot, rem, pd);
         // assert(find(quot, rem, pd));
         // return true;
+    }
+
+    inline bool add_plus_tombs(int64_t quot, uint8_t rem, __m512i *pd) {
+        // the first part in the assertion, make it work only portion of the times.
+        assert((quot != 42) || v_ts_pd512::safe_validate_tombstoning_methods(pd, 16));
+
+        if (!pd_full(pd)) {
+            add_when_not_full(quot, rem, pd);
+            return false;
+        }
+        const __m512i target = _mm512_set1_epi8(Tombstone_FP);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (v) {
+            // clear_all_tombstones_super_naive(pd);
+            clear_all_tombstones_wrapper(pd);
+            add_when_not_full(quot, rem, pd);
+            return false;
+        } else {
+            add_when_full(quot, rem, pd);
+            assert(find(quot, rem, pd));
+            return true;
+        }
     }
 
     inline bool add_old(int64_t quot, uint8_t rem, __m512i *pd) {

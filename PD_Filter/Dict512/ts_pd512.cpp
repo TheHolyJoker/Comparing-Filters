@@ -361,8 +361,261 @@ namespace v_ts_pd512 {
         return true;
     }
 
+
+    bool safe_validate_tombstoning_methods(__m512i *pd, size_t reps) {
+        const __m512i target = _mm512_set1_epi8(ts_pd512::Tombstone_FP);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+        if (v){
+            return true;
+        }
+        const __m512i pd0 = *pd;
+        size_t capacity = pd512::get_capacity(pd);
+        if (capacity < 2)
+            return true;
+        size_t a_size = capacity + 2;// +2 to deal with the case that capacity < 2, and then an error occur (not an array).
+        uint64_t pd_arr[capacity + 2];
+        pd_to_array(pd, pd_arr, a_size);
+
+        size_t reps0 = reps;
+        for (size_t i = 0; i < reps; i++) {
+            const size_t rand_rem_index = rand() % capacity;
+            uint8_t rand_rem = ((uint8_t *) pd)[ts_pd512::kBytes2copy + rand_rem_index];
+            int64_t rand_quot = pd512_plus::count_ones_up_to_the_kth_zero(pd, rand_rem_index);
+            ts_pd512::remove_by_tombstoning(rand_quot, rand_rem, pd);
+            const __m512i pd1 = *pd;
+            auto temp_s = pds_difference_to_string(rand_quot, rand_rem, &pd0, &pd1);
+            ts_pd512::clear_all_tombstones_wrapper(pd);
+            // ts_pd512::clear_all_tombstones_super_naive(pd);
+            const __m512i pd2 = *pd;
+            ts_pd512::add(rand_quot, rand_rem, pd);
+            const __m512i pd3 = *pd;
+            auto temp_res = pd_distance(&pd0, &pd3);
+            if (temp_res != 0) {
+                std::cout << "Failed after the following repetition: " << (i) << std::endl;
+
+                // std::cout << "quot:              " << quot << std::endl;
+                std::cout << "rand_quot:         " << rand_quot << std::endl;
+                std::cout << "rand_rem:          " << (uint16_t) rand_rem << std::endl;
+                std::cout << "rand_rem_index:    " << rand_rem_index << std::endl;
+                std::cout << "\n\npd0:" << std::endl;
+                print_pd(&pd0);
+                std::cout << std::string(80, '.') << std::endl;
+                std::cout << "\n\npd1:" << std::endl;
+                print_pd(&pd1);
+                std::cout << std::string(80, '.') << std::endl;
+                std::cout << "\n\npd2:" << std::endl;
+                print_pd(&pd2);
+                std::cout << std::string(80, '.') << std::endl;
+                std::cout << "\n\npd3:" << std::endl;
+                print_pd(&pd3);
+                std::cout << std::string(80, '.') << std::endl;
+                // auto diff_01 = pds_difference_to_string(rand_quot, rand_rem, &pd0, &pd1);
+                // auto diff_12 = pds_difference_to_string(rand_quot, rand_rem, &pd1, &pd2);
+                // auto diff_23 = pds_difference_to_string(rand_quot, rand_rem, &pd2, &pd3);
+                // auto old_vs_curr=  pds_difference_to_string(rand_quot, rand_rem, &old_pd, &mid_pd);
+
+                assert(0);
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @brief Prints standart info of two PD's. Sometimes "quot" and "rem" are used naturally.
+     * 
+     * @param quot 
+     * @param rem 
+     * @param old_pd 
+     * @param new_pd 
+     */
+    void print_pds_difference(int64_t quot, uint8_t rem, const __m512i *old_pd, const __m512i *new_pd) {
+        std::cout << "quot:              " << quot << std::endl;
+        std::cout << "rem:               " << (uint16_t) rem << std::endl;
+
+        if (!compare_headers(old_pd, new_pd)) {
+            std::cout << "Headers differ" << std::endl;
+            size_t temp0_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(old_pd, quot) + quot;
+            size_t temp1_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(new_pd, quot) + quot;
+            // size_t temp2_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot) + quot;
+
+            size_t temp0_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(old_pd, quot - 1) + quot - 1;
+            size_t temp1_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(new_pd, quot - 1) + quot - 1;
+            // size_t temp2_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot - 1) + quot - 1;
+            std::cout << "temp0_select_quot: " << temp0_select_quot << std::endl;
+            std::cout << "temp1_select_quot: " << temp1_select_quot << std::endl;
+            // std::cout << "temp2_select_quot: " << temp2_select_quot << std::endl;
+            std::cout << "temp0_select_quot_m1: " << temp0_select_quot_m1 << std::endl;
+            std::cout << "temp1_select_quot_m1: " << temp1_select_quot_m1 << std::endl;
+            // std::cout << "temp2_select_quot_m1: " << temp2_select_quot_m1 << std::endl;
+        }
+        v_pd512_plus::print_headers_extended(old_pd);
+        v_pd512_plus::print_headers_extended(new_pd);
+        // v_pd512_plus::print_headers_extended(&temp_pd2);
+
+        std::cout << "temp0 cap: " << pd512::get_capacity_naive(old_pd) << std::endl;
+        std::cout << "temp1 cap: " << pd512::get_capacity_naive(new_pd) << std::endl;
+        // std::cout << "temp2 cap: " << pd512::get_capacity_naive(&temp_pd2) << std::endl;
+        if (!compare_bodies(old_pd, new_pd)) {
+            size_t arr[ts_pd512::MAX_CAPACITY];
+            // Next line is useful.
+            // diff_bodies(old_pd, new_pd, arr);
+            print_body(old_pd);
+            print_body(new_pd);
+            // v_ts_pd512::print_body(&temp_pd2);
+        }
+    }
+
+    void print_pd(const __m512i *pd) {
+        std::cout << std::string(80, '~') << std::endl;
+        assert(pd512::get_capacity(pd) == pd512::get_capacity_naive(pd));
+        std::cout << "pd capacity:" << pd512::get_capacity(pd) << std::endl;
+        v_pd512_plus::print_headers_extended(pd);
+        print_body(pd);
+        std::cout << std::string(80, '~') << std::endl;
+    }
+
+    auto pds_difference_to_string(int64_t quot, uint8_t rem, const __m512i *old_pd, const __m512i *new_pd) -> std::stringstream {
+        std::stringstream ss;
+        ss << "quot:              " << quot << std::endl;
+        ss << "rem:               " << (uint16_t) rem << std::endl;
+
+        if (!compare_headers(old_pd, new_pd)) {
+            ss << "Headers differ" << std::endl;
+            size_t temp0_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(old_pd, quot) + quot;
+            size_t temp1_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(new_pd, quot) + quot;
+            // size_t temp2_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot) + quot;
+
+            size_t temp0_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(old_pd, quot - 1) + quot - 1;
+            size_t temp1_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(new_pd, quot - 1) + quot - 1;
+            // size_t temp2_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot - 1) + quot - 1;
+            ss << "temp0_select_quot: " << temp0_select_quot << std::endl;
+            ss << "temp1_select_quot: " << temp1_select_quot << std::endl;
+            // ss << "temp2_select_quot: " << temp2_select_quot << std::endl;
+            ss << "temp0_select_quot_m1: " << temp0_select_quot_m1 << std::endl;
+            ss << "temp1_select_quot_m1: " << temp1_select_quot_m1 << std::endl;
+            // ss << "temp2_select_quot_m1: " << temp2_select_quot_m1 << std::endl;
+        }
+        ss << headers_extended_to_string(old_pd).str();
+        ss << headers_extended_to_string(new_pd).str();
+        // v_pd512_plus::print_headers_extended(&temp_pd2);
+
+        ss << "temp0 cap: " << pd512::get_capacity_naive(old_pd) << std::endl;
+        ss << "temp1 cap: " << pd512::get_capacity_naive(new_pd) << std::endl;
+        // std::cout << "temp2 cap: " << pd512::get_capacity_naive(&temp_pd2) << std::endl;
+        if (!compare_bodies(old_pd, new_pd)) {
+            size_t arr[ts_pd512::MAX_CAPACITY];
+            // diff_bodies(old_pd, new_pd, arr);
+            ss << body_to_string(old_pd).str();
+            ss << body_to_string(new_pd).str();   
+        }
+        return ss;
+    }
+
+    auto headers_extended_to_string(const __m512i *pd) -> std::stringstream {
+        std::stringstream ss;
+        // constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        ss << std::string(84, '-') << std::endl;
+        ss << "h0: " << v_pd512_plus::bin_print_header_spaced2(h0);
+        ss << "\t(#1,#0): (" << _mm_popcnt_u64(h0) << ", " << (64 - _mm_popcnt_u64(h0)) << ")" << std::endl;
+        ss << "h1: " << v_pd512_plus::bin_print_header_spaced2(h1);
+        ss << "\t(#1,#0): (" << _mm_popcnt_u64(h1) << ", " << (64 - _mm_popcnt_u64(h1)) << ")" << std::endl;
+        ss << std::string(84, '-') << std::endl;
+        return ss;
+    }
+
+    auto headers_extended_to_string2(const __m512i *pd) -> std::stringstream {
+        std::stringstream ss;
+        constexpr uint64_t h1_mask = (1ULL << (101ul - 64ul)) - 1ul;
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        ss << std::string(84, '-') << std::endl;
+        ss << "h0: " << v_pd512_plus::bin_print_header_spaced2(h0);
+        ss << "\t(#1,#0): (" << _mm_popcnt_u64(h0) << ", " << (64 - _mm_popcnt_u64(h0)) << ")" << std::endl;
+        ss << "h1: " << v_pd512_plus::bin_print_header_spaced2(h1);
+        auto h1_pop = _mm_popcnt_u64(h1 & h1_mask);
+        ss << "\t(#1,#0): (" << h1_pop << ", " << (37 - h1_pop) << ")" << std::endl;
+        ss << std::string(84, '-') << std::endl;
+        return ss;
+    }
+
+    auto body_to_string(const __m512i *pd) -> std::stringstream {
+        std::stringstream ss;
+
+        ss << std::string(80, '=') << std::endl;
+        uint8_t temp_arr[ts_pd512::MAX_CAPACITY];
+        memcpy(temp_arr, &((uint8_t *) pd)[ts_pd512::kBytes2copy], ts_pd512::MAX_CAPACITY);
+        for (size_t i = 0; i < 6; i++) {
+            for (size_t j = 0; j < 8; j++) {
+                size_t temp_index = i * 8 + j;
+                ss << std::setw(3) << (uint16_t) temp_arr[temp_index] << " | ";
+            }
+            ss << std::endl;
+        }
+        for (size_t i = 0; i < 3; i++) {
+            size_t temp_index = 48 + i;
+            ss << std::setw(3) << (uint16_t) temp_arr[temp_index] << " | ";
+        }
+        ss << std::endl;
+        ss << std::string(80, '=') << std::endl;
+        return ss;
+    }
+
+    auto pd_to_string(const __m512i *pd) -> std::stringstream{
+        std::stringstream ss;
+
+        assert(pd512::get_capacity(pd) == pd512::get_capacity_naive(pd));
+        ss << "pd capacity:" << pd512::get_capacity(pd) << std::endl;
+        ss << headers_extended_to_string(pd).str();
+        ss << body_to_string(pd).str();
+        return ss;
+    }
+
 }// namespace v_ts_pd512
 
+
+// for printing
+namespace v_ts_pd512 {
+    void p_format_word(uint64_t x) {
+        std::string res = to_bin(x, 64);
+        std::cout << space_string(res) << std::endl;
+    }
+
+    auto format_word_to_string(uint64_t x) -> std::string {
+        std::string res = to_bin(x, 64) + "\n";
+        return space_string(res);
+        // std::cout << space_string(res) << std::endl;
+    }
+
+    auto to_bin(uint64_t x, size_t length) -> std::string {
+        assert(length <= 64);
+        uint64_t b = 1ULL;
+        std::string res = "";
+        for (size_t i = 0; i < length; i++) {
+            res += (b & x) ? "1" : "0";
+            b <<= 1ul;
+        }
+        return res;
+    }
+
+    auto space_string(std::string s) -> std::string {
+        std::string new_s = "";
+        for (size_t i = 0; i < s.size(); i += 4) {
+            if (i) {
+                if (i % 16 == 0) {
+                    new_s += "|";
+                } else if (i % 4 == 0) {
+                    new_s += ".";
+                }
+            }
+            new_s += s.substr(i, 4);
+        }
+        return new_s;
+    }
+
+
+}// namespace v_ts_pd512
 
 namespace ts_pd512 {
 

@@ -200,7 +200,6 @@ void pre_main() {
     std::cout << line << std::endl;
 }
 
-
 void helper_for_printing_fp_rates() {
     using itemType = uint64_t;
 
@@ -280,6 +279,10 @@ void helper_for_printing_fp_rates() {
 }
 
 int main(int argc, char **argv) {
+    // #ifndef NDEBUG
+    // assert(pd512::select64(4, 0) == 2);
+    // error_rates_test();
+    // return 0;
 
     //    auto temp = (DEBUG);
     // #ifndef NDEBUG
