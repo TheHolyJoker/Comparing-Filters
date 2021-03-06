@@ -654,8 +654,8 @@ namespace pd256_plus {
      * @return uint8_t 
      */
     inline auto compute_next_last_quot_att(const __m256i *pd) -> uint8_t {
-        int static t_counter = 0;
-        t_counter++;
+        // int static t_counter = 0;
+        // t_counter++;
         // uint64_t header1 = get_clean_header(pd) >> 14ul;
         // uint64_t header2 = get_clean_header(pd) << 14ul;
         // uint64_t res2 = compute_next_last_quot_helper1(header2);
@@ -668,14 +668,15 @@ namespace pd256_plus {
         uint64_t header3 = (header2 << (index2 + 1));
         size_t index3 = _lzcnt_u64(header3);//connting second sequence of ones.
         auto res = QUOT_SIZE25 - 1 - index2 - index3;
-        auto v_res = compute_next_last_quot_naive(pd);
-        if (v_res != res) {
-            v_pd256_plus::p_format_header(pd);
-            std::cout << "res: " << res << std::endl;
-            std::cout << "v_res: " << v_res << std::endl;
-            std::cout << "t_counter: " << t_counter << std::endl;
-            assert(0);
-        }
+        assert(res == compute_next_last_quot_naive(pd));
+        // auto v_res = compute_next_last_quot_naive(pd);
+        // if (v_res != res) {
+        //     v_pd256_plus::p_format_header(pd);
+        //     std::cout << "res: " << res << std::endl;
+        //     std::cout << "v_res: " << v_res << std::endl;
+        //     std::cout << "t_counter: " << t_counter << std::endl;
+        //     assert(0);
+        // }
         assert(validate_compute_next_last_quot_att(res, pd));
         //    assert(get_last_quot_after_future_swap_naive(0, pd));
         return res;
@@ -1762,7 +1763,7 @@ namespace pd256_plus {
         assert(validate_number_of_quotient(pd));
     }
 
-    
+
     /**
      * @brief Only for validation (to solve a recursive call to the validation function.)
      * 
@@ -1872,7 +1873,7 @@ namespace pd256_plus {
         // pd_add_25_core_vec(quot, rem, pd);
         // return;
         // static bool should_validate = true;
-//        assert(v_pd256_plus::v_pd_add_25_core_vec(quot, rem, pd, false));
+        //        assert(v_pd256_plus::v_pd_add_25_core_vec(quot, rem, pd, false));
         constexpr unsigned kBytes2copy = 7;
         const uint64_t header = get_clean_header(pd);
 
@@ -2190,7 +2191,8 @@ namespace pd256_plus {
                 break;
         }
         if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[kBytes2copy + i])) {
-            if (pd_find_25(quot, rem, pd)) assert(false);
+            assert(!pd_find_25(quot, rem, pd));
+            // if (pd_find_25(quot, rem, pd)) assert(false);
             return false;
         }
 
@@ -2202,6 +2204,93 @@ namespace pd256_plus {
                 &((const uint8_t *) pd)[kBytes2copy + i + 1],
                 sizeof(*pd) - (kBytes2copy + i + 1));
         return true;
+    }
+
+    inline bool delete_from_non_overflowing_pd_core_att(int64_t quot, uint8_t rem, __m256i *pd) {
+        //This function contains an error, I think it is related to the masking of v.
+        assert(0);
+        assert(quot < QUOT_SIZE25);
+        constexpr unsigned kBytes2copy = 7;
+        const uint64_t header = get_clean_header(pd);
+
+        const uint64_t begin = quot ? (select64(header, quot - 1) + 1) : 0;
+        const uint64_t end = select64(header, quot);
+        const __m256i target = _mm256_set1_epi8(rem);
+        const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd);
+        const uint64_t masked_v = v & MSK(end - quot + kBytes2copy) & ~MSK(begin - quot + kBytes2copy);
+        if (!masked_v)
+            return false;
+
+        assert(validate_number_of_quotient(pd));
+        delete_from_header_without_updating_max_quot(begin, end, quot, pd);
+        assert(validate_number_of_quotient(pd));
+
+        const uint64_t i = _tzcnt_u64(masked_v);
+
+        memmove(&((uint8_t *) pd)[i],
+                &((const uint8_t *) pd)[i + 1],
+                sizeof(*pd) - (i + 1));
+        return true;
+
+
+        // const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        // const uint64_t masked_v = v & MSK(end - quot) & ~MSK(begin - quot);
+        // if (!masked_v)
+        //     return false;
+
+        // assert(validate_number_of_quotient(pd));
+        // delete_from_header_without_updating_max_quot(begin, end, quot, pd);
+        // assert(validate_number_of_quotient(pd));
+
+        // const uint64_t i = _tzcnt_u64(masked_v);
+
+        // memmove(&((uint8_t *) pd)[kBytes2copy + i],
+        //         &((const uint8_t *) pd)[kBytes2copy + i + 1],
+        //         sizeof(*pd) - (kBytes2copy + i + 1));
+        // return true;
+
+
+        // const uint64_t end = select64(header, quot);
+
+        // uint64_t i;
+        // if (begin + 1 == end) {
+        //     i = begin - quot;
+        // } else {
+        //     const __m256i target = _mm256_set1_epi8(rem);
+        //     const uint64_t v = _mm256_cmpeq_epu8_mask(target, *pd) >> 7ul;
+        //     assert(v);
+        //     i = _tzcnt_u64(v & MSK(begin - quot));
+        // }
+        // memmove(&((uint8_t *) pd)[kBytes2copy + i],
+        //         &((const uint8_t *) pd)[kBytes2copy + i + 1],
+        //         sizeof(*pd) - (kBytes2copy + i + 1));
+        // return true;
+
+
+        // assert(begin <= end);
+        // assert(end <= CAPACITY25 + QUOT_SIZE25);
+
+        // const uint64_t begin_fingerprint = begin - quot;
+        // const uint64_t end_fingerprint = end - quot;
+        // assert(begin_fingerprint <= end_fingerprint);
+        // assert(end_fingerprint <= CAPACITY25);
+
+        // uint64_t i = begin_fingerprint;
+        // for (; i < end_fingerprint; ++i) {
+        //     if (rem == ((const uint8_t *) pd)[kBytes2copy + i])
+        //         break;
+        // }
+        // if ((i == end_fingerprint) || (rem != ((const uint8_t *) pd)[kBytes2copy + i])) {
+        //     assert(!pd_find_25(quot, rem, pd));
+        //     // if (pd_find_25(quot, rem, pd)) assert(false);
+        //     return false;
+        // }
+
+
+        // memmove(&((uint8_t *) pd)[kBytes2copy + i],
+        //         &((const uint8_t *) pd)[kBytes2copy + i + 1],
+        //         sizeof(*pd) - (kBytes2copy + i + 1));
+        // return true;
     }
 
     inline bool delete_from_non_overflowing_pd(int64_t quot, uint8_t rem, __m256i *pd) {

@@ -59,6 +59,90 @@ namespace v_ts_pd512 {
 
         return true;
     }
+    size_t v_get_element_body_index(int64_t quot, uint8_t rem, const __m512i *pd) {
+        bool cond = ts_pd512::find(quot, rem, pd);
+        if (!cond)
+            return 128;
+
+        uint64_t begin = pd512_plus::count_ones_up_to_the_kth_zero(pd, quot - 1);
+        uint64_t end = pd512_plus::count_ones_up_to_the_kth_zero(pd, quot);
+
+        const uint64_t begin_fingerprint = begin - quot;
+        const uint64_t end_fingerprint = end - quot;
+        assert(begin_fingerprint <= end_fingerprint);
+        assert(end_fingerprint <= ts_pd512::MAX_CAPACITY);
+
+        uint64_t i = begin_fingerprint;
+        for (; i < end_fingerprint; ++i) {
+            if (rem == ((const uint8_t *) pd)[ts_pd512::kBytes2copy + i])
+                return i;
+        }
+        assert(false);
+        return 128;
+    }
+
+    size_t v_get_element_header_index(int64_t quot, uint8_t rem, const __m512i *pd) {
+        bool cond = ts_pd512::find(quot, rem, pd);
+        if (!cond)
+            return 128;
+
+        uint64_t begin = pd512_plus::count_ones_up_to_the_kth_zero(pd, quot - 1);
+        uint64_t end = pd512_plus::count_ones_up_to_the_kth_zero(pd, quot);
+
+        const uint64_t begin_fingerprint = begin - quot;
+        const uint64_t end_fingerprint = end - quot;
+        assert(begin_fingerprint <= end_fingerprint);
+        assert(end_fingerprint <= ts_pd512::MAX_CAPACITY);
+
+        uint64_t i = begin_fingerprint;
+        for (; i < end_fingerprint; ++i) {
+            if (rem == ((const uint8_t *) pd)[ts_pd512::kBytes2copy + i])
+                return begin + i;
+        }
+        assert(false);
+        return 128;
+    }
+
+    bool validate_header_remove(int64_t quot, uint8_t rem, __m512i *pd) {
+        const __m512i old_pd = *pd;
+        __m512i temp_pd0 = old_pd;
+        __m512i temp_pd1 = old_pd;
+        __m512i temp_pd2 = old_pd;
+
+        size_t index = v_get_element_header_index(quot, rem, pd);
+        if (index == 128) {
+            return true;
+        }
+        ts_pd512::header_remove_naive(index, &temp_pd1);
+        ts_pd512::header_remove(index, &temp_pd2);
+
+        if (!compare_headers(&temp_pd1, &temp_pd2)) {
+            // std::cout << "Headers differ" << std::endl;
+            size_t temp0_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd0, quot) + quot;
+            size_t temp1_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd1, quot) + quot;
+            size_t temp2_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot) + quot;
+
+            size_t temp0_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd0, quot - 1) + quot - 1;
+            size_t temp1_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd1, quot - 1) + quot - 1;
+            size_t temp2_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot - 1) + quot - 1;
+            std::cout << "index:                " << index << std::endl;
+            std::cout << "temp0_select_quot:    " << temp0_select_quot << std::endl;
+            std::cout << "temp1_select_quot:    " << temp1_select_quot << std::endl;
+            std::cout << "temp2_select_quot:    " << temp2_select_quot << std::endl;
+            std::cout << "temp0_select_quot_m1: " << temp0_select_quot_m1 << std::endl;
+            std::cout << "temp1_select_quot_m1: " << temp1_select_quot_m1 << std::endl;
+            std::cout << "temp2_select_quot_m1: " << temp2_select_quot_m1 << std::endl;
+
+            v_pd512_plus::print_headers_extended(&temp_pd0);
+            v_pd512_plus::print_headers_extended(&temp_pd1);
+            v_pd512_plus::print_headers_extended(&temp_pd2);
+
+            assert(0);
+        }
+
+        return true;
+    }
+
 
     void print_body(const __m512i *pd) {
         std::cout << std::string(80, '=') << std::endl;
@@ -365,7 +449,7 @@ namespace v_ts_pd512 {
     bool safe_validate_tombstoning_methods(__m512i *pd, size_t reps) {
         const __m512i target = _mm512_set1_epi8(ts_pd512::Tombstone_FP);
         uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
-        if (v){
+        if (v) {
             return true;
         }
         const __m512i pd0 = *pd;
@@ -506,7 +590,7 @@ namespace v_ts_pd512 {
             size_t arr[ts_pd512::MAX_CAPACITY];
             // diff_bodies(old_pd, new_pd, arr);
             ss << body_to_string(old_pd).str();
-            ss << body_to_string(new_pd).str();   
+            ss << body_to_string(new_pd).str();
         }
         return ss;
     }
@@ -562,7 +646,7 @@ namespace v_ts_pd512 {
         return ss;
     }
 
-    auto pd_to_string(const __m512i *pd) -> std::stringstream{
+    auto pd_to_string(const __m512i *pd) -> std::stringstream {
         std::stringstream ss;
 
         assert(pd512::get_capacity(pd) == pd512::get_capacity_naive(pd));

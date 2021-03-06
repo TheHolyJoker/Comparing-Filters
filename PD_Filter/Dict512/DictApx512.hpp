@@ -82,6 +82,9 @@ public:
         // // print_data_on_space();
         // std::cout << std::string(80, '=') << std::endl;
 
+        double full_pd_ratio = 1.0 * count_full_pds() / number_of_pd;
+        std::cout << "Full PD ratio: " << full_pd_ratio << std::endl;
+
         free(pd_array);
     }
 
@@ -114,10 +117,10 @@ public:
         const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 12800);// 12800 == QUOTS << 8;
         const int64_t quot = qr >> bits_per_item;
-        //  const uint8_t rem = qr;
-        // const uint8_t rem = qr * (qr & 255 != 255);
-        uint8_t rem = qr;
-        rem += (rem == 255);
+        const uint8_t rem = qr;
+
+        // uint8_t rem = qr;
+        // rem += (rem == 255);
 
         // if (((uint16_t) rem) == 255)
         //     rem = 1;
@@ -166,10 +169,6 @@ public:
         pd_apx_name::add(quot, rem, &pd_array[pd_index]);
     }
 
-    inline void insert(const itemType s) {
-        //  insert_without_tombstone_handling(s);
-        insert_plus_tombstones(s);
-    }
 
     inline bool remove_without_tombstone_handling(const itemType s) {
         uint64_t hash_res = Hasher(s);
@@ -190,20 +189,27 @@ public:
         uint8_t rem = qr;
         rem += (rem == 255);
 
-        pd_apx_name::bad_tombstoning_idea(quot, rem, &pd_array[pd_index]);
-        return true;
+        // pd_apx_name::remove_by_tombstoning(quot, rem, &pd_array[pd_index]);
+        // return true;
+        // pd_apx_name::bad_tombstoning_idea(quot, rem, &pd_array[pd_index]);
+        // return true;
 
         if (pd_apx_name::find(quot, rem, &pd_array[pd_index])) {
             // pd_apx_name::remove(quot, rem, &pd_array[pd_index]);
-            pd_apx_name::remove_by_tombstoning(quot, rem, &pd_array[pd_index]);
+           pd_apx_name::remove_by_tombstoning(quot, rem, &pd_array[pd_index]);
             return true;
         }
         return false;
     }
 
+    inline void insert(const itemType s) {
+        insert_without_tombstone_handling(s);
+        // insert_plus_tombstones(s);
+    }
+
     inline bool remove(const itemType s) {
-        return remove_plus_tombstones(s);
-        // return remove_without_tombstone_handling(s);
+        return remove_without_tombstone_handling(s);
+        // return remove_plus_tombstones(s);
     }
 
     void insert_count(const itemType s) {
@@ -267,6 +273,18 @@ public:
 
     auto get_name() -> std::string {
         return "DictApx512";
+    }
+
+    // auto get_info() -> std::string {
+
+    // }
+
+    auto count_full_pds() const -> size_t {
+        size_t counter = 0;
+        for (size_t i = 0; i < number_of_pd; i++) {
+            counter += pd_apx_name::pd_full(&pd_array[i]);
+        }
+        return counter;
     }
 };
 
