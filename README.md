@@ -27,8 +27,7 @@ Currently benchmarking:
  cd Comparing_Filters
  mkdir build
  cd build
- cmake ..
- make
+ cmake --build ./ --target Filters
  ```
  ### To run
  In `build` directory run
