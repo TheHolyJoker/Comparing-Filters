@@ -13,7 +13,9 @@ Currently benchmarking:
   Filter often have a parameter controlling on the false positive probability $\epsilon$, when it is increased, the filter uses more space, and has smaller error probability.  
   
  ## Benchmark
- Currently checking only insertions and lookups performances, in different loads. 
+ There are various benchmark to evaluate the error probability under differents loads, and speed test by four paramaters:
+ Insertions, uniform lookup (uniform lookup result is "no" w.h.p. in standard scenarios), True-lookup (of elements in the filter) and Deletions.
+ 
  
  ## Usage
  
@@ -27,6 +29,7 @@ Currently benchmarking:
  cd Comparing_Filters
  mkdir build
  cd build
+ cmake..
  cmake --build ./ --target Filters
  ```
  ### To run
