@@ -39,6 +39,7 @@
 // using Dict512_SS = Dict512_SparseSpare<>;
 #include "../Bloom_Filter/simd-block-fixed-fpp.h"
 #include "../Bloom_Filter/simd-block.h"
+#include "../Bloom_Filter/ts-simd-block.h"
 // #include "../morton/morton_sample_configs.h"
 
 //#include "../morton/compressed_cuckoo_filter.h"
@@ -797,7 +798,11 @@ struct FilterAPI<Dict256_Ver7<itemType>> {
         return table->lookup_count(key);
 #endif// COUNT \
 
-        return table->lookup(key);
+        // return table->lookup(key);
+        // return table->lookup_one_access(key);
+        // return table->lookup_one_access(key);
+        // return table->lookup_two_access(key);
+        return table->lookup_two_access_further(key);
         // return table->lookup_count(key);
         // return table->lookup_minimal(key);
     }
@@ -1146,6 +1151,64 @@ struct FilterAPI<DictApx512<itemType>> {
     }
 };
 
+
+template<>
+struct FilterAPI<TS_SimdBlockFilter<>> {
+    using Table = TS_SimdBlockFilter<>;
+
+    static Table ConstructFromAddCount(size_t add_count) {
+        Table ans(ceil(log2(add_count * 8.0 / CHAR_BIT)));
+        return ans;
+    }
+
+    static void Add(uint64_t key, Table *table) {
+        table->Add(key);
+    }
+
+    static void AddAll(const vector<uint64_t> keys, const size_t start, const size_t end, Table *table) {
+        for (int i = start; i < end; ++i) {
+            table->Add(keys[i]);
+        }
+    }
+
+    static void AddAll(const std::vector<uint64_t> keys, Table *table) {
+        AddAll(keys, 0, keys.size(), table);
+        /*  for (int i = 0; i < keys.size(); ++i) {
+              table->Add(keys[i]);
+          }*/
+    }
+
+    static bool Contain(uint64_t key, const Table *table) {
+        return table->Find(key);
+    }
+
+    static void Remove(uint64_t key, Table *table) {
+        table->Delete(key);
+    }
+
+    static string get_name(Table *table) {
+        return "TS_SimdBlockFilter";
+    }
+
+    static auto get_info(Table *table) -> std::stringstream {
+        assert(false);
+        std::stringstream ss;
+        return ss;
+    }
+
+    /**
+     * Returns int indciating which function can the filter do.
+     * 1 is for lookups.
+     * 2 is for adds.
+     * 4 is for deletions.
+     */
+    static auto get_functionality(Table *table) -> uint32_t {
+        return 7;
+    }
+    static auto get_ID(Table *table) -> filter_id {
+        return SIMD;
+    }
+};
 
 #endif//FILTERS_WRAPPERS_HPP
 

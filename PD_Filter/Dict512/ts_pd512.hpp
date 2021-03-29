@@ -14,7 +14,8 @@
 // #define MAX(x, y) (((x) < (y)) ? y : x)
 // #define MIN(x, y) (((x) > (y)) ? y : x)
 
-#define MSK(p) ((1ULL << p) - 1)
+#define CONST_BZ_MSK(p) ((1ULL << p) - 1)
+#define BZ_MSK(p) (_bzhi_u64(-1, p))
 #define BITWISE_DISJOINT(a, b) (!((a) & (b)))
 
 
@@ -65,6 +66,8 @@ namespace v_ts_pd512 {
 
     bool val_AWF(int64_t quot, uint8_t rem, const __m512i *pd);
 
+    bool val_body_remove(size_t index, const __m512i *pd);
+
     bool val_add_when_full(int64_t quot, uint8_t rem, const __m512i *pd);
 
     size_t get_last_occupied_quot_naive(const __m512i *pd);
@@ -101,8 +104,39 @@ namespace ts_pd512 {
 
     constexpr size_t QUOTS = 50;
     constexpr size_t MAX_CAPACITY = 51;
-    constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-    constexpr uint64_t h1_const_mask = ((1ULL << (101 - 64)) - 1);
+    constexpr unsigned kBytes2copy = (QUOTS + MAX_CAPACITY + CHAR_BIT - 1) / CHAR_BIT;
+    constexpr uint64_t h1_const_mask = ((1ULL << (QUOTS + MAX_CAPACITY - 64)) - 1);//37
+
+
+    /**
+     * @brief Get the select mask object
+     * 
+     * keeps the (j)'th 1 and the (j + 1)'th 1 in x turn on, and turn off the other bits.  
+     * @param x 
+     * @param j >= 0
+     * @return uint64_t 
+     */
+    inline uint64_t get_select_mask(uint64_t x, int64_t j) {
+        assert(_mm_popcnt_u64(x) > j);
+        return _pdep_u64(3ul << (j), x);
+    }
+
+
+    /**
+     * @brief 
+     * 
+     * @param x a number with only two set bits. (62 zeros, and 2 ones).
+     * @return uint64_t turn on the bits between the currently set bits. 
+     *         Also turn off the previously turned on bits. 
+     */
+    inline uint64_t mask_between_bits(uint64_t x) {
+        assert(_mm_popcnt_u64(x) == 2);
+        uint64_t hi_bit = (x - 1) & x;
+        uint64_t clear_hi = hi_bit - 1;
+        uint64_t lo_set = (x - 1);
+        uint64_t res = (clear_hi ^ lo_set) & (~x);
+        return res;
+    }
 
 
     inline bool pd_full(const __m512i *pd) {
@@ -112,17 +146,28 @@ namespace ts_pd512 {
     }
 
     /**
-     * @brief Shift 'a' 8 bits left.
+     * @brief Shift 'a' 8 bits right.
      * @param a 
      * @return __m512i 
      */
-    inline __m512i shift_left(__m512i a) {
+    inline __m512i shift_right(__m512i a) {
+        // The indices encoded here actually encode shift left.
+        // idx is an "uint8_t arr[64]" where "arr[i] = i-1" (arr[0] = 0).
         constexpr __m512i idx = {433757350076153919, 1012478732780767239, 1591200115485380623, 2169921498189994007,
                                  2748642880894607391, 3327364263599220775, 3906085646303834159, 4484807029008447543};
         constexpr uint64_t mask = 18446744073709551614ULL;
         __m512i res = _mm512_maskz_permutexvar_epi8(mask, idx, a);
         return res;
     }
+
+    inline __m512i shift_left(__m512i a) {
+        constexpr __m512i idx = {578437695752307201, 1157159078456920585, 1735880461161533969, 2314601843866147353, 2893323226570760737, 3472044609275374121, 4050765991979987505, 17801356257212985};
+
+        constexpr uint64_t mask = 9223372036854775807ULL;
+        __m512i res = _mm512_maskz_permutexvar_epi8(mask, idx, a);
+        return res;
+    }
+
 
     auto get_specific_quot_capacity_naive2(int64_t quot, const __m512i *pd) -> int;
 
@@ -366,6 +411,18 @@ namespace ts_pd512 {
         return true;
     }
 
+    inline void body_remove_naive(size_t index, __m512i *pd) {
+        memmove(&((uint8_t *) pd)[kBytes2copy + index],
+                &((const uint8_t *) pd)[kBytes2copy + index + 1],
+                sizeof(*pd) - (kBytes2copy + index + 1));
+    }
+
+    inline void body_remove_att(size_t index, __m512i *pd) {
+        const __m512i shifted_pd = shift_left(*pd);
+        const uint64_t mask = BZ_MSK(kBytes2copy + index);
+        _mm512_store_si512(pd, _mm512_mask_blend_epi8(mask, shifted_pd, *pd));
+    }
+
     inline auto remove_from_not_sorted_body_naive(int64_t quot, uint8_t rem, __m512i *pd) -> bool {
         assert(quot < 50);
 
@@ -410,10 +467,13 @@ namespace ts_pd512 {
         assert(pd512::popcount128(header) == 50);
 
         memcpy(pd, &new_header, kBytes2copy);
-        memmove(&((uint8_t *) pd)[kBytes2copy + i],
-                &((const uint8_t *) pd)[kBytes2copy + i + 1],
-                sizeof(*pd) - (kBytes2copy + i + 1));
 
+        assert(v_ts_pd512::val_body_remove(i, pd));
+        body_remove_att(i, pd);
+
+        // memmove(&((uint8_t *) pd)[kBytes2copy + i],
+        //         &((const uint8_t *) pd)[kBytes2copy + i + 1],
+        //         sizeof(*pd) - (kBytes2copy + i + 1));
         return true;
     }
 
@@ -648,26 +708,18 @@ namespace ts_pd512 {
     }
 
 
-    inline void body_add_naive(size_t end_fingerprint, uint8_t rem, __m512i *pd) {
-        // constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-
-        memmove(&((uint8_t *) pd)[kBytes2copy + end_fingerprint + 1],
-                &((const uint8_t *) pd)[kBytes2copy + end_fingerprint],
-                sizeof(*pd) - (kBytes2copy + end_fingerprint + 1));
-        ((uint8_t *) pd)[kBytes2copy + end_fingerprint] = rem;
-    }
-
     inline void body_add(size_t end_fingerprint, uint8_t rem, __m512i *pd) {
         // assert(v_ts_pd512::validate_body_add(end_fingerprint, rem, pd));
         // v_ts_pd512::print_body(pd);
-        constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
+        // constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
         __m512i pd_start = *pd;
         ((uint8_t *) &pd_start)[kBytes2copy + end_fingerprint] = rem;
 
-        const __m512i shifted_pd = shift_left(*pd);
-        const uint64_t mask = ~MSK(kBytes2copy + end_fingerprint + 1);
+        const __m512i shifted_pd = shift_right(*pd);
+        const uint64_t mask = BZ_MSK(kBytes2copy + end_fingerprint + 1);
+        _mm512_store_si512(pd, _mm512_mask_blend_epi8(mask, shifted_pd, pd_start));
         // const __mmask64 blend_mask = mask;
-        *pd = _mm512_mask_blend_epi8(mask, pd_start, shifted_pd);
+        // *pd = ;
         // v_ts_pd512::print_body(pd);
     }
 
@@ -679,8 +731,8 @@ namespace ts_pd512 {
         __m512i old_pd = *pd;
 
         constexpr unsigned kBytes2copy = (50 + 51 + CHAR_BIT - 1) / CHAR_BIT;
-        const uint64_t mask = ~MSK(kBytes2copy + end_fingerprint + 1);
-        const __m512i shifted_pd = shift_left(*pd);
+        const uint64_t mask = ~BZ_MSK(kBytes2copy + end_fingerprint + 1);
+        const __m512i shifted_pd = shift_right(*pd);
         ((uint8_t *) pd)[kBytes2copy + end_fingerprint] = rem;
         *pd = _mm512_mask_blend_epi8(mask, *pd, shifted_pd);
         assert(pd512::validate_number_of_quotient(pd));
@@ -700,6 +752,23 @@ namespace ts_pd512 {
             assert(0);
         } */
     }
+
+    inline void body_add3(size_t end_fingerprint, uint8_t rem, __m512i *pd) {
+        const __m512i shifted_pd = shift_right(*pd);
+        ((uint8_t *) pd)[kBytes2copy + end_fingerprint] = rem;
+        const uint64_t mask = BZ_MSK(kBytes2copy + end_fingerprint + 1);
+        _mm512_store_si512(pd, _mm512_mask_blend_epi8(mask, shifted_pd, *pd));
+    }
+
+
+    inline void body_add_naive(size_t end_fingerprint, uint8_t rem, __m512i *pd) {
+        return body_add3(end_fingerprint, rem, pd);
+        memmove(&((uint8_t *) pd)[kBytes2copy + end_fingerprint + 1],
+                &((const uint8_t *) pd)[kBytes2copy + end_fingerprint],
+                sizeof(*pd) - (kBytes2copy + end_fingerprint + 1));
+        ((uint8_t *) pd)[kBytes2copy + end_fingerprint] = rem;
+    }
+
 
     /**
      * @brief This function helps insertions. When "popcount(h0) == quot". and pd is not full.
@@ -754,7 +823,7 @@ namespace ts_pd512 {
 
         //can not happend as long as quot > 0.
         assert(end > 0);
-        uint64_t h0_mask = MSK(end);
+        uint64_t h0_mask = BZ_MSK(end);
         uint64_t h0_low = h0 & h0_mask;
         assert(end < 64);
         uint64_t h0_high = (h0 >> end) << (end + 1);
@@ -819,7 +888,7 @@ namespace ts_pd512 {
         //this is wrong.
         const uint64_t h1 = ((_mm_extract_epi64(_mm512_castsi512_si128(*pd), 1) & h1_mask) << 1u) | (h0 >> 63u);
 
-        uint64_t h0_mask = MSK(index);
+        uint64_t h0_mask = BZ_MSK(index);
         uint64_t h0_lower = h0 & h0_mask;
         // to AND then shift or vice versa?
         uint64_t new_h0 = h0_lower | ((h0 << 1u) & ~h0_mask);
@@ -855,7 +924,7 @@ namespace ts_pd512 {
         *p_h1 = (h1_low | h1_high);
 
 
-        const uint64_t h0_mask = MSK(index);
+        const uint64_t h0_mask = BZ_MSK(index);
         const uint64_t h0_lower = h0 & h0_mask;
 
         const uint64_t new_h0 = h0_lower | ((h0 & ~h0_mask) << 1u);
@@ -872,7 +941,7 @@ namespace ts_pd512 {
         uint64_t *pd64 = (uint64_t *) pd;
         const uint64_t low_h1 = ((pd64[1] << 1) & h1_const_mask) | (pd64[0] >> 63u);
 
-        const uint64_t h0_mask = MSK(index);
+        const uint64_t h0_mask = BZ_MSK(index);
         const uint64_t h0_lower = pd64[0] & h0_mask;
 
         // pd64[0] = h0_lower | ((pd64[0] << 1u) & ~h0_mask);
@@ -904,20 +973,18 @@ namespace ts_pd512 {
     inline void header_remove(uint64_t index, __m512i *pd) {
         assert(pd512::validate_number_of_quotient(pd));
         // v_pd512_plus::print_headers(pd);
-        // constexpr uint64_t h1_mask = ((1ULL << (101 - 64)) - 1);
 
         uint64_t *pd64 = (uint64_t *) pd;
         const uint64_t h1_lsb = pd64[1] << 63u;
         const uint64_t low_h1 = (pd64[1] & h1_const_mask) >> 1u;
-        const uint64_t h0_mask = MSK(index);
+        const uint64_t h0_mask = BZ_MSK(index);
         const uint64_t h0_lower = pd64[0] & h0_mask;
         const uint64_t h0_higher = ((pd64[0] & ~h0_mask) >> 1u) | h1_lsb;
 
-        // pd64[0] = h0_lower | ((pd64[0] << 1u) & ~h0_mask);
         pd64[0] = h0_lower | h0_higher;
         memcpy(pd64 + 1, &low_h1, 5);
-        // v_pd512_plus::print_headers(pd);
 
+        // v_pd512_plus::print_headers(pd);
         assert(pd512::validate_number_of_quotient(pd));
     }
 
@@ -929,14 +996,14 @@ namespace ts_pd512 {
         const uint64_t low_h1 = ((pd64[1] << 1)) | (pd64[0] >> 63u);
         memcpy(pd64 + 1, &low_h1, 5);
 
-        const uint64_t h0_mask = MSK(index);
+        const uint64_t h0_mask = BZ_MSK(index);
         const uint64_t h0_lower = pd64[0] & h0_mask;
 
         pd64[0] = h0_lower | ((pd64[0] & ~h0_mask) << 1u);
         //This saves one command, but does not work when index == 63.
         // pd64[0] = h0_lower | ((pd64[0] >> index) << (index + 1));
 
-        //   pd64[0] = (pd64[0] & MSK(index)) | ((pd64[0] >> index) << (index - 1));
+        //   pd64[0] = (pd64[0] & BZ_MSK(index)) | ((pd64[0] >> index) << (index - 1));
 
         assert(pd512::validate_number_of_quotient(pd));
     }
@@ -1035,7 +1102,7 @@ namespace ts_pd512 {
             //header
             assert(pd512::validate_number_of_quotient(pd));
 
-            const uint64_t h1_mask = MSK(end);
+            const uint64_t h1_mask = BZ_MSK(end);
             const uint64_t h1_low = h1 & h1_mask;
             const uint64_t h1_high = (h1 >> end) << (end + 1);
             const uint64_t new_h1 = h1_low | h1_high;
@@ -1125,7 +1192,6 @@ namespace ts_pd512 {
         assert(!pd_full(pd));
         assert(quot < 50);
 
-        // FIXME: uncomment.
         if (quot == 0) {
             add_when_not_full_with_zero_quot(rem, pd);
             return;
@@ -1151,7 +1217,7 @@ namespace ts_pd512 {
             //header
             assert(pd512::validate_number_of_quotient(pd));
 
-            const uint64_t h1_mask = MSK(end);
+            const uint64_t h1_mask = BZ_MSK(end);
             const uint64_t h1_low = h1 & h1_mask;
             const uint64_t h1_high = (h1 >> end) << (end + 1);
             const uint64_t new_h1 = h1_low | h1_high;
@@ -1387,7 +1453,7 @@ namespace ts_pd512 {
         const uint64_t end = pd512::select64(h0, quot);
         const size_t evict_rem_index = end - quot;
 
-        const uint64_t end_mask = ~MSK(end);
+        const uint64_t end_mask = ~BZ_MSK(end);
         uint64_t evict_r_att = ((uint8_t *) pd)[kBytes2copy + evict_rem_index];
 
         if ((end_mask & h0) != end_mask) {
@@ -1792,7 +1858,7 @@ namespace ts_pd512 {
         assert(validate_number_of_quotient(pd));
 
         __m256i pd_start = *pd;
-        const __m256i shifted_pd = shift_left(*pd);
+        const __m256i shifted_pd = shift_right(*pd);
 
         const uint64_t begin_fingerprint = begin - quot;
         const uint64_t end_fingerprint = end - quot;
@@ -1804,7 +1870,7 @@ namespace ts_pd512 {
             if (rem <= ((const uint8_t *) pd)[kBytes2copy + i]) break;
         }
         ((uint8_t *) &pd_start)[kBytes2copy + i] = rem;
-        const uint32_t mask = ~MSK(kBytes2copy + i + 1);
+        const uint32_t mask = ~BZ_MSK(kBytes2copy + i + 1);
         const __mmask32 blend_mask = mask;
 
         assert((i == end_fingerprint) ||
@@ -1828,7 +1894,7 @@ namespace ts_pd512 {
         //TODO: switch order of if here.
         if (index == 63) {
             assert(h0 >> 63u);
-            constexpr uint64_t mask63 = MSK(63);
+            constexpr uint64_t mask63 = CONST_BZ_MSK(63);
             uint64_t *pd_64 = &((uint64_t *) pd)[0];
             pd_64[0] &= mask63;
 
@@ -1882,10 +1948,17 @@ namespace ts_pd512 {
     }
 
     inline bool add(int64_t quot, uint8_t rem, __m512i *pd) {
-        const bool res = pd_full(pd);
-        (!res) ? add_when_not_full(quot, rem, pd) : add_when_full(quot, rem, pd);
-        assert(find(quot, rem, pd));
-        return res;
+        if (!pd_full(pd)) {
+            add_when_not_full(quot, rem, pd);
+            assert(find(quot, rem, pd));
+            return false;
+        } else {
+            add_when_full(quot, rem, pd);
+            return true;
+        }
+        // const bool res = pd_full(pd);
+        // (!res) ? add_when_not_full(quot, rem, pd) : add_when_full(quot, rem, pd);
+        // assert(find(quot, rem, pd));
         // if (!pd_full(pd)) {
         //     add_when_not_full(quot, rem, pd);
         //     return false;
@@ -1918,31 +1991,36 @@ namespace ts_pd512 {
     }
 
 
-    inline void remove_att_zero_quot(int64_t quot, uint8_t rem, __m512i *pd) {
-        //TODO: change header.
+    inline bool remove_att_zero_quot(uint8_t rem, __m512i *pd) {
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const size_t quot_cap = _lzcnt_u64(h0);
+        size_t i = 0;
+        for (; i < quot_cap; i++) {
+            if (rem == ((const uint8_t *) pd)[kBytes2copy + i]) {
+                // header
+                header_remove(i, pd);
 
-        uint64_t index = _tzcnt_u64(rem);
-        memmove(&((uint8_t *) pd)[kBytes2copy + index],
-                &((const uint8_t *) pd)[kBytes2copy + index + 1],
-                sizeof(*pd) - (kBytes2copy + index + 1));
+                // body
+                memmove(&((uint8_t *) pd)[kBytes2copy + i],
+                        &((const uint8_t *) pd)[kBytes2copy + i + 1],
+                        sizeof(*pd) - (kBytes2copy + i + 1));
+                return true;
+            }
+        }
+        return false;
     }
 
-    inline void remove_att(int64_t quot, uint8_t rem, __m512i *pd) {
-        constexpr uint64_t h1_const_mask = ((1ULL << (101 - 64)) - 1);
+    inline bool remove_att(int64_t quot, uint8_t rem, __m512i *pd) {
+        //FIXME: complete this some day.
+        if (quot == 0) {
+            return remove_att_zero_quot(rem, pd);
+        }
 
         const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
         const uint64_t pop = _mm_popcnt_u64(h0);
 
         const __m512i target = _mm512_set1_epi8(rem);
         uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
-
-
-        if (quot == 0) {
-            uint64_t index = _tzcnt_u64(rem);
-            // validate_header_remove
-            // remove_att_zero_quot(0, rem, pd);
-            return;
-        }
 
 
         // const uint64_t pop = (h0 ^ (h0 >> 8u)) % QUOTS;
@@ -1952,7 +2030,7 @@ namespace ts_pd512 {
             write_header6(end, pd);
             // write_header_naive(quot, end, pd);
             body_add_naive(end - quot, rem, pd);
-            return;
+            return false;
         } else {
             const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1) & h1_const_mask;
             const uint64_t end = pd512::select64(h1, quot - pop);
@@ -1960,7 +2038,7 @@ namespace ts_pd512 {
             //header
             assert(pd512::validate_number_of_quotient(pd));
 
-            const uint64_t h1_mask = MSK(end);
+            const uint64_t h1_mask = BZ_MSK(end);
             const uint64_t h1_low = h1 & h1_mask;
             const uint64_t h1_high = (h1 >> end) << (end + 1);
             const uint64_t new_h1 = h1_low | h1_high;
@@ -1976,7 +2054,7 @@ namespace ts_pd512 {
             assert(pd512::validate_number_of_quotient(pd));
             assert(find(quot, rem, pd));
 
-            return;
+            return false;
         }
     }
 
@@ -1991,13 +2069,11 @@ namespace ts_pd512 {
         const __m512i target = _mm512_set1_epi8(rem);
         uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
 
+        if (!v)
+            return false;
+
         if (_blsr_u64(v) == 0) {
             // std::cout << "h0" << std::endl;
-            const uint64_t i = _tzcnt_u64(v);
-            assert(kBytes2copy + i < 64);
-            assert(((uint8_t *) pd)[kBytes2copy + i] == rem);
-            ((uint8_t *) pd)[kBytes2copy + i] = Tombstone_FP;
-            return true;
         }
         return false;
     }
@@ -2036,7 +2112,7 @@ namespace ts_pd512 {
                 // std::cout << "h2" << std::endl;
                 const uint64_t begin = pd512::select64(h0, quot - 1);
                 const uint64_t begin_body_index = begin - (quot - 1);
-                const uint64_t index_att_val = _tzcnt_u64(v & ~MSK(begin_body_index));
+                const uint64_t index_att_val = _tzcnt_u64(v & ~BZ_MSK(begin_body_index));
                 const uint64_t index_att = _tzcnt_u64(v >> begin_body_index) + begin_body_index;
                 assert(index_att < MAX_CAPACITY);
                 // const uint64_t end = pd512::select64(h0, quot);
@@ -2055,7 +2131,7 @@ namespace ts_pd512 {
                 const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
                 const uint64_t begin = pd512::select64(h1, rel_quot - 1);
                 const uint64_t begin_body_index = (64 + begin) - (quot - 1);
-                const uint64_t index_att_val = _tzcnt_u64(v & ~MSK(begin_body_index));
+                const uint64_t index_att_val = _tzcnt_u64(v & ~BZ_MSK(begin_body_index));
                 const uint64_t index_att = _tzcnt_u64(v >> begin_body_index) + begin_body_index;
                 assert(index_att < MAX_CAPACITY);
                 assert(((uint8_t *) pd)[kBytes2copy + index_att] == rem);
@@ -2078,7 +2154,7 @@ namespace ts_pd512 {
 
         uint64_t temp_quot = get_last_occupied_quot_for_full_pd(pd);
         //        uint64_t temp_quot2 = pd512_plus::count_ones_up_to_the_kth_zero(pd, 50);
-        assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, 50););
+        assert(temp_quot == pd512_plus::count_ones_up_to_the_kth_zero(pd, 50));
         uint64_t temp_shift = QUOTS - temp_quot;
         uint64_t xor_mask = (1ULL << 36) | ((1ULL << (36 - temp_shift)));
         assert(_mm_popcnt_u64(pd64[1] & (1ULL << 36)) == 1);
@@ -2667,7 +2743,7 @@ namespace ts_pd512 {
             //header
             assert(pd512::validate_number_of_quotient(pd));
 
-            const uint64_t h1_mask = MSK(end);
+            const uint64_t h1_mask = BZ_MSK(end);
             const uint64_t h1_low = h1 & h1_mask;
             const uint64_t h1_high = (h1 >> end) << (end + 1);
             const uint64_t new_h1 = h1_low | h1_high;

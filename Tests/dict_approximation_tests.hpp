@@ -27,6 +27,15 @@ void fpc_sanity_check(Table *wrap_filter, vector<itemType> *query_vec, size_t st
 template<typename Table, typename itemType>
 void fpc_strong_sanity_check(Table *wrap_filter, size_t reps);
 
+template<class Table, typename itemType>
+auto count_ans_of_items_in_vec(Table *wrap_filter, vector<itemType> *item_vec, bool desired_ans, size_t start, size_t end, size_t inc) -> size_t;
+
+template<class Table, typename itemType>
+auto count_ans_of_items_in_vec(Table *wrap_filter, vector<itemType> *item_vec, bool desired_ans, size_t start, size_t end) -> size_t;
+
+template<class Table, typename itemType>
+auto count_ans_of_items_in_vec(Table *wrap_filter, vector<itemType> *item_vec, bool desired_ans) -> size_t;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,6 +65,67 @@ void init_vectors(size_t filter_max_capacity, float work_load, size_t lookup_rep
  * @param add_block_size 
  * @param find_block_size 
  */
+
+template<typename Table, typename itemType>
+void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, size_t filter_max_capacity,
+                                       size_t max_elements_in_filter, size_t num_of_blocks_it_takes_to_fill_the_filter,
+                                       size_t add_block_size, size_t find_block_size, vector<vector<size_t> *> *output_vec) {
+
+    Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
+    Table *wrap_filter = &filter;
+    string filter_name = FilterAPI<Table>::get_name(&filter);
+    std::cout << filter_name << std::endl;
+
+    auto add_vec = elements->at(0);
+    auto find_vec = elements->at(1);
+
+    auto false_positive_rate_vec = output_vec->at(0);
+    auto false_negative_rate_vec = output_vec->at(1);
+    size_t total_insertions_num = add_vec->size();
+
+    // Reaching the desired load.
+    const size_t rounded_max_elements = (max_elements_in_filter / num_of_blocks_it_takes_to_fill_the_filter) *
+                                        num_of_blocks_it_takes_to_fill_the_filter;
+    auto insertion_time = time_insertions(wrap_filter, add_vec, 0, rounded_max_elements);
+
+    // Number of rounds left. Each round contain the same number of insertions and deletions.
+    size_t number_of_rounds_left = (total_insertions_num / add_block_size) - num_of_blocks_it_takes_to_fill_the_filter;
+
+    false_positive_rate_vec->resize(number_of_rounds_left + 1);
+    false_negative_rate_vec->resize(number_of_rounds_left + 1);
+
+
+    false_negative_rate_vec->at(0) = count_ans_of_items_in_vec(wrap_filter, add_vec, false, 0, rounded_max_elements, 8);
+    false_positive_rate_vec->at(0) = prob_compute_yes_queries(wrap_filter, find_vec, true, 0, find_end, 8);
+
+    for (int round_index = 0; round_index < number_of_rounds_left; ++round_index) {
+        size_t del_start = add_block_size * round_index;
+        size_t del_end = del_start + add_block_size;
+
+        size_t add_start = rounded_max_elements + del_start;
+        size_t add_end = add_start + add_block_size;
+
+        auto removal_time = time_deletions(wrap_filter, add_vec, del_start, del_start + add_block_size);
+        // size_t removal_time = 0;
+
+        auto insertions_time = time_insertions(wrap_filter, add_vec, add_start, add_start + add_block_size);
+
+        //Queries
+
+        size_t find_start = find_block_size * round_index;
+        size_t find_end = find_start + find_block_size;
+
+        // fnc_arr_exact[round_index] = compute_false_negative_exact_with_limits(wrap_filter, add_vec, del_end, add_end);
+        // fpc_arr[round_index] = prob_compute_yes_queries(wrap_filter, find_vec, find_start, find_end);
+
+        false_negative_rate_vec->at(round_index + 1) = count_ans_of_items_in_vec(wrap_filter, add_vec, false, del_end, add_end, 8);
+        false_positive_rate_vec->at(round_index + 1) = prob_compute_yes_queries(wrap_filter, find_vec, true, find_start, find_end, 8);
+    }
+    // std::string fp_header = "False Positive Probabilities";
+    // std::string fn_header_exact = "exact False Negative Probabilities";
+    // print_array_normalized_vertical(fpc_arr, number_of_rounds_left, find_block_size, fp_header);
+    // print_array_normalized_vertical(fnc_arr_exact, number_of_rounds_left, rounded_max_elements, fn_header_exact);
+}
 template<typename Table, typename itemType>
 void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, size_t filter_max_capacity,
                                        size_t max_elements_in_filter, size_t num_of_blocks_it_takes_to_fill_the_filter,
@@ -83,13 +153,12 @@ void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, siz
     // fpc_sanity_check = prob_compute_yes_queries(wrap_filter, find_vec);
     // std::cout << "fpc_sanity_check: " << fpc_sanity_check << std::endl;
     // std::cout << "fpc_sanity_check_normalized: " << (1.0 * fpc_sanity_check / find_vec->size()) << std::endl;
-
-    /*Those tests are too slow:*/
+    // Those tests are too slow:
     //    fpc_sanity_check(wrap_filter, find_vec);
     //    fpc_strong_sanity_check<Table, itemType>(wrap_filter, find_vec->size() / 4);
 
     size_t fnc_arr_exact[number_of_rounds_left];
-    size_t fnc_arr_prob[number_of_rounds_left];
+    // size_t fnc_arr_prob[number_of_rounds_left];
     size_t fpc_arr[number_of_rounds_left];
     for (int round_index = 0; round_index < number_of_rounds_left; ++round_index) {
         size_t del_start = add_block_size * round_index;
@@ -104,23 +173,24 @@ void compute_prob_symmetric_difference(vector<vector<itemType> *> *elements, siz
 
         //Queries
         fnc_arr_exact[round_index] = compute_false_negative_exact_with_limits(wrap_filter, add_vec, del_end, add_end);
-        fnc_arr_prob[round_index] = prob_compute_false_negative(wrap_filter, add_vec, del_end, add_end, add_block_size);
+        // fnc_arr_prob[round_index] = prob_compute_false_negative(wrap_filter, add_vec, del_end, add_end, add_block_size);
 
         size_t find_start = find_block_size * round_index;
         size_t find_end = find_start + find_block_size;
         fpc_arr[round_index] = prob_compute_yes_queries(wrap_filter, find_vec, find_start, find_end);
     }
-    std::string fp_header = "False Positive Probabilities";
-    std::string fn_header_exact = "exact False Negative Probabilities";
-    std::string fn_header_prob = "prob False Negative Probabilities";
+    print_two_arrays_normalized_vertical(fpc_arr, fnc_arr_exact, number_of_rounds_left, find_block_size, rounded_max_elements);
 
+    // std::string fp_header = "False Positive Probabilities";
+    // std::string fn_header_exact = "exact False Negative Probabilities";
+    // std::string fn_header_prob = "prob False Negative Probabilities";
     // const size_t var_num = 3;
     // std::string names[var_num] = {"FP", "FN-Exact", "FN-prob"};
     // size_t values[var_num] = {};
     // table_print_normalized<size_t>(3, names, )
-    print_array_normalized_vertical(fpc_arr, number_of_rounds_left, find_block_size, fp_header);
-    print_array_normalized_vertical(fnc_arr_exact, number_of_rounds_left, rounded_max_elements, fn_header_exact);
-    print_array_normalized_vertical(fnc_arr_prob, number_of_rounds_left, add_block_size, fn_header_prob);
+    // print_array_normalized_vertical(fpc_arr, number_of_rounds_left, find_block_size, fp_header);
+    // print_array_normalized_vertical(fnc_arr_exact, number_of_rounds_left, rounded_max_elements, fn_header_exact);
+    // print_array_normalized_vertical(fnc_arr_prob, number_of_rounds_left, add_block_size, fn_header_prob);
 }
 
 template<typename Table, typename itemType>
@@ -263,6 +333,42 @@ compute_false_negative_exact_with_limits(Table *wrap_filter, vector<itemType> *a
     return fn_counter;
 }
 
+template<class Table, typename itemType>
+size_t
+compute_false_negative_exact_with_limits_and_jump_inc(Table *wrap_filter, vector<itemType> *add_vec, size_t start, size_t end, size_t inc) {
+    size_t fn_counter = 0;
+    for (size_t i = start; i < end; i += inc) {
+        bool temp_res = FilterAPI<Table>::Contain(add_vec->at(i), wrap_filter);
+        if (!temp_res)
+            fn_counter++;
+    }
+    return fn_counter;
+}
+
+template<class Table, typename itemType>
+auto count_ans_of_items_in_vec(Table *wrap_filter, vector<itemType> *item_vec, bool desired_ans, size_t start, size_t end, size_t inc)
+        -> size_t {
+    size_t ans_counter = 0;
+    for (size_t i = start; i < end; i += inc) {
+        bool temp_res = FilterAPI<Table>::Contain(item_vec->at(i), wrap_filter);
+        if (temp_res == desired_ans)
+            ans_counter++;
+    }
+    return ans_counter;
+}
+
+template<class Table, typename itemType>
+auto count_ans_of_items_in_vec(Table *wrap_filter, vector<itemType> *item_vec, bool desired_ans, size_t start, size_t end)
+        -> size_t {
+    return count_ans_of_items_in_vec(wrap_filter, item_vec, desired_ans, start, end, 1);
+}
+
+template<class Table, typename itemType>
+auto count_ans_of_items_in_vec(Table *wrap_filter, vector<itemType> *item_vec, bool desired_ans)
+        -> size_t {
+    return count_ans_of_items_in_vec(wrap_filter, item_vec, desired_ans, 0, item_vec->size(), 1);
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -279,7 +385,7 @@ void bench_symmetric_difference(vector<vector<itemType> *> *elements, size_t fil
     Table filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     Table *wrap_filter = &filter;
     string filter_name = FilterAPI<Table>::get_name(&filter);
-    std::cout << filter_name << std::endl;
+    // std::cout << filter_name << std::endl;
 
     auto add_vec = elements->at(0);
     auto find_vec = elements->at(1);
@@ -361,13 +467,32 @@ void bench_symmetric_difference(vector<vector<itemType> *> *elements, size_t fil
     size_t del_end = add_block_size * number_of_rounds_left;
     size_t add_end = del_end + rounded_max_elements;
 
-    size_t prob_fnc = prob_compute_false_negative(wrap_filter, add_vec, del_end, add_end, add_block_size << 1);
     size_t fpc = prob_compute_yes_queries(wrap_filter, find_vec, 0, find_block_size << 1);
+    size_t fpc2 = prob_compute_yes_queries(wrap_filter, find_vec, 0, find_block_size << 2);
+    size_t fpc4 = prob_compute_yes_queries(wrap_filter, find_vec, 0, find_block_size << 4);
+
+    double fpc_ratio = 1.0 * fpc / (find_block_size << 1);
+    double fpc2_ratio = 1.0 * fpc2 / (find_block_size << 2);
+    double fpc4_ratio = 1.0 * fpc4 / (find_block_size << 4);
+
+    std::cout << "fp ratio:          " << fpc_ratio << std::endl;
+    std::cout << "fp2 ratio:         " << fpc2_ratio << std::endl;
+    std::cout << "fp4 ratio:         " << fpc4_ratio << std::endl;
+
+
+    size_t prob_fnc = prob_compute_false_negative(wrap_filter, add_vec, del_end, add_end, add_block_size << 1);
+    size_t strong_prob_fnc = compute_false_negative_exact_with_limits(wrap_filter, add_vec, del_end, add_end);
+    // size_t prob_fnc2 = prob_compute_false_negative(wrap_filter, add_vec, del_end, add_end, add_block_size << 2);
+    // size_t prob_fnc4 = prob_compute_false_negative(wrap_filter, add_vec, del_end, add_end, add_block_size << 4);
 
     double fnc_ratio = 1.0 * prob_fnc / (add_block_size << 1);
-    double fpc_ratio = 1.0 * fpc / (find_block_size << 1);
-    std::cout << "fp ratio:  " << fpc_ratio << std::endl;
-    std::cout << "fn ratio:  " << fnc_ratio << std::endl;
+    double strong_fnc_ratio = 1.0 * strong_prob_fnc / (add_end - del_end);
+    // double fnc_ratio2 = 1.0 * prob_fnc2 / (add_block_size << 2);
+    // double fnc_ratio4 = 1.0 * prob_fnc4 / (add_block_size << 4);
+    std::cout << "fn ratio:          " << fnc_ratio << std::endl;
+    std::cout << "strong fn ratio:   " << strong_fnc_ratio << std::endl;
+    // std::cout << "fn ratio2:   " << fnc_ratio2 << std::endl;
+    // std::cout << "fn ratio4:   " << fnc_ratio4 << std::endl;
 }
 
 template<typename Table, typename itemType>

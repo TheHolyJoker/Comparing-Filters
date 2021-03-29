@@ -153,6 +153,7 @@ target_compile_options(set_apx_val2 PRIVATE -O2 -g3 -DVALIDATE)
 
 add_executable(set_apx_bench sa_main.cpp ${PROJECT_SOURCES})
 target_compile_options(set_apx_bench PRIVATE -O3 -DNDEBUG)
+# target_compile_options(set_apx_bench PRIVATE -Ofast -DNDEBUG)
 
 add_executable(set_apx_profile sa_main.cpp ${PROJECT_SOURCES})
 target_compile_options(set_apx_profile PRIVATE -O3 -DNDEBUG -g3 -fno-inline-small-functions)

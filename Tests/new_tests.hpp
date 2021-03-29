@@ -294,7 +294,7 @@ template<class Table, typename itemType>
 auto time_deletions(Table *wrap_filter, vector<itemType> *element_set, size_t start, size_t end) -> ulong {
     if (!(FilterAPI<Table>::get_functionality(wrap_filter) & 4)) {
         //FIXME: UNCOMMENT!
-        // std::cout << FilterAPI<Table>::get_name(wrap_filter) << " does not support deletions." << std::endl;
+        std::cout << FilterAPI<Table>::get_name(wrap_filter) << " does not support deletions." << std::endl;
         return 0;
     }
 

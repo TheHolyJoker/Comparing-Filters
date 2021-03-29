@@ -137,6 +137,38 @@ namespace pd512 {
         return _mm_popcnt_u64(_mm_cvtsi128_si64(n)) + _mm_popcnt_u64(_mm_cvtsi128_si64(n_hi));
     }
 
+
+    /**
+     * @brief Get the select mask object
+     * 
+     * keeps the (j)'th 1 and the (j + 1)'th 1 in x turn on, and turn off the other bits.  
+     * @param x 
+     * @param j >= 0
+     * @return uint64_t 
+     */
+    inline uint64_t get_select_mask(uint64_t x, int64_t j) {
+        assert(_mm_popcnt_u64(x) > j);
+        return _pdep_u64(3ul << (j), x);
+    }
+
+
+    /**
+     * @brief 
+     * 
+     * @param x a number with only two set bits. (62 zeros, and 2 ones).
+     * @return uint64_t turn on the bits between the currently set bits. 
+     *         Also turn off the previously turned on bits. 
+     */
+    inline uint64_t mask_between_bits(uint64_t x) {
+        assert(_mm_popcnt_u64(x) == 2);
+        uint64_t hi_bit = (x - 1) & x;
+        uint64_t clear_hi = hi_bit - 1;
+        uint64_t lo_set = (x - 1);
+        uint64_t res = (clear_hi ^ lo_set) & (~x);
+        return res;
+    }
+
+
     auto get_capacity_naive_with_OF_bit(const __m512i *x) -> size_t;
 
     inline auto get_capacity(const __m512i *pd) -> int {
@@ -1200,6 +1232,61 @@ namespace pd512 {
             }
         } else {
             return true;
+        }
+    }
+
+    inline bool pd_find_50_v20(int64_t quot, uint8_t rem, const __m512i *pd) {
+        assert(0 == (reinterpret_cast<uintptr_t>(pd) % 64));
+        assert(quot < 50);
+        const __m512i target = _mm512_set1_epi8(rem);
+        uint64_t v = _mm512_cmpeq_epu8_mask(target, *pd) >> 13ul;
+
+        if (!v) return false;
+
+        const uint64_t h0 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 0);
+        const uint64_t h1 = _mm_extract_epi64(_mm512_castsi512_si128(*pd), 1);
+        if (_blsr_u64(v) == 0) {
+            if (v << quot) {
+                // const unsigned __int128 *h = (const unsigned __int128 *) pd;
+                // const unsigned __int128 header = (*h);
+                const int64_t mask = v << quot;
+                const bool att = (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+                assert(att == pd_find_50_v1(quot, rem, pd));
+                return (!(h0 & mask)) && (_mm_popcnt_u64(h0 & (mask - 1)) == quot);
+            } else {
+                const unsigned __int128 *h = (const unsigned __int128 *) pd;
+                constexpr unsigned __int128 kLeftoverMask = (((unsigned __int128) 1) << (50 + 51)) - 1;
+                const unsigned __int128 header = (*h) & kLeftoverMask;
+                const unsigned __int128 mask = ((unsigned __int128) v) << quot;
+                const bool att = (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
+                assert(att == pd_find_50_v1(quot, rem, pd));
+                return (!(header & mask)) && (popcount128(header & (mask - 1)) == quot);
+            }
+        }
+
+        const int64_t pop = _mm_popcnt_u64(h0);
+
+        if (quot == 0) {
+            // std::cout << "h0" << std::endl;
+            return v & (_blsmsk_u64(h0) >> 1ul);
+        } else if (quot < pop) {
+            // std::cout << "h1" << std::endl;
+            const uint64_t mask = (~_bzhi_u64(-1, quot - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h0);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h0)) >> quot) & v;
+        } else if (quot > pop) {
+            // std::cout << "h2" << std::endl;
+
+            const uint64_t mask = (~_bzhi_u64(-1, quot - pop - 1));
+            const uint64_t h_cleared_quot_set_bits = _pdep_u64(mask, h1);
+            return (((_blsmsk_u64(h_cleared_quot_set_bits) ^ _blsmsk_u64(_blsr_u64(h_cleared_quot_set_bits))) & (~h1)) >> (quot - pop)) & (v >> (64 - pop));
+        } else {
+            // std::cout << "h3" << std::endl;
+
+            const uint64_t helper = _lzcnt_u64(h0);
+            const uint64_t temp = (63 - helper) + 1;
+            const uint64_t diff = helper + _tzcnt_u64(h1);
+            return diff && ((v >> (temp - quot)) & ((UINT64_C(1) << diff) - 1));
         }
     }
 

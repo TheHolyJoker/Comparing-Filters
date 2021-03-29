@@ -116,8 +116,16 @@ class ts_CuckooFilter {
 
   ~ts_CuckooFilter() {
     // std::cout << get_name();
-    double ratio = 1.0 * insertions_failed_counter / insertions_total_count;
-    std::cout << "Failed insertion ratio is: " << ratio << std::endl;
+
+    // double n_t_by_slots = 1.0 * capacity / filter_max_capacity;
+    std::cout << "Final capacity:                 " << LoadFactor()
+              << std::endl;
+    double insertion_ratio =
+        1.0 * insertions_failed_counter / insertions_total_count;
+    std::cout << "Failed insertion ratio is:      " << insertion_ratio
+              << std::endl;
+    // double remove_ratio = 1.0 * true_remove_counter / total_remove_counter;
+    // std::cout << "Yes-remove-counter-ratio:       " << remove_ratio // << std::endl;
 
     delete table_;
   }
@@ -139,17 +147,18 @@ class ts_CuckooFilter {
   size_t Size() const { return num_items_; }
 
   // size of the filter in bytes.r_of_quotient(pd));
-            //     memcpy(pd, &new_header, kBytes2copy);
-            //     assert(pd512::validate_number_of_quotient(pd));
+  //     memcpy(pd, &new_header, kBytes2copy);
+  //     assert(pd512::validate_number_of_quotient(pd));
 
-            //     memmove(&((uint8_t *) pd)[kBytes2copy + i],
-            //             &((const uint8_t *) pd)[kBytes2copy + i + 1],
-            //             sizeof(*pd) - (kBytes2copy + i + 1));
-            // }
-            // return find_res;
+  //     memmove(&((uint8_t *) pd)[kBytes2copy + i],
+  //             &((const uint8_t *) pd)[kBytes2copy + i + 1],
+  //             sizeof(*pd) - (kBytes2copy + i + 1));
+  // }
+  // return find_res;
   size_t SizeInBytes() const { return table_->SizeInBytes(); }
 
   std::string get_name() const;
+  std::string get_name_old() const;
 };
 
 template <typename ItemType, size_t bits_per_item,
@@ -335,11 +344,23 @@ template <typename ItemType, size_t bits_per_item,
           template <size_t> class TableType, typename HashFamily,
           size_t max_relocations>
 std::string ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
+                            max_relocations>::get_name_old() const {
+  std::stringstream ss;
+  ss << "ts_CuckooFilter-With" << bits_per_item << "bits per item.    ";
+  // ss << "BPI:" << bits_per_item << "\t";
+  ss << "Max Relocations is " << max_relocations;
+  return ss.str();
+}
+
+template <typename ItemType, size_t bits_per_item,
+          template <size_t> class TableType, typename HashFamily,
+          size_t max_relocations>
+std::string ts_CuckooFilter<ItemType, bits_per_item, TableType, HashFamily,
                             max_relocations>::get_name() const {
   std::stringstream ss;
-  ss << "ts_CuckooFilter:\t";
-  ss << "BPI:" << bits_per_item << std::endl;
-  ss << "Max Relocations:\t " << max_relocations << std::endl;
+  ss << "2S-" << max_relocations << "-CF-" << bits_per_item << " ";
+  // ss << "BPI:" << bits_per_item << "\t";
+  // ss << "Max Relocations is " << max_relocations;
   return ss.str();
 }
 

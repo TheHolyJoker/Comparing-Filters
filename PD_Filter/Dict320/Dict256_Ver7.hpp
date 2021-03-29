@@ -62,12 +62,12 @@ class Dict256_Ver7 {
 
 public:
     Dict256_Ver7(size_t max_number_of_elements, double level1_load_factor, double level2_load_factor)
-            : filter_max_capacity(max_number_of_elements),
-              number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
-            //   pd_index_length(
-            //           ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
-            //   spare_element_length(pd_index_length + quotient_length + remainder_length),
-              Hasher() {
+        : filter_max_capacity(max_number_of_elements),
+          number_of_pd(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor)),
+          //   pd_index_length(
+          //           ceil_log2(compute_number_of_PD(max_number_of_elements, max_capacity, level1_load_factor))),
+          //   spare_element_length(pd_index_length + quotient_length + remainder_length),
+          Hasher() {
         // op_count = 0;
         expected_pd_capacity = max_capacity * level1_load_factor;
         spare = new packed_spare<48, 32, bits_per_item, 4>(number_of_pd);
@@ -79,7 +79,8 @@ public:
         int ok = posix_memalign((void **) &pd_array, 32, 32 * number_of_pd);
         if (ok != 0) {
             std::cout << "Failed!!!" << std::endl;
-            std::cout << level2_load_factor << std::endl;;
+            std::cout << level2_load_factor << std::endl;
+            ;
             assert(false);
             return;
         }
@@ -93,6 +94,7 @@ public:
 
     virtual ~Dict256_Ver7() {
         std::cout << std::string(80, '=') << std::endl;
+        std::cout << "number of pds: " << number_of_pd << std::endl;
         print_data_on_space();
         std::cout << std::string(80, '=') << std::endl;
 
@@ -250,6 +252,47 @@ public:
                (spare_filter->Find(((uint64_t) pd_index << (13)) | qr));
     }
 
+    inline auto lookup_one_access(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        assert(validate_lowers_quot_are_in_l1(pd_index));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        return _mm256_cmpeq_epu8_mask(_mm256_set1_epi8(rem), pd_array[pd_index]);
+        // return pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) ||
+        //        (spare_filter->Find(((uint64_t) pd_index << (13)) | qr));
+    }
+
+    inline auto lookup_two_access(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        assert(validate_lowers_quot_are_in_l1(pd_index));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        return _mm256_cmpeq_epu8_mask(_mm256_set1_epi8(rem), pd_array[pd_index]) || _mm256_cmpeq_epu8_mask(_mm256_set1_epi8(rem), pd_array[pd_index + 1]);
+        // return _mm256_cmpeq_epu8_mask(_mm256_set1_epi8(rem), pd_array[pd_index]);
+        // return pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) ||
+        //        (spare_filter->Find(((uint64_t) pd_index << (13)) | qr));
+    }
+
+    inline auto lookup_two_access_further(const itemType s) const -> bool {
+        uint64_t hash_res = Hasher(s);
+        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        assert(validate_lowers_quot_are_in_l1(pd_index));
+        const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
+        const int64_t quot = qr >> 8;
+        const uint8_t rem = qr;
+        return _mm256_cmpeq_epu8_mask(_mm256_set1_epi8(rem), pd_array[pd_index]) || _mm256_cmpeq_epu8_mask(_mm256_set1_epi8(rem), pd_array[pd_index >> 1u]);
+        // return _mm256_cmpeq_epu8_mask(_mm256_set1_epi8(rem), pd_array[pd_index]);
+        // return pd_name::pd_find_25(quot, rem, &pd_array[pd_index]) ||
+        //        (spare_filter->Find(((uint64_t) pd_index << (13)) | qr));
+    }
+
     int get_find_level(const itemType s) const {
         if (!lookup(s)) return 0;
         uint64_t hash_res = Hasher(s);
@@ -360,9 +403,9 @@ public:
     }
 
     inline void insert_into_not_full_pd_helper(const itemType s, const uint32_t pd_index, const uint32_t out2) {
-//        uint64_t hash_res = Hasher(s);
-//        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
-//        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        //        uint64_t hash_res = Hasher(s);
+        //        uint32_t out1 = hash_res >> 32u, out2 = hash_res & MASK32;
+        //        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         assert(!pd_name::pd_full(&pd_array[pd_index]));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
         const int64_t quot = qr >> bits_per_item;
@@ -419,7 +462,7 @@ public:
     }
 
     inline void insert_into_full_pd_helper(const itemType s, const uint32_t pd_index, const uint32_t out2) {
-//        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
+        //        const uint32_t pd_index = reduce32(out1, (uint32_t) number_of_pd);
         assert(pd_name::pd_full(&pd_array[pd_index]));
         const uint16_t qr = reduce16((uint16_t) out2, (uint16_t) 6400);
         const int64_t quot = qr >> bits_per_item;
@@ -611,8 +654,10 @@ public:
                 std::cout << "b1: " << b1 << std::endl;
                 std::cout << "b2: " << b2 << std::endl;
                 std::cout << "pd_index: " << pd_index << std::endl;
-                std::cout << "pop_item:\n" << pop_item << std::endl;
-                std::cout << "pd_last_item:\n" << pd_last_item << std::endl;
+                std::cout << "pop_item:\n"
+                          << pop_item << std::endl;
+                std::cout << "pd_last_item:\n"
+                          << pd_last_item << std::endl;
                 assert(0);
             }
             assert(validation);

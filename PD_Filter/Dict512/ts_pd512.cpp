@@ -7,7 +7,7 @@ namespace v_ts_pd512 {
         if (index == sizeof(word) * CHAR_BIT)
             return _mm_popcnt_u64(word);
 
-        uint64_t mask = MSK(index);
+        uint64_t mask = BZ_MSK(index);
         return _mm_popcnt_u64(word & mask);
     }
 
@@ -413,6 +413,61 @@ namespace v_ts_pd512 {
         return true;
     }
 
+    auto equal_other_than_last_byte(__m512i x, __m512i y) -> bool {
+        assert(memcmp(&x, &x, 64) == 0);
+        assert(memcmp(&y, &y, 64) == 0);
+        return (memcmp(&x, &y, 63) == 0);
+    }
+
+    bool val_body_remove(size_t index, const __m512i *pd) {
+        const __m512i old_pd = *pd;
+        __m512i temp_pd0 = old_pd;
+        __m512i temp_pd1 = old_pd;
+        __m512i temp_pd2 = old_pd;
+        ts_pd512::body_remove_naive(index, &temp_pd1);
+        ts_pd512::body_remove_att(index, &temp_pd2);
+        // ts_pd512::add_when_full(, &temp_pd2);
+
+        bool cond = equal_other_than_last_byte(temp_pd1, temp_pd2);
+        if (!cond) {
+            // std::cout << "quot:              " << quot << std::endl;
+
+            // if (!compare_headers(&temp_pd1, &temp_pd2)) {
+            //     std::cout << "Headers differ" << std::endl;
+            //     size_t temp0_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd0, quot) + quot;
+            //     size_t temp1_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd1, quot) + quot;
+            //     size_t temp2_select_quot = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot) + quot;
+
+            //     size_t temp0_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd0, quot - 1) + quot - 1;
+            //     size_t temp1_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd1, quot - 1) + quot - 1;
+            //     size_t temp2_select_quot_m1 = pd512_plus::count_zeros_up_to_the_kth_one(&temp_pd2, quot - 1) + quot - 1;
+            //     std::cout << "temp0_select_quot: " << temp0_select_quot << std::endl;
+            //     std::cout << "temp1_select_quot: " << temp1_select_quot << std::endl;
+            //     std::cout << "temp2_select_quot: " << temp2_select_quot << std::endl;
+            //     std::cout << "temp0_select_quot_m1: " << temp0_select_quot_m1 << std::endl;
+            //     std::cout << "temp1_select_quot_m1: " << temp1_select_quot_m1 << std::endl;
+            //     std::cout << "temp2_select_quot_m1: " << temp2_select_quot_m1 << std::endl;
+            // }
+            v_pd512_plus::print_headers_extended(&temp_pd0);
+            v_pd512_plus::print_headers_extended(&temp_pd1);
+            v_pd512_plus::print_headers_extended(&temp_pd2);
+
+            std::cout << "temp0 cap: " << pd512::get_capacity_naive(&temp_pd0) << std::endl;
+            std::cout << "temp1 cap: " << pd512::get_capacity_naive(&temp_pd1) << std::endl;
+            std::cout << "temp2 cap: " << pd512::get_capacity_naive(&temp_pd2) << std::endl;
+            if (!compare_bodies(&temp_pd1, &temp_pd2)) {
+                size_t arr[ts_pd512::MAX_CAPACITY];
+                diff_bodies(&temp_pd1, &temp_pd2, arr);
+                v_ts_pd512::print_body(&temp_pd0);
+                v_ts_pd512::print_body(&temp_pd1);
+                v_ts_pd512::print_body(&temp_pd2);
+            }
+            assert(0);
+        }
+        assert(cond);
+
+        return true;
+    }
     bool val_add_when_full(int64_t quot, uint8_t rem, const __m512i *pd) {
         const __m512i old_pd = *pd;
         __m512i temp_pd0 = old_pd;

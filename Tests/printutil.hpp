@@ -300,4 +300,32 @@ auto print_array_normalized_vertical(T *a, size_t a_size, size_t normalizer_val,
     return os;
 }
 
+
+template<typename T>
+auto print_two_arrays_normalized_vertical(T *a, T *b, size_t a_size, size_t normalizer_val_a, size_t normalizer_val_b, std::ostream &os = std::cout) -> std::ostream & {
+    auto line = std::string(80, '=');
+    auto sep = "  |  ";
+    // os << line << std::endl;
+    auto mid_line = std::string(80, '-');
+    // if (header.size()) {
+    //     os << header << std::endl;
+    //     os << mid_line << std::endl;
+    // }
+    os << setw(6) << "Round" << sep;
+    os << setw(12) << "    FPP      " << " |";
+    // os << setw(12) << "    FPP      " << sep;
+    os << setw(12) << "    FNP      " << std::endl;
+    os << mid_line << std::endl;
+    for (size_t i = 0; i < a_size; i++) {
+        os << left;
+        os << setw(6) << i << sep;
+        os << setw(12) << (1.0 * a[i] / normalizer_val_a) << sep;
+        os << setw(12) << (1.0 * b[i] / normalizer_val_b) << std::endl;
+        //  << (1.0 * a[i] / normalizer_val_a);
+        // os << "\t| \t" <<   (1.0 * b[i] / normalizer_val_b) << std::endl;
+    }
+    os << line << std::endl;
+    return os;
+}
+
 #endif//FILTERS_PRINTUTIL_HPP

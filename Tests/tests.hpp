@@ -54,13 +54,13 @@ void set_init(size_t size, unordered_set<itemType> *mySet) {
 }
 
 template<typename itemType>
-auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
-//    srand(time(NULL));
+auto fill_vec_naive(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
     vec->resize(number_of_elements);
     for (int i = 0; i < number_of_elements; ++i) {
-        vec->at(i) = ((uint64_t) rand());
+        vec->at(i) = i;
     }
 }
+
 
 template<typename itemType>
 auto fill_vec_better_but_slower_randomness(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
@@ -74,6 +74,17 @@ auto fill_vec_better_but_slower_randomness(std::vector<itemType> *vec, size_t nu
         // if (i % 500000 == 0) {
         //     std::cout << i << "/" << number_of_elements << std::endl;
         // }
+    }
+}
+
+template<typename itemType>
+auto fill_vec(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
+    fill_vec_better_but_slower_randomness(vec, number_of_elements, universe_mask);
+    return;
+//    srand(time(NULL));
+    vec->resize(number_of_elements);
+    for (int i = 0; i < number_of_elements; ++i) {
+        vec->at(i) = ((uint64_t) random());
     }
 }
 
