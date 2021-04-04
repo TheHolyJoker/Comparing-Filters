@@ -798,11 +798,11 @@ struct FilterAPI<Dict256_Ver7<itemType>> {
         return table->lookup_count(key);
 #endif// COUNT \
 
-        // return table->lookup(key);
+        return table->lookup(key);
         // return table->lookup_one_access(key);
         // return table->lookup_one_access(key);
         // return table->lookup_two_access(key);
-        return table->lookup_two_access_further(key);
+        // return table->lookup_two_access_further(key);
         // return table->lookup_count(key);
         // return table->lookup_minimal(key);
     }

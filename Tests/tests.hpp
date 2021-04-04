@@ -48,13 +48,24 @@ auto rand_item() -> itemType {
 auto rand_item() -> string;
 
 template<typename itemType>
-void set_init(size_t size, unordered_set<itemType> *mySet) {
+void set_init_horrifice_randomness(size_t size, unordered_set<itemType> *mySet) {
     for (int i = 0; i < size; ++i)
         mySet->insert(rand());
 }
 
 template<typename itemType>
-auto fill_vec_naive(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
+void set_init(size_t size, unordered_set<itemType> *mySet) {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, INT64_MAX);
+    for (int i = 0; i < size; ++i)
+        mySet->insert(dist(rng));
+}
+
+
+template<typename itemType>
+auto
+fill_vec_naive(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
     vec->resize(number_of_elements);
     for (int i = 0; i < number_of_elements; ++i) {
         vec->at(i) = i;
@@ -63,7 +74,8 @@ auto fill_vec_naive(std::vector<itemType> *vec, size_t number_of_elements, ulong
 
 
 template<typename itemType>
-auto fill_vec_better_but_slower_randomness(std::vector<itemType> *vec, size_t number_of_elements, ulong universe_mask = UNIVERSE_SIZE) -> void {
+auto fill_vec_better_but_slower_randomness(std::vector<itemType> *vec, size_t number_of_elements,
+                                           ulong universe_mask = UNIVERSE_SIZE) -> void {
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_int_distribution<std::mt19937::result_type> dist(0, INT64_MAX);
@@ -125,9 +137,9 @@ template<class Table, typename itemType, bool block_insertion = false>
 auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *el_set) -> bool {
     // std::cout << "h2" << std::endl;
     size_t counter = 0;
-    if (block_insertion) {
+    /*if (block_insertion) {
         vector<itemType> vec(el_set->begin(), el_set->end());
-        FilterAPI<Table>::AddAll(vec, wrap_filter);
+//        FilterAPI<Table>::AddAll(vec, wrap_filter);
         for (auto el : vec) {
             if (!FilterAPI<Table>::Contain(el, wrap_filter)) {
                 cout << "%%lookup failed.%%" << endl;
@@ -141,7 +153,7 @@ auto v_insertion_plus_imm_lookups(Table *wrap_filter, unordered_set<itemType> *e
             }
         }
         return true;
-    }
+    }*/
 
     for (auto el : *el_set) {
         FilterAPI<Table>::Add(el, wrap_filter);
@@ -426,7 +438,8 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
     auto temp = att_print_single_round_false_positive_rates(lookup_set.size(), error_power_inv, fp_counter, tp_counter);
     *ss << temp.str();
 
-    auto temp2 = print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter, fp_counter);
+    auto temp2 = print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv,
+                                                         tp_counter, fp_counter);
     *ss << temp2.str();
     //    cout << "filter_max_capacity: " << filter_max_capacity << endl;
     //    cout << "\nnumber of false-positive is out of total number of lookups: " << fp_counter << "/ " << lookup_reps << endl;
@@ -454,8 +467,9 @@ auto v_filter_core(Table *wrap_filter, size_t filter_max_capacity, size_t lookup
 }
 
 template<class Table, typename itemType, bool block_insertion = false>
-auto v_filter_core_with_deletions(Table *wrap_filter, size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-                                  double level1_load_factor, double level2_load_factor, std::stringstream *ss) -> int {
+auto
+v_filter_core_with_deletions(Table *wrap_filter, size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
+                             double level1_load_factor, double level2_load_factor, std::stringstream *ss) -> int {
 
     unordered_set<itemType> member_set, lookup_set, to_be_deleted_set;
     size_t del_size = filter_max_capacity / 2;
@@ -519,10 +533,12 @@ auto v_filter_core_with_deletions(Table *wrap_filter, size_t filter_max_capacity
     auto temp = att_print_single_round_false_positive_rates(lookup_set.size(), error_power_inv, fp_counter, tp_counter);
     *ss << temp.str();
 
-    auto temp2 = print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv, tp_counter, fp_counter);
+    auto temp2 = print_single_round_false_positive_rates(filter_max_capacity, lookup_set.size() >> error_power_inv,
+                                                         tp_counter, fp_counter);
     *ss << temp2.str();
     cout << "filter_max_capacity: " << filter_max_capacity << endl;
-    cout << "\nnumber of false-positive is out of total number of lookups: " << fp_counter << "/ " << lookup_reps << endl;
+    cout << "\nnumber of false-positive / total number of lookups: " << fp_counter << "/ " << lookup_reps
+         << endl;
     cout << "Expected FP reps: " << (lookup_set.size() >> error_power_inv) << endl;
 
     // std::cout << "deletion validation" << std::endl;
@@ -548,17 +564,20 @@ auto v_filter_core_with_deletions(Table *wrap_filter, size_t filter_max_capacity
 
 template<class Table, typename itemType, bool block_insertion = false>
 auto w_validate_filter(size_t filter_max_capacity, size_t lookup_reps, size_t error_power_inv,
-                       double level1_load_factor, double level2_load_factor, std::stringstream *ss, bool perform_deletions = false) -> bool {
+                       double level1_load_factor, double level2_load_factor, std::stringstream *ss,
+                       bool perform_deletions = false) -> bool {
     Table wrap_filter = FilterAPI<Table>::ConstructFromAddCount(filter_max_capacity);
     size_t line_width = 160;// number of columns (6) * column's width (24)
     print_name(FilterAPI<Table>::get_name(&wrap_filter));
     int res = 42;
     if (perform_deletions) {
         res = v_filter_core_with_deletions<Table, itemType, block_insertion>(
-                &wrap_filter, filter_max_capacity, lookup_reps, error_power_inv, level1_load_factor, level2_load_factor, ss);
+                &wrap_filter, filter_max_capacity, lookup_reps, error_power_inv, level1_load_factor, level2_load_factor,
+                ss);
     } else {
         res = v_filter_core<Table, itemType, block_insertion>(
-                &wrap_filter, filter_max_capacity, lookup_reps, error_power_inv, level1_load_factor, level2_load_factor, ss);
+                &wrap_filter, filter_max_capacity, lookup_reps, error_power_inv, level1_load_factor, level2_load_factor,
+                ss);
     }
     if (res != 1) {
         std::cout << FilterAPI<Table>::get_name(&wrap_filter) << " Failed in validation." << std::endl;
