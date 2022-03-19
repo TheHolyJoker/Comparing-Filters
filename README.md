@@ -1,3 +1,7 @@
+# Update
+A recent Incremental version of the ideas in this code appears in [Prefix-Filter](https://github.com/TomerEven/Prefix-Filter) repository. 
+The Prefix-Filter is an incremental filter, with faster insertions throughput than Bloom, CF and VQF, and query throughput which is slightly worse than the CF with the same false positive rate (which is faster than others ''hashtable for fingerprints'' filters).
+
 # Comparing Filters
 Currently benchmarking:
 1. Bloomfilter (BF)
